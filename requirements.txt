@@ -1,0 +1,13 @@
+Flask==3.0.0
+python-dotenv==1.0.1
+watchdog==4.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-Login==0.6.3
+Flask-Ext==0.1
+requests==2.31.0
+RouterOS-api==0.17.0
+SQLAlchemy==2.0.21
+Flask-Migrate==4.0.5
+paramiko==3.4.0
+PyYAML==6.0.1
+Flask-WTF==1.2.1

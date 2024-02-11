@@ -1,0 +1,8 @@
+-aplikasi ini menggunakan Flask
+-konsep dengan blueprint
+-static folder network_templates untuk menyimpan data jinja2 dan yaml
+-menggunakan SQLite database
+-konsep MVC
+-konsep layouts pada halaman html
+-menggunakan templates html sbadmin2
+-getbootstrap dan font awesome serta jquery

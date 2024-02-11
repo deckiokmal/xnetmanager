@@ -1,0 +1,92 @@
+{% extends "/layouts/layout.html" %}
+{% block title %}Users Management{% endblock %}
+
+
+{% block content %}
+<!-- Begin Page Content -->
+<div class="container-fluid">
+    
+    <!-- # Flash Messages -->
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <ul>
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+    <!-- end Flash Message -->
+    <div class="min-vw-10">
+        <div class="position-relative py-2 px-4 text-bg-secondary">
+            <div class="position-relative py-2 px-4">
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-2">
+                    <a class="btn btn-primary" href="{{url_for('users.user_create')}}" role="button">Add Users</a>
+                </div>
+                <div class="card position-relative py-2 px-4">
+                    <div class="card-header">
+                        Users Management
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th scope="col" class="justify-content">No</th>
+                                    <th scope="col">Username</th>
+                                    <th scope="col" class="text-justify-content">Password</th>
+                                    <th scope="col">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="position-relative py-2 px-4">
+                                
+                                {% for user in data %}
+                                <tr>
+                                    <th scope="row">{{ loop.index }}</th>
+                                    <td>
+                                        <div class="text-wrap">
+                                            {{ user.username }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="text-wrap">
+                                            {{ user.password }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if user %}
+                                        {# Pastikan user tidak kosong sebelum mengakses elemen ke-0 #}
+                                        {% set user_id = user.id%}
+                
+                                        <div class="input-group flex-nowrap">
+                                            <div class="position-relative py-2 px-2">
+                                                <form action="{{url_for('users.user_update', user_id=user_id)}}" method="get">
+                                                    <input class="btn btn-success" type="submit" value="Edit">
+                                                </form>
+                                            </div>
+                
+                                            <div class="position-relative py-2 px-2">
+                                                <!-- Tombol Remove yang langsung mengarah ke fungsi delete_routeros -->
+                                                <form action="{{url_for('users.user_delete', user_id=user_id)}}" method="post">
+                                                    <input class="btn btn-danger" onclick="return confirm('Anda yakin ingin menghapus user ini?');" type="submit" value="Delete">
+                                                </form>
+                                            </div>
+                                        </div>
+                
+                                        {% else %}
+                                        {# Handle jika user kosong #}
+                                        <span class="text-danger">No data available</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End of Page Content -->
+{% endblock %}
