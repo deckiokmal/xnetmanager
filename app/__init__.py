@@ -53,9 +53,9 @@ from .controllers.device_manager import dm_bp
 app.register_blueprint(dm_bp)
 
 # blueprint controllers network_manager.py
-# from .controllers.network_manager import nm_bp
+from .controllers.network_manager import nm_bp
 
-# app.register_blueprint(nm_bp)
+app.register_blueprint(nm_bp)
 
 # Registrasi blueprint End
 
