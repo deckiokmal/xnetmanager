@@ -57,6 +57,11 @@ from .controllers.device_manager import dm_bp
 
 app.register_blueprint(dm_bp)
 
+# blueprint controllers template_manager.py
+from .controllers.template_manager import tm_bp
+
+app.register_blueprint(tm_bp)
+
 # blueprint controllers network_manager.py
 from .controllers.network_manager import nm_bp
 

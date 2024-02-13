@@ -1,0 +1,84 @@
+#1 VPN Site to Site
+config firewall address
+    edit "local"
+        set allow-routing enable
+        set subnet 192.168.100.0/24
+    next
+    edit "remote"
+        set allow-routing enable
+        set subnet 192.168.200.0/24
+    next
+end
+
+config firewall addrgrp
+    edit "local-group"
+        set member "local"
+        set allow-routing enable
+    next
+    edit "remote-grup"
+        set member "remote"
+        set allow-routing enable
+    next
+end
+
+config vpn ipsec phase1-interface
+    edit "my_tunnel"
+        set interface "wan"
+        set ike-version 2
+        set local-gw 10.10.10.1
+        set peertype any
+        set net-device disable
+        set proposal 3des-sha1
+        set dhgrp 2
+        set remote-gw 10.10.10.2
+        set psksecret mysecretkey
+    next
+end
+
+config vpn ipsec phase2-interface
+    edit "my_tunnel"
+        set phase1name "my_tunnel"
+        set proposal 3des-sha1
+        set dhgrp 2
+        set auto-negotiate enable
+        set src-addr-type name
+        set dst-addr-type name
+        set src-name "local-group"
+        set dst-name "remote-grup"
+    next
+end
+
+config firewall policy
+    edit 20
+        set name "remote_to_local_policy"
+        set srcintf "lan"
+        set dstintf "my_tunnel"
+        set srcaddr "local-group"
+        set dstaddr "remote-grup"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+    next
+    edit 21
+        set name "local_to_remote_policy"
+        set srcintf "my_tunnel"
+        set dstintf "lan"
+        set srcaddr "remote-grup"
+        set dstaddr "local-group"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+    next
+end
+
+config router static
+    edit 20
+        set device "my_tunnel"
+        set dstaddr "remote-grup"
+    next
+    edit 21
+        set distance 254
+        set blackhole enable
+        set dstaddr "remote-grup"
+    next
+end

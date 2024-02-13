@@ -49,7 +49,7 @@ def index():
     per_page = 10
     all_devices = Device_manager.query.paginate(page=page, per_page=per_page)
 
-    return render_template("/network_managers/device_manager.html", data=all_devices)
+    return render_template("/device_managers/device_manager.html", data=all_devices)
 
 
 # Create device
@@ -95,7 +95,7 @@ def device_create():
             # kembali ke index
             return redirect(url_for("dm.index"))
 
-    return render_template("/network_managers/device_create.html")
+    return render_template("/device_managers/device_create.html")
 
 
 # Update device
@@ -127,7 +127,7 @@ def device_update(device_id):
         # Check jika username, password dan ssh kosong
         elif not new_username or not new_password or not new_ssh:
             flash("username, password dan ssh tidak boleh kosong.", "error")
-            return render_template("/network_managers/device_update.html", device=device)
+            return render_template("/device_managers/device_update.html", device=device)
         
         # 3. periksa ssh dengan isdigit()
         elif not new_ssh.isdigit():
@@ -146,7 +146,7 @@ def device_update(device_id):
             flash("Device update berhasil.", "success")
             return redirect(url_for("dm.index"))
 
-    return render_template("/network_managers/device_update.html", device=device)
+    return render_template("/device_managers/device_update.html", device=device)
 
 
 # Delete device

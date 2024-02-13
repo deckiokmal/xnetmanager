@@ -41,13 +41,13 @@
                         {% set template_id = template.id%}
                         <div class="input-group flex-nowrap">
                             <div class="position-relative py-2 px-2">
-                                <form action="{{ url_for('nm.template_update', template_id=template_id) }}"
+                                <form action="{{ url_for('tm.template_update', template_id=template_id) }}"
                                     method="get">
                                     <input class="btn btn-success" type="submit" value="Update">
                                 </form>
                             </div>
                             <div class="position-relative py-2 px-2">
-                                <form action="{{ url_for('nm.template_delete', template_id=template_id) }}"
+                                <form action="{{ url_for('tm.template_delete', template_id=template_id) }}"
                                     method="post">
                                     <input class="btn btn-danger"
                                         onclick="return confirm('Anda yakin ingin menghapus template ini?');"
@@ -55,10 +55,11 @@
                                 </form>
                             </div>
                             <div class="position-relative py-2 px-2">
-                                <form action="#" method="post">
+                                <form action="{{ url_for('tm.template_generator', template_id=template_id) }}"
+                                    method="post">
                                     <input class="btn btn-primary"
                                         onclick="return confirm('Anda yakin ingin generate config?');" type="submit"
-                                        value="Generate">
+                                        value="Generate template">
                                 </form>
                             </div>
                         </div>
@@ -86,7 +87,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form method="post" enctype="multipart/form-data" action="{{ url_for('nm.template_upload') }}">
+                <form method="post" enctype="multipart/form-data" action="{{ url_for('tm.template_upload') }}">
                     <div class="mb-3">
                         <label for="j2" class="form-label">J2 Template</label>
                         <input type="file" class="form-control" id="j2" name="j2" accept=".j2" required>
