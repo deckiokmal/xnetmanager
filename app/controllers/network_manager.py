@@ -1,9 +1,23 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    jsonify,
+    current_app,
+)
 from flask_login import login_required, current_user
 from functools import wraps
 from app import db
 from app.models.users import User
+from app.models.device_manager import Device_manager
+from app.models.network_manager import configTemplates
 from app.utils.network_manager_class import netAuto
+from werkzeug.utils import secure_filename
+import os
+import json
 
 
 # Membuat blueprint main_bp dan error_bp
@@ -45,14 +59,262 @@ def inject_user():
     return dict(username=None)
 
 
-# Main APP starting
+# Network Manager App Starting
 
 
-@nm_bp.route("/nm", methods=['GET'])
+# Network Manager route
+@nm_bp.route("/nm", methods=["GET"])
 @login_required
 def index():
+    # Tampilkan all devices per_page 10
+    page = request.args.get("page", 1, type=int)
+    per_page = 10
+    all_devices = Device_manager.query.paginate(page=page, per_page=per_page)
 
     return render_template("/network_managers/network_manager.html")
+
+
+# Templates route
+@nm_bp.route("/nm_template", methods=["GET"])
+@login_required
+def templates():
+    # Tampilkan all devices per_page 10
+    page = request.args.get("page", 1, type=int)
+    per_page = 10
+    all_templates = configTemplates.query.paginate(page=page, per_page=per_page)
+
+    return render_template(
+        "/network_managers/template_manager.html", all_templates=all_templates
+    )
+
+
+# Upload data template
+UPLOAD_FOLDER = "network_templates"
+TEMPLE_EXTENSIONS = {"j2"}
+PARAMS_EXTENSIONS = {"yml", "yaml"}
+
+
+def allowed_file_temple(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in TEMPLE_EXTENSIONS
+
+def allowed_file_params(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in PARAMS_EXTENSIONS
+
+
+@nm_bp.route("/template_upload", methods=["GET", "POST"])
+@login_required
+def template_upload():
+    if request.method == "POST":
+        # Ambil data dari formulir
+        vendor = request.form["vendor"]
+        version = request.form["version"]
+        info = request.form["info"]
+
+        # Cek apakah jinja2 file telah diunggah
+        if "j2" not in request.files:
+            flash("No j2 part")
+            return redirect(request.url)
+
+        j2 = request.files["j2"]
+
+        # Cek apakah yaml file telah diunggah
+        if "yaml" not in request.files:
+            flash("No yaml part")
+            return redirect(request.url)
+
+        yaml = request.files["yaml"]
+
+        # Cek apakah semua kolom telah diisi
+        if not vendor or not version or not info:
+            flash("Data tidak boleh kosong!", "error")
+            return redirect(request.url)
+
+        # Cek apakah file dipilih
+        if j2.filename == "" or yaml.filename == "":
+            flash("No selected file", "error")
+            return redirect(request.url)
+
+        # Cek apakah file memiliki ekstensi yang diizinkan
+        if j2 and allowed_file_temple(j2.filename):
+            template_name = secure_filename(j2.filename)
+            file_path = os.path.join(
+                current_app.static_folder, UPLOAD_FOLDER, template_name
+            )
+            j2.save(file_path)
+        else:
+            flash("Jenis file yang dimasukkan tidak sesuai. hint j2.", "error")
+            return redirect(url_for("nm.templates"))
+
+        # Cek apakah file memiliki ekstensi yang diizinkan
+        if yaml and allowed_file_params(yaml.filename):
+            parameter_name = secure_filename(yaml.filename)
+            file_path = os.path.join(
+                current_app.static_folder, UPLOAD_FOLDER, parameter_name
+            )
+            yaml.save(file_path)
+        else:
+            flash("Jenis file yang dimasukkan tidak sesuai. hint yml, yaml.", "error")
+            return redirect(url_for("nm.templates"))
+        
+        # Simpan data ke dalam database
+        new_template = configTemplates(
+            template_name=template_name,
+            parameter_name=parameter_name,
+            vendor=vendor,
+            version=version,
+            info=info,
+        )
+        db.session.add(new_template)
+        db.session.commit()
+
+        flash("File berhasil upload.", "success")
+        return redirect(url_for("nm.templates"))
+
+
+
+# Templates update
+@nm_bp.route("/template_update/<int:template_id>", methods=["GET", "POST"])
+@login_required
+def template_update(template_id):
+    # 1. Dapatkan objek dari database berdasarkan ID
+    template = configTemplates.query.get_or_404(template_id)
+
+    # Read file J2 template content
+    def read_template(filename=template.template_name):
+        template_path = os.path.join(
+            current_app.static_folder, "network_templates", filename
+        )
+        with open(template_path, "r") as file:
+            template_content = file.read()
+        return template_content
+
+    # Read file YAML parameter content
+    def read_parameter(filename=template.parameter_name):
+        parameter_path = os.path.join(
+            current_app.static_folder, "network_templates", filename
+        )
+        with open(parameter_path, "r") as file:
+            parameter_content = file.read()
+        return parameter_content
+
+    # 2. kirim hasil baca file ke content textarea update page.
+    template_content = read_template()
+    parameter_content = read_parameter()
+
+    # 4. cek ketika user melakukan submit data dengan method 'POST'
+    if request.method == "POST":
+        new_template_name = request.form["template_name"]
+        new_parameter_name = request.form["parameter_name"]
+        new_vendor = request.form["vendor"]
+        new_version = request.form["version"]
+        new_info = request.form["info"]
+        new_template_content = request.form["template_content"]
+        new_parameter_content = request.form["parameter_content"]
+
+        # 5.1 Update file template_content jika ada perubahan
+        if new_template_content != read_template():
+            template_path = os.path.join(
+                current_app.static_folder, "network_templates", template.template_name
+            )
+            with open(template_path, "w") as file:
+                file.write(new_template_content)
+
+        # 5.1 Update file parameter_content jika ada perubahan
+        if new_parameter_content != read_parameter():
+            parameter_path = os.path.join(
+                current_app.static_folder, "network_templates", template.parameter_name
+            )
+            with open(parameter_path, "w") as file:
+                file.write(new_parameter_content)
+
+        # 5.2 Update file name jika ada perubahan
+        if new_template_name != template.template_name:
+            # template_path
+            new_path_template = os.path.join(
+                current_app.static_folder, "network_templates", new_template_name
+            )
+
+            # cek filename exsisting, filename tidak boleh sama dengan filename exsisting
+            if os.path.exists(new_path_template):
+                flash("File with the new name already exists.", "error")
+            else:
+                # old_path_template
+                old_path_template = os.path.join(
+                    current_app.static_folder,
+                    "network_templates",
+                    template.template_name,
+                )
+                os.rename(old_path_template, new_path_template)
+                template.template_name = new_template_name
+
+        # 5.2 Update file name jika ada perubahan
+        if new_parameter_name != template.parameter_name:
+            # parameter_path
+            new_path_parameter = os.path.join(
+                current_app.static_folder, "network_templates", new_parameter_name
+            )
+
+            # cek filename exsisting, filename tidak boleh sama dengan filename exsisting
+            if os.path.exists(new_path_parameter):
+                flash("File with the new name already exists.", "error")
+            else:
+                # old_path_parameter
+                old_path_parameter = os.path.join(
+                    current_app.static_folder,
+                    "network_templates",
+                    template.parameter_name,
+                )
+                os.rename(old_path_parameter, new_path_parameter)
+                template.parameter_name = new_parameter_name
+
+        # 5.3 Update data ke dalam database
+        template.template_name = new_template_name
+        template.parameter_name = new_parameter_name
+        template.vendor = new_vendor
+        template.version = new_version
+        template.info = new_info
+
+        db.session.commit()
+        flash("Template update berhasil.", "success")
+        return redirect(url_for("nm.templates"))
+
+    # 3. Tampilkan halaman template_update dengan data file di update page.
+    return render_template(
+        "/network_managers/template_update.html",
+        template=template,
+        template_content=template_content,
+        parameter_content=parameter_content,
+    )
+
+
+# Templates delete
+@nm_bp.route("/template_delete/<int:template_id>", methods=["POST"])
+@login_required
+def template_delete(template_id):
+
+    # Dapatkan objek dari database berdasarkan ID
+    template = configTemplates.query.get_or_404(template_id)
+
+    # Hapus file J2 template
+    file_path = os.path.join(
+        current_app.static_folder, "network_templates", str(template.template_name)
+    )
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    # Hapus file YAML parameter
+    file_path = os.path.join(
+        current_app.static_folder, "network_templates", str(template.parameter_name)
+    )
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    # Hapus data dari database
+    db.session.delete(template)
+    db.session.commit()
+
+    # Redirect ke halaman templates
+    return redirect(url_for("nm.templates"))
 
 
 @nm_bp.route("/send-command", methods=["POST"])

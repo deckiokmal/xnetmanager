@@ -1,92 +1,125 @@
 {% extends "/layouts/layout.html" %}
 {% block title %}Users Management{% endblock %}
-
-
 {% block content %}
 <!-- Begin Page Content -->
-<div class="container-fluid">
-    
-    <!-- # Flash Messages -->
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}
-    <ul>
-        {% for message in messages %}
-        <li>{{ message }}</li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-    {% endwith %}
-    <!-- end Flash Message -->
-    <div class="min-vw-10">
-        <div class="position-relative py-2 px-4 text-bg-secondary">
-            <div class="position-relative py-2 px-4">
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-2">
-                    <a class="btn btn-primary" href="{{url_for('users.user_create')}}" role="button">Add Users</a>
-                </div>
-                <div class="card position-relative py-2 px-4">
-                    <div class="card-header">
-                        Users Management
+
+
+<div class="d-grid gap-2 d-md-flex justify-content-md-end mb-2">
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createuserModal">
+        Create user
+    </button>
+</div>
+
+<div class="card position-relative px-4">
+    <div class="card-header">
+        Users Management
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col" class="justify-content">No</th>
+                    <th scope="col">Username</th>
+                    <th scope="col" class="text-justify-content">Password</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody class="position-relative py-2 px-4">
+
+                {% for user in data %}
+                <tr>
+                    <th scope="row">{{ loop.index }}</th>
+                    <td>
+                        <div class="text-wrap">
+                            {{ user.username }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="text-wrap">
+                            {{ user.password }}
+                        </div>
+                    </td>
+                    <td>
+                        {% if user %}
+                        {# Pastikan user tidak kosong sebelum mengakses elemen ke-0 #}
+                        {% set user_id = user.id%}
+
+                        <div class="input-group flex-nowrap">
+                            <div class="position-relative py-2 px-2">
+                                <form action="{{url_for('users.user_update', user_id=user_id)}}" method="get">
+                                    <input class="btn btn-success" type="submit" value="Edit">
+                                </form>
+                            </div>
+
+                            <div class="position-relative py-2 px-2">
+                                <!-- Tombol Remove yang langsung mengarah ke fungsi delete_routeros -->
+                                <form action="{{url_for('users.user_delete', user_id=user_id)}}" method="post">
+                                    <input class="btn btn-danger"
+                                        onclick="return confirm('Anda yakin ingin menghapus user ini?');" type="submit"
+                                        value="Delete">
+                                </form>
+                            </div>
+                        </div>
+
+                        {% else %}
+                        {# Handle jika user kosong #}
+                        <span class="text-danger">No data available</span>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- create user Modal -->
+<div class="modal fade" id="createuserModal" tabindex="-1" aria-labelledby="createuserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createuserModalLabel">
+                    Create new user
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" enctype="multipart/form-data" action="{{url_for('users.user_create')}}">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th scope="col" class="justify-content">No</th>
-                                    <th scope="col">Username</th>
-                                    <th scope="col" class="text-justify-content">Password</th>
-                                    <th scope="col">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody class="position-relative py-2 px-4">
-                                
-                                {% for user in data %}
-                                <tr>
-                                    <th scope="row">{{ loop.index }}</th>
-                                    <td>
-                                        <div class="text-wrap">
-                                            {{ user.username }}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="text-wrap">
-                                            {{ user.password }}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        {% if user %}
-                                        {# Pastikan user tidak kosong sebelum mengakses elemen ke-0 #}
-                                        {% set user_id = user.id%}
-                
-                                        <div class="input-group flex-nowrap">
-                                            <div class="position-relative py-2 px-2">
-                                                <form action="{{url_for('users.user_update', user_id=user_id)}}" method="get">
-                                                    <input class="btn btn-success" type="submit" value="Edit">
-                                                </form>
-                                            </div>
-                
-                                            <div class="position-relative py-2 px-2">
-                                                <!-- Tombol Remove yang langsung mengarah ke fungsi delete_routeros -->
-                                                <form action="{{url_for('users.user_delete', user_id=user_id)}}" method="post">
-                                                    <input class="btn btn-danger" onclick="return confirm('Anda yakin ingin menghapus user ini?');" type="submit" value="Delete">
-                                                </form>
-                                            </div>
-                                        </div>
-                
-                                        {% else %}
-                                        {# Handle jika user kosong #}
-                                        <span class="text-danger">No data available</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password">
                     </div>
-                </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="exampleCheck1" onclick="showPassword()">
+                        <label class="form-check-label" for="exampleCheck1">Show Password</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        Create
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 </div>
+
+
+<!-- showPassword cheklist -->
+<script>
+    function showPassword() {
+        var passwordField = document.getElementById("password");
+        if (passwordField.type === "password") {
+            passwordField.type = "text";
+        } else {
+            passwordField.type = "password";
+        }
+    }
+</script>
+
+
 <!-- End of Page Content -->
 {% endblock %}

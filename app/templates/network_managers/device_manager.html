@@ -1,116 +1,151 @@
 {% extends "/layouts/layout.html" %}
-{% block title %}Device Manager{% endblock %}
-
-
+{% block title %}device_manager{% endblock %}
 {% block content %}
 <!-- Begin Page Content -->
-<div class="container-fluid">
-    
-    <!-- # Flash Messages -->
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}
-    <ul>
-        {% for message in messages %}
-        <li>{{ message }}</li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-    {% endwith %}
-    <!-- end Flash Message -->
-    <div class="min-vw-10">
-        <div class="position-relative py-2 px-4 text-bg-secondary">
-            <div class="position-relative py-2 px-4">
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-2">
-                    <a class="btn btn-primary" href="{{url_for('dm.device_create')}}" role="button">Add Device</a>
-                </div>
-                <div class="card position-relative py-2 px-4">
-                    <div class="card-header">
-                        Device Manager List
+
+
+<div class="position-relative py-1 px-4">
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-2">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createdeviceModal">
+            Create Device
+        </button>
+    </div>
+    <div class="card position-relative py-1 px-4">
+        <div class="card-header">
+            Device Manager List
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th scope="col" class="justify-content">No</th>
+                        <th scope="col">Device Name</th>
+                        <th scope="col">Vendor</th>
+                        <th scope="col">IP Address</th>
+                        <th scope="col">Username</th>
+                        <th scope="col">Password</th>
+                        <th scope="col">SSH Port</th>
+                        <th scope="col">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="position-relative py-2 px-4">
+
+                    {% for device in data %}
+                    <tr>
+                        <th scope="row">{{ loop.index }}</th>
+                        <td>
+                            <div class="text-wrap">
+                                {{ device.device_name }}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-wrap">
+                                {{ device.vendor }}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-wrap">
+                                {{ device.ip_address }}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-wrap">
+                                {{ device.username }}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-wrap">
+                                {{ device.password }}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-wrap">
+                                {{ device.ssh }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if device %}
+                            {# Pastikan device tidak kosong sebelum mengakses elemen ke-0 #}
+                            {% set device_id = device.id%}
+
+                            <div class="input-group flex-nowrap">
+                                <div class="position-relative py-2 px-2">
+                                    <form action="{{url_for('dm.device_update', device_id=device_id)}}" method="get">
+                                        <input class="btn btn-success" type="submit" value="Edit">
+                                    </form>
+                                </div>
+
+                                <div class="position-relative py-2 px-2">
+                                    <!-- Tombol Remove yang langsung mengarah ke fungsi delete -->
+                                    <form action="{{url_for('dm.device_delete', device_id=device_id)}}" method="post">
+                                        <input class="btn btn-danger"
+                                            onclick="return confirm('Anda yakin ingin menghapus device ini?');"
+                                            type="submit" value="Delete">
+                                    </form>
+                                </div>
+                            </div>
+
+                            {% else %}
+                            {# Handle jika user kosong #}
+                            <span class="text-danger">Data tidak tersedia!</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<!-- create device Modal -->
+<div class="modal fade" id="createdeviceModal" tabindex="-1" aria-labelledby="createdeviceModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createdeviceModalLabel">
+                    Create new device
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" enctype="multipart/form-data" action="{{url_for('dm.device_create')}}">
+                    <div class="mb-3">
+                        <label for="device_name" class="form-label">Device Name</label>
+                        <input type="text" class="form-control" id="device_name" name="device_name" required>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th scope="col" class="justify-content">No</th>
-                                    <th scope="col">Device Name</th>
-                                    <th scope="col">Vendor</th>
-                                    <th scope="col">IP Address</th>
-                                    <th scope="col">Username</th>
-                                    <th scope="col">Password</th>
-                                    <th scope="col">SSH Port</th>
-                                    <th scope="col">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody class="position-relative py-2 px-4">
-                                
-                                {% for device in data %}
-                                <tr>
-                                    <th scope="row">{{ loop.index }}</th>
-                                    <td>
-                                        <div class="text-wrap">
-                                            {{ device.device_name }}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="text-wrap">
-                                            {{ device.vendor }}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="text-wrap">
-                                            {{ device.ip_address }}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="text-wrap">
-                                            {{ device.username }}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="text-wrap">
-                                            {{ device.password }}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="text-wrap">
-                                            {{ device.ssh }}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        {% if device %}
-                                        {# Pastikan device tidak kosong sebelum mengakses elemen ke-0 #}
-                                        {% set device_id = device.id%}
-                
-                                        <div class="input-group flex-nowrap">
-                                            <div class="position-relative py-2 px-2">
-                                                <form action="{{url_for('dm.device_update', device_id=device_id)}}" method="get">
-                                                    <input class="btn btn-success" type="submit" value="Edit">
-                                                </form>
-                                            </div>
-                
-                                            <div class="position-relative py-2 px-2">
-                                                <!-- Tombol Remove yang langsung mengarah ke fungsi delete -->
-                                                <form action="{{url_for('dm.device_delete', device_id=device_id)}}" method="post">
-                                                    <input class="btn btn-danger" onclick="return confirm('Anda yakin ingin menghapus device ini?');" type="submit" value="Delete">
-                                                </form>
-                                            </div>
-                                        </div>
-                
-                                        {% else %}
-                                        {# Handle jika user kosong #}
-                                        <span class="text-danger">Data tidak tersedia!</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                    <div class="mb-3">
+                        <label for="vendor" class="form-label">Vendor</label>
+                        <input type="text" class="form-control" id="vendor" name="vendor" required>
                     </div>
-                </div>
+                    <div class="mb-3">
+                        <label for="ip_address" class="form-label">IP Addresses</label>
+                        <input type="text" class="form-control" id="ip_address" name="ip_address" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="ssh" class="form-label">SSH Port</label>
+                        <input type="text" class="form-control" id="ssh" name="ssh" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        Create
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 </div>
+
+
 <!-- End of Page Content -->
 {% endblock %}

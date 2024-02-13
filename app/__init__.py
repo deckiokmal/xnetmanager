@@ -15,7 +15,12 @@ load_dotenv(dotenv_path)
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
+
+# absolut path static directory
 app.static_folder = "static"
+
+# Buat path untuk direktori network_templates di dalam direktori static
+network_templates_path = os.path.join(app.static_folder, "network_templates")
 
 
 # # Definisi path untuk basis data SQLite
@@ -56,6 +61,7 @@ app.register_blueprint(dm_bp)
 from .controllers.network_manager import nm_bp
 
 app.register_blueprint(nm_bp)
+
 
 # Registrasi blueprint End
 

@@ -1,0 +1,51 @@
+{% extends "/layouts/layout.html" %}
+{% block title %}template_update{% endblock %}
+{% block content %}
+<!-- Begin Page Content -->
+
+
+<div class="card position-relative py-2 px-4">
+    <div class="card-header">
+        Update Template
+    </div>
+    <form action="{{ url_for('nm.template_update', template_id=template.id) }}" method="post">
+        <div class="mb-3">
+            <label for="template_name" class="form-label">Template File</label>
+            <input type="text" class="form-control" value="{{ template.template_name }}" id="template_name"
+                name="template_name">
+        </div>
+        <div class="mb-3">
+            <label for="parameter_name" class="form-label">Parameter File</label>
+            <input type="text" class="form-control" value="{{ template.parameter_name }}" id="parameter_name"
+                name="parameter_name">
+        </div>
+        <div class="mb-3">
+            <label for="vendor" class="form-label">Vendor</label>
+            <input type="text" class="form-control" value="{{ template.vendor }}" id="vendor" name="vendor">
+        </div>
+        <div class="mb-3">
+            <label for="version" class="form-label">Version</label>
+            <input type="text" class="form-control" value="{{ template.version }}" id="version" name="version">
+        </div>
+        <div class="mb-3">
+            <label for="info" class="form-label">Info</label>
+            <input type="text" class="form-control" value="{{template.info}}" id="info" name="info">
+        </div>
+        <div class="mb-3">
+            <label for="template_content" class="form-label">Template Content</label>
+            <textarea name="template_content" id="template_content" rows="10"
+                class="form-control">{{template_content}}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="parameter_content" class="form-label">Parameter Content</label>
+            <textarea name="parameter_content" id="parameter_content" rows="10"
+                class="form-control">{{parameter_content}}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+        <a class="btn btn-danger" href="{{ url_for('nm.templates') }}">Back</a>
+    </form>
+</div>
+
+
+<!-- End of Page Content -->
+{% endblock %}
