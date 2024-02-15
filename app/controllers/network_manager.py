@@ -140,13 +140,11 @@ def push_config(device_id):
         if command:
             try:
                 config.configure_device(command)
-                flash("Push config successful!", "success")
                 return redirect(url_for("nm.index"))
             except Exception as e:
                 flash("Error pushing config: " + str(e), "error")
-        else:  # If template read failed, handle the error
-            # You can add more specific error handling here
-
+                return redirect(url_for("nm.index"))
+        else:
             return redirect(url_for("nm.index"))
 
 

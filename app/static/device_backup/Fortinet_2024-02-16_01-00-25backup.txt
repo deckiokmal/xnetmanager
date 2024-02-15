@@ -1,0 +1,5 @@
+HUB-1 # 
+command parse error before 'sftp'
+Command fail. Return code -61
+
+HUB-1 # 

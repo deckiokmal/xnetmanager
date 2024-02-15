@@ -6,6 +6,7 @@ import webbrowser
 import platform
 from jinja2 import Template
 import yaml
+from flask import flash
 
 
 class NetworkManagerUtils:
@@ -27,10 +28,12 @@ class NetworkManagerUtils:
                 username=self.username,
                 password=self.password,
                 port=self.ssh,
+                timeout=3,
             )
-            ssh_client.exec_command(command)
+            ssh_client.exec_command(command, timeout=3)
+
             ssh_client.close()
-            return True
+            return flash("konfigurasi sukses.", "success")
         except Exception as e:
             print("Error:", e)
             return False
@@ -144,15 +147,10 @@ class NetworkManagerUtils:
 
 
 # Examples
-list = [
-    "192.168.1.1",
-    "192.168.2.1",
-    "192.168.100.300",
-    "192.168.100.254",
-    "192.168.100.100",
-]
+list = ["192.168.100.49"]
 
 for ip in list:
-    myob = NetworkManagerUtils(ip_address=ip)
-    myob.check_device_status_threaded()
-    print(myob.device_status)
+    myob = NetworkManagerUtils(
+        ip_address=ip, username="admin", password="admin", ssh=22
+    )
+    myob.configure_device(command="config router static\n edit 1\n set device\n")
