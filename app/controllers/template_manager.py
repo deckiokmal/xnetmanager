@@ -17,6 +17,7 @@ from app.utils.network_manager_class import NetworkManagerUtils
 from werkzeug.utils import secure_filename
 import os
 import random
+from datetime import datetime
 
 
 # Membuat blueprint main_bp dan error_bp
@@ -335,7 +336,10 @@ def template_generator(template_id):
     rendered_config = net_auto.render_template_config(jinja_template, yaml_params)
 
     if rendered_config:
-        newFileName = "templates_generate" + str(random.randint(1, 100)) + ".txt"
+        now = datetime.now()
+        date_time_string = now.strftime("%Y-%m-%d_%H-%M-%S")
+        gen_filename = str(template.vendor)
+        newFileName = gen_filename + "-" + date_time_string + ".txt"
         # Path ke file baru
         new_file_path = os.path.join(
             current_app.static_folder, "network_templates", newFileName
