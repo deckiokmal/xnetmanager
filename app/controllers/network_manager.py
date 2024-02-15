@@ -14,6 +14,8 @@ from app.models.users import User
 from app.models.device_manager import DeviceManager
 from app.models.network_manager import NetworkManager
 from app.utils.network_manager_class import NetworkManagerUtils
+from app import SFTP_USERNAME, SFTP_PASSWORD, SFTP_ADDRESS
+from datetime import datetime
 import os
 
 
@@ -89,7 +91,7 @@ def check_status():
 
 
 # Open Console
-@nm_bp.route("/open_console/<int:device_id>", methods=["GET", "POST"])
+@nm_bp.route("/open_console/<int:device_id>", methods=["POST"])
 @login_required
 def open_console(device_id):
     device = DeviceManager.query.get_or_404(device_id)
@@ -109,7 +111,9 @@ def push_config(device_id):
 
     # Read template content with error handling
     def read_template(filename):
-        template_path = os.path.join(current_app.static_folder, "network_templates", filename)
+        template_path = os.path.join(
+            current_app.static_folder, "network_templates", filename
+        )
         try:
             with open(template_path, "r") as file:
                 return file.read()
@@ -137,11 +141,61 @@ def push_config(device_id):
             try:
                 config.configure_device(command)
                 flash("Push config successful!", "success")
-                return redirect(url_for('nm.index'))
+                return redirect(url_for("nm.index"))
             except Exception as e:
                 flash("Error pushing config: " + str(e), "error")
         else:  # If template read failed, handle the error
             # You can add more specific error handling here
 
             return redirect(url_for("nm.index"))
+
+
+@nm_bp.route("/backup_config/<int:device_id>", methods=["POST"])
+@login_required
+def backup_config(device_id):
+    # get device_id
+    device = DeviceManager.query.get_or_404(device_id)
+
+    if request.method == "POST":
+        # get data device vendor
+        vendor = device.vendor
+
+        # Mikrotik
+        if vendor.lower() == "mikrotik":
+            command = "export compact"
+
+        # Fortinet
+        elif vendor.lower() == "fortinet":
+            command = f"execute backup config sftp backup/backup.conf {SFTP_ADDRESS} {SFTP_USERNAME} {SFTP_PASSWORD}"
         
+        # Cisco
+        elif vendor.lower() == "cisco":
+            command = "show running-config"
+        else:
+            flash("device vendor belum disupport.", "error")
+            return redirect(url_for('nm.index'))
+
+        # kirim perintah backup
+        backup = NetworkManagerUtils(
+            ip_address=device.ip_address,
+            username=device.username,
+            password=device.password,
+            ssh=device.ssh,
+        )
+        # tangkap hasil backup
+        backup_data = backup.backup_config(command)
+
+        # Simpan dan buat file tangkapan hasil backup ke directory backup
+        now = datetime.now()
+        date_time_string = now.strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"{device.vendor}_{date_time_string}backup.txt"
+        filepath = os.path.join(
+                    current_app.static_folder,
+                    "device_backup",
+                    filename,
+                )
+        with open(filepath, 'w') as f:
+            f.write(backup_data)
+
+        flash("Backup berhasil.", "success")
+        return redirect(url_for("nm.index"))

@@ -20,7 +20,10 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 # Cross side request forgery protect
 # csrf = CSRFProtect(app)
 
-
+# sftp server credential
+SFTP_USERNAME = os.getenv('SFTP_USERNAME')
+SFTP_PASSWORD = os.getenv('SFTP_PASSWORD')
+SFTP_ADDRESS = os.getenv('SFTP_ADDRESS')
 # absolut path static directory
 app.static_folder = "static"
 
@@ -28,14 +31,14 @@ app.static_folder = "static"
 network_templates_path = os.path.join(app.static_folder, "network_templates")
 
 
-# # Definisi path untuk basis data SQLite
+# Definisi path untuk basis data SQLite
 database_path = os.path.join(app.root_path, "data", "xnetmanager.db")
 
-# # Konfigurasi SQLAlchemy dengan menonaktifkan fitur "track modifications" dan menentukan URI database.
+# Konfigurasi SQLAlchemy dengan menonaktifkan fitur "track modifications" dan menentukan URI database.
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{database_path}"
 
-# # Inisialisasi SQLAlchemy dan fungsi migrasi
+# Inisialisasi SQLAlchemy dan fungsi migrasi
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
@@ -57,7 +60,7 @@ from .controllers.users import users_bp
 
 app.register_blueprint(users_bp)
 
-# # blueprint controllers device_manager.py
+# blueprint controllers device_manager.py
 from .controllers.device_manager import dm_bp
 
 app.register_blueprint(dm_bp)
@@ -88,14 +91,14 @@ app.register_blueprint(error_bp)
 from .models.users import User
 
 
-# # definisikan fungsi load_user yang digunakan oleh login_manager untuk memuat pengguna
+# definisikan fungsi load_user yang digunakan oleh login_manager untuk memuat pengguna
 @login_manager.user_loader
 def load_user(user_id):
     # Load user by user_id
     return User.query.get(int(user_id))
 
 
-# # Buat basis data jika belum ada
+# Buat basis data jika belum ada
 if not os.path.exists(database_path):
     with app.app_context():
         db.create_all()

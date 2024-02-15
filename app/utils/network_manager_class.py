@@ -122,6 +122,26 @@ class NetworkManagerUtils:
             print("Error:", e)
             return None
 
+    def backup_config(self, command):
+        try:
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_client.connect(
+                hostname=self.ip_address,
+                username=self.username,
+                password=self.password,
+                port=self.ssh,
+            )
+            stdin, stdout, stderr = ssh_client.exec_command(command)
+            backup_data = stdout.read().decode("utf-8")
+            ssh_client.close()
+
+            return backup_data
+
+        except Exception as e:
+            print("Error:", e)
+            return False
+
 
 # Examples
 list = [

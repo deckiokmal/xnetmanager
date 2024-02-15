@@ -16,7 +16,6 @@ from app.models.network_manager import NetworkManager
 from app.utils.network_manager_class import NetworkManagerUtils
 from werkzeug.utils import secure_filename
 import os
-import random
 from datetime import datetime
 
 
