@@ -1,5 +1,5 @@
 {% extends "/layouts/layout.html" %}
-{% block title %}Templates_Manager{% endblock %}
+{% block title %}template_manager{% endblock %}
 {% block content %}
 <!-- Begin Page Content -->
 
@@ -40,13 +40,13 @@
                         {# Pastikan device tidak kosong sebelum mengakses elemen ke-0 #}
                         {% set template_id = template.id%}
                         <div class="input-group flex-nowrap">
-                            <div class="position-relative py-2 px-2">
+                            <div class="position-relative mr-2">
                                 <form action="{{ url_for('tm.template_update', template_id=template_id) }}"
                                     method="get">
                                     <input class="btn btn-success" type="submit" value="Update">
                                 </form>
                             </div>
-                            <div class="position-relative py-2 px-2">
+                            <div class="position-relative mr-2">
                                 <form action="{{ url_for('tm.template_delete', template_id=template_id) }}"
                                     method="post">
                                     <input class="btn btn-danger"
@@ -54,7 +54,7 @@
                                         type="submit" value="Delete">
                                 </form>
                             </div>
-                            <div class="position-relative py-2 px-2">
+                            <div class="position-relative">
                                 <form action="{{ url_for('tm.template_generator', template_id=template_id) }}"
                                     method="post">
                                     <input class="btn btn-primary"

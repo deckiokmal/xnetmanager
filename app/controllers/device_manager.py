@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from functools import wraps
 from app import db
 from app.models.users import User
-from app.models.device_manager import Device_manager
+from app.models.device_manager import DeviceManager
 
 
 # Membuat blueprint users
@@ -47,7 +47,7 @@ def index():
     # Tampilkan all devices per_page 10
     page = request.args.get("page", 1, type=int)
     per_page = 10
-    all_devices = Device_manager.query.paginate(page=page, per_page=per_page)
+    all_devices = DeviceManager.query.paginate(page=page, per_page=per_page)
 
     return render_template("/device_managers/device_manager.html", data=all_devices)
 
@@ -65,8 +65,8 @@ def device_create():
         ssh = request.form["ssh"]
 
         # 1. existing device ip address and device name checking
-        exist_address = Device_manager.query.filter_by(ip_address=ip_address).first()
-        exist_device = Device_manager.query.filter_by(device_name=device_name).first()
+        exist_address = DeviceManager.query.filter_by(ip_address=ip_address).first()
+        exist_device = DeviceManager.query.filter_by(device_name=device_name).first()
         if exist_device or exist_address:
             flash("Device sudah terdaftar!", "error")
 
@@ -80,7 +80,7 @@ def device_create():
 
         # jika error checking null, maka eksekusi device_create
         else:
-            new_device = Device_manager(
+            new_device = DeviceManager(
                 device_name=device_name,
                 vendor=vendor,
                 ip_address=ip_address,
@@ -104,7 +104,7 @@ def device_create():
 def device_update(device_id):
 
     # Get data Device by id
-    device = Device_manager.query.get(device_id)
+    device = DeviceManager.query.get(device_id)
 
     if request.method == "POST":
         new_device_name = request.form["device_name"]
@@ -115,11 +115,11 @@ def device_update(device_id):
         new_ssh = request.form["ssh"]
 
         # Check jika device_name dan ip_address yang dimasukan sudah tersedia dan bukan user saat ini.
-        exist_device = Device_manager.query.filter(
-            Device_manager.device_name == new_device_name, Device_manager.id != device.id
+        exist_device = DeviceManager.query.filter(
+            DeviceManager.device_name == new_device_name, DeviceManager.id != device.id
         ).first()
-        exist_address = Device_manager.query.filter(
-            Device_manager.ip_address == new_ip_address, Device_manager.id != device.id
+        exist_address = DeviceManager.query.filter(
+            DeviceManager.ip_address == new_ip_address, DeviceManager.id != device.id
         ).first()
         if exist_device or exist_address:
             flash("Device name atau IP Address sudah ada. Silahkan masukkan yang lain!", "error")
@@ -153,7 +153,7 @@ def device_update(device_id):
 @dm_bp.route("/device_delete/<int:device_id>", methods=["POST"])
 @login_required
 def device_delete(device_id):
-    device = Device_manager.query.get(device_id)
+    device = DeviceManager.query.get(device_id)
     if not device:
         flash("Device tidak ditemukan.", "error")
         return redirect(url_for("dm.index"))

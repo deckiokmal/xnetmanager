@@ -1,12 +1,12 @@
 {% extends "/layouts/layout.html" %}
-{% block title %}User_update{% endblock %}
+{% block title %}user_update{% endblock %}
 {% block content %}
 <!-- Begin Page Content -->
 
 
 <div class="card position-relative py-2 px-4">
     <div class="card-header">
-        Edit Users
+        User Update
     </div>
     <form action="{{ url_for('users.user_update', user_id=user.id) }}" method="post">
         <div class="mb-3">

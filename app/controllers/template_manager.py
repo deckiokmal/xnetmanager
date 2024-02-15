@@ -11,8 +11,9 @@ from flask_login import login_required, current_user
 from functools import wraps
 from app import db
 from app.models.users import User
-from app.models.network_manager import configTemplates
-from app.utils.network_manager_class import netAuto
+from app.models.template_manager import ConfigTemplate
+from app.models.network_manager import NetworkManager
+from app.utils.network_manager_class import NetworkManagerUtils
 from werkzeug.utils import secure_filename
 import os
 import random
@@ -67,7 +68,7 @@ def templates():
     # Tampilkan all devices per_page 10
     page = request.args.get("page", 1, type=int)
     per_page = 10
-    all_templates = configTemplates.query.paginate(page=page, per_page=per_page)
+    all_templates = ConfigTemplate.query.paginate(page=page, per_page=per_page)
 
     return render_template(
         "/template_managers/template_manager.html", all_templates=all_templates
@@ -144,7 +145,7 @@ def template_upload():
             return redirect(url_for("tm.templates"))
 
         # Simpan data ke dalam database
-        new_template = configTemplates(
+        new_template = ConfigTemplate(
             template_name=template_name,
             parameter_name=parameter_name,
             vendor=vendor,
@@ -163,7 +164,7 @@ def template_upload():
 @login_required
 def template_update(template_id):
     # 1. Dapatkan objek dari database berdasarkan ID
-    template = configTemplates.query.get_or_404(template_id)
+    template = ConfigTemplate.query.get_or_404(template_id)
 
     # Read file J2 template content
     def read_template(filename=template.template_name):
@@ -279,7 +280,7 @@ def template_update(template_id):
 def template_delete(template_id):
 
     # Dapatkan objek dari database berdasarkan ID
-    template = configTemplates.query.get_or_404(template_id)
+    template = ConfigTemplate.query.get_or_404(template_id)
 
     # Hapus file J2 template
     file_path = os.path.join(
@@ -309,7 +310,7 @@ def template_delete(template_id):
 def template_generator(template_id):
 
     # Get template ID
-    template = configTemplates.query.get_or_404(template_id)
+    template = ConfigTemplate.query.get_or_404(template_id)
 
     # Path ke file template Jinja2
     jinja_template_path = os.path.join(
@@ -330,7 +331,7 @@ def template_generator(template_id):
         yaml_params = yaml_params_file.read()
 
     # Render template Jinja2 dengan parameter YAML
-    net_auto = netAuto(ip_address="0.0.0.0", username="none", password="none", ssh=22)
+    net_auto = NetworkManagerUtils(ip_address="0.0.0.0", username="none", password="none", ssh=22)
     rendered_config = net_auto.render_template_config(jinja_template, yaml_params)
 
     if rendered_config:
@@ -343,6 +344,13 @@ def template_generator(template_id):
         # Tulis rendered_config ke file baru
         with open(new_file_path, "w") as new_file:
             new_file.write(rendered_config)
+        
+        # Simpan template generate ke dalam database network_manager
+        new_template_generate = NetworkManager(
+            template_name = newFileName
+        )
+        db.session.add(new_template_generate)
+        db.session.commit()
 
         flash("Template berhasil di-generate.", "success")
     else:

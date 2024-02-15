@@ -1,12 +1,13 @@
 from app import db
 
 
-class configTemplates(db.Model):
-    __tablename__ = "config_templates"
+class NetworkManager(db.Model):
+    __tablename__ = "network_manager"
 
     id = db.Column(db.Integer, primary_key=True)
-    template_name = db.Column(db.String(100), unique=True, nullable=False)
-    parameter_name = db.Column(db.String(100), nullable=False)
-    vendor = db.Column(db.String(100), nullable=False)
-    version = db.Column(db.String(10), nullable=False)
-    info = db.Column(db.Text, nullable=False)
+    template_name = db.Column(db.String(100), nullable=False, unique=True)
+
+    # Mengubah back_populates ke "devices"
+    devices = db.relationship(
+        "DeviceManager", back_populates="network_manager", lazy=True
+    )

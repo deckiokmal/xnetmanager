@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from dotenv import load_dotenv
 from flask_migrate import Migrate
+# from flask_wtf.csrf import CSRFProtect
 
 
 # Load .env file variable
@@ -15,6 +16,10 @@ load_dotenv(dotenv_path)
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
+
+# Cross side request forgery protect
+# csrf = CSRFProtect(app)
+
 
 # absolut path static directory
 app.static_folder = "static"

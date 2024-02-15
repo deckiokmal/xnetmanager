@@ -1,23 +1,20 @@
 from flask import (
     Blueprint,
     render_template,
+    jsonify,
     request,
     redirect,
     url_for,
     flash,
-    jsonify,
     current_app,
 )
 from flask_login import login_required, current_user
 from functools import wraps
-from app import db
 from app.models.users import User
-from app.models.device_manager import Device_manager
-from app.models.network_manager import configTemplates
-from app.utils.network_manager_class import netAuto
-from werkzeug.utils import secure_filename
+from app.models.device_manager import DeviceManager
+from app.models.network_manager import NetworkManager
+from app.utils.network_manager_class import NetworkManagerUtils
 import os
-import random
 
 
 # Membuat blueprint main_bp dan error_bp
@@ -59,108 +56,92 @@ def inject_user():
     return dict(username=None)
 
 
-# Network Manager App Starting
+# Network Manager App Starting ###################################################
 
 
 # Network Manager route
 @nm_bp.route("/nm", methods=["GET"])
 @login_required
 def index():
-    # Tampilkan all devices per_page 10
-    page = request.args.get("page", 1, type=int)
-    per_page = 10
-    all_devices = Device_manager.query.paginate(page=page, per_page=per_page)
+    # Mengambil semua perangkat dan template konfigurasi dari database
+    devices = DeviceManager.query.all()
+    templates = NetworkManager.query.all()
 
-    return render_template("/network_managers/network_manager.html")
-
-
-@nm_bp.route("/send-command", methods=["POST"])
-def send_command():
-    """
-    Route untuk mengirimkan perintah SSH ke perangkat.
-    """
-    data = request.get_json()
-    ip_address = data.get("ip_address")
-    username = data.get("username")
-    password = data.get("password")
-    ssh_port = data.get("ssh_port")
-    command = data.get("command")
-
-    if ip_address and username and password and ssh_port and command:
-        device = netAuto(ip_address, username, password, ssh_port)
-        result = device.send_command(command)
-        if result:
-            return (
-                jsonify({"success": True, "message": "Command sent successfully."}),
-                200,
-            )
-        else:
-            return (
-                jsonify({"success": False, "message": "Failed to send command."}),
-                500,
-            )
-    else:
-        return (
-            jsonify({"success": False, "message": "Missing required parameters."}),
-            400,
-        )
+    return render_template(
+        "/network_managers/network_manager.html", devices=devices, templates=templates
+    )
 
 
-@nm_bp.route("/check-status", methods=["POST"])
+# Check status perangkat
+@nm_bp.route("/check_status", methods=["POST"])
+@login_required
 def check_status():
-    """
-    Route untuk memeriksa status perangkat dengan melakukan ping.
-    """
-    data = request.get_json()
-    ip_address = data.get("ip_address")
+    devices = DeviceManager.query.all()
 
-    if ip_address:
-        device = netAuto(
-            ip_address, "", "", 22
-        )  # Username, password, dan port SSH dapat dikosongkan karena tidak digunakan untuk ping
-        result = device.check_device_status()
-        if result:
-            return jsonify({"success": True, "message": "Device is reachable."}), 200
-        else:
-            return jsonify({"success": False, "message": "Device is unreachable."}), 500
-    else:
-        return (
-            jsonify({"success": False, "message": "Missing required parameters."}),
-            400,
+    device_status = {}
+    for device in devices:
+        check_device_status = NetworkManagerUtils(ip_address=device.ip_address)
+        check_device_status.check_device_status_threaded()
+
+        device_status[device.id] = check_device_status.device_status
+
+    return jsonify(device_status)
+
+
+# Open Console
+@nm_bp.route("/open_console/<int:device_id>", methods=["GET", "POST"])
+@login_required
+def open_console(device_id):
+    device = DeviceManager.query.get_or_404(device_id)
+
+    if request.method == "POST":
+        console = NetworkManagerUtils(ip_address=device.ip_address)
+        console.open_webconsole()
+
+        return redirect(url_for("nm.index"))
+
+
+@nm_bp.route("/push_config/<int:device_id>", methods=["POST"])
+@login_required
+def push_config(device_id):
+    device = DeviceManager.query.get_or_404(device_id)
+    templates = NetworkManager.query.all()  # Use template_id from device
+
+    # Read template content with error handling
+    def read_template(filename):
+        template_path = os.path.join(current_app.static_folder, "network_templates", filename)
+        try:
+            with open(template_path, "r") as file:
+                return file.read()
+        except FileNotFoundError:
+            flash("Error: Template file not found.", "error")
+            return redirect(url_for("nm.index"))  # Redirect on error
+        except Exception as e:
+            flash("Error reading template: " + str(e), "error")
+            return redirect(url_for("nm.index"))  # Redirect on other errors
+
+    if request.method == "POST":
+        config = NetworkManagerUtils(
+            ip_address=device.ip_address,
+            username=device.username,
+            password=device.password,
+            ssh=device.ssh,
         )
 
+        # Get template content using the improved read_template()
+        for template in templates:
+            command = read_template(template.template_name)
 
-@nm_bp.route("/send-command-by-id", methods=["POST"])
-def send_command_by_id():
-    """
-    Route untuk mengirimkan perintah ke perangkat berdasarkan ID perangkat.
-    """
-    data = request.get_json()
-    device_id = data.get("device_id")
-    command = data.get("command")
+        # Check if command was read successfully before proceeding
+        if command:
+            try:
+                config.configure_device(command)
+                flash("Push config successful!", "success")
+                return redirect(url_for('nm.index'))
+            except Exception as e:
+                flash("Error pushing config: " + str(e), "error")
+        else:  # If template read failed, handle the error
+            # You can add more specific error handling here
 
-    if device_id and command:
-        device_list = netAuto.get_device_list_from_database()
-        if device_id <= len(device_list):
-            ip_address, username, password, ssh_port = device_list[
-                device_id - 1
-            ]  # Mengambil info perangkat dari database
-            device = netAuto(ip_address, username, password, ssh_port)
-            result = device.send_command(command)
-            if result:
-                return (
-                    jsonify({"success": True, "message": "Command sent successfully."}),
-                    200,
-                )
-            else:
-                return (
-                    jsonify({"success": False, "message": "Failed to send command."}),
-                    500,
-                )
-        else:
-            return jsonify({"success": False, "message": "Device not found."}), 404
-    else:
-        return (
-            jsonify({"success": False, "message": "Missing required parameters."}),
-            400,
-        )
+            return redirect(url_for("nm.index"))
+        

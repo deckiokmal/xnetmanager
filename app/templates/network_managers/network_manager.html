@@ -3,5 +3,101 @@
 {% block content %}
 <!-- Begin Page Content -->
 
+
+<!-- Tombol untuk memeriksa status -->
+<div class="mb-2">
+    <button id="checkStatusButton" class="btn btn-primary">Check Network Status</button>
+</div>
+<div class="card position-relative py-1 px-4">
+    <div class="card-header">
+        Network Configurations
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover" style="text-align: center;">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col" class="justify-content">No</th>
+                    <th scope="col">Device Name</th>
+                    <th scope="col">IP Address</th>
+                    <th scope="col">Templates</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                {% for device in devices %}
+                <tr>
+                    <th scope="row">{{ loop.index }}</th>
+                    <td>{{ device.device_name }}</td>
+                    <td>{{ device.ip_address }}</td>
+
+                    <td>
+                        <select class="form-select form-select-sm">
+                            <option selected>Pilih template</option>
+                            {% for template in templates %}
+                            <option value="{{ template.id }}">{{ template.template_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <div id="statusIndicator{{ device.id }}" class="status-indicator"></div>
+                    </td>
+                    <td>
+                        <div class="input-group flex-nowrap">
+                            <div class="position-relative mr-2">
+                                <form action="{{ url_for('nm.open_console', device_id=device.id) }}" method="post">
+                                    <input class="btn btn-primary" type="submit" value="WebConsole">
+                                </form>
+                            </div>
+                            <div class="position-relative mr-2">
+                                <form action="{{ url_for('nm.push_config', device_id=device.id) }}" method="post">
+                                    <input class="btn btn-success" type="submit" value="Push Config">
+                                </form>
+                            </div>
+                            <div class="position-relative">
+                                <form action="#" method="post">
+                                    <input class="btn btn-warning" type="submit" value="Backup Config">
+                                </form>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- update status script -->
+<script>
+    document.getElementById("checkStatusButton").addEventListener("click", function () {
+
+        fetch("/check_status", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                Object.keys(data).forEach(deviceId => {
+                    const statusIndicator = document.getElementById("statusIndicator" + deviceId);
+                    statusIndicator.classList.remove("status-indicator-green", "status-indicator-red");
+
+                    if (data[deviceId]) {
+                        statusIndicator.classList.add("status-indicator-green");
+                    } else {
+                        statusIndicator.classList.add("status-indicator-red");
+                    }
+                });
+            })
+            .catch(error => console.error("Error:", error));
+    });
+</script>
+
+
+
 <!-- End of Page Content -->
 {% endblock %}

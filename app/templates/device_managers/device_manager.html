@@ -69,13 +69,13 @@
                             {% set device_id = device.id%}
 
                             <div class="input-group flex-nowrap">
-                                <div class="position-relative py-2 px-2">
+                                <div class="position-relative mr-1">
                                     <form action="{{url_for('dm.device_update', device_id=device_id)}}" method="get">
                                         <input class="btn btn-success" type="submit" value="Edit">
                                     </form>
                                 </div>
 
-                                <div class="position-relative py-2 px-2">
+                                <div class="position-relative ml-1">
                                     <!-- Tombol Remove yang langsung mengarah ke fungsi delete -->
                                     <form action="{{url_for('dm.device_delete', device_id=device_id)}}" method="post">
                                         <input class="btn btn-danger"
