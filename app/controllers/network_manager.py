@@ -16,6 +16,7 @@ from app.models.network_manager import NetworkManager
 from app.utils.network_manager_class import NetworkManagerUtils
 from app import SFTP_USERNAME, SFTP_PASSWORD, SFTP_ADDRESS
 from datetime import datetime
+from app import db
 import os
 
 
@@ -59,6 +60,8 @@ def inject_user():
 
 
 # Network Manager App Starting ###################################################
+GEN_TEMPLATE_FOLDER = "xmanager/gen_templates"
+BACKUP_FOLDER = "xmanager/device_backup"
 
 
 # Network Manager route
@@ -103,6 +106,7 @@ def open_console(device_id):
         return redirect(url_for("nm.index"))
 
 
+# Push Config
 @nm_bp.route("/push_config/<int:device_id>", methods=["POST"])
 @login_required
 def push_config(device_id):
@@ -112,7 +116,7 @@ def push_config(device_id):
     # Read template content with error handling
     def read_template(filename):
         template_path = os.path.join(
-            current_app.static_folder, "network_templates", filename
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
         )
         try:
             with open(template_path, "r") as file:
@@ -148,6 +152,7 @@ def push_config(device_id):
             return redirect(url_for("nm.index"))
 
 
+# Backup Config
 @nm_bp.route("/backup_config/<int:device_id>", methods=["POST"])
 @login_required
 def backup_config(device_id):
@@ -165,13 +170,13 @@ def backup_config(device_id):
         # Fortinet
         elif vendor.lower() == "fortinet":
             command = f"execute backup config sftp backup/backup.conf {SFTP_ADDRESS} {SFTP_USERNAME} {SFTP_PASSWORD}"
-        
+
         # Cisco
         elif vendor.lower() == "cisco":
             command = "show running-config"
         else:
             flash("device vendor belum disupport.", "error")
-            return redirect(url_for('nm.index'))
+            return redirect(url_for("nm.index"))
 
         # kirim perintah backup
         backup = NetworkManagerUtils(
@@ -188,12 +193,112 @@ def backup_config(device_id):
         date_time_string = now.strftime("%Y-%m-%d_%H-%M-%S")
         filename = f"{device.vendor}_{date_time_string}backup.txt"
         filepath = os.path.join(
-                    current_app.static_folder,
-                    "device_backup",
-                    filename,
-                )
-        with open(filepath, 'w') as f:
+            current_app.static_folder,
+            BACKUP_FOLDER,
+            filename,
+        )
+        with open(filepath, "w") as f:
             f.write(backup_data)
 
         flash("Backup berhasil.", "success")
         return redirect(url_for("nm.index"))
+
+# Template view page
+@nm_bp.route("/templates")
+@login_required
+def templates():
+    templates = NetworkManager.query.all()
+
+    return render_template(
+        "/network_managers/templates.html", templates=templates
+    )
+
+
+# Templates update
+@nm_bp.route("/network_template_update/<int:template_id>", methods=["GET", "POST"])
+@login_required
+def network_template_update(template_id):
+    # 1. Dapatkan objek dari database berdasarkan ID
+    template = NetworkManager.query.get_or_404(template_id)
+
+    # Read file template content
+    def read_template(filename=template.template_name):
+        template_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
+        )
+        with open(template_path, "r") as file:
+            template_content = file.read()
+        return template_content
+
+    # 2. kirim hasil baca file ke content textarea update page.
+    template_content = read_template()
+
+    # 4. cek ketika user melakukan submit data dengan method 'POST'
+    if request.method == "POST":
+        new_template_name = request.form["template_name"]
+        new_template_content = request.form["template_content"]
+
+        # 5.1 Update file template_content jika ada perubahan
+        if new_template_content != read_template():
+            template_path = os.path.join(
+                current_app.static_folder, GEN_TEMPLATE_FOLDER, template.template_name
+            )
+            with open(template_path, "w") as file:
+                file.write(new_template_content)
+
+        # 5.2 Update file name jika ada perubahan
+        if new_template_name != template.template_name:
+            # template_path
+            new_path_template = os.path.join(
+                current_app.static_folder, GEN_TEMPLATE_FOLDER, new_template_name
+            )
+
+            # cek filename exsisting, filename tidak boleh sama dengan filename exsisting
+            if os.path.exists(new_path_template):
+                flash("File with the new name already exists.", "error")
+            else:
+                # old_path_template
+                old_path_template = os.path.join(
+                    current_app.static_folder,
+                    GEN_TEMPLATE_FOLDER,
+                    template.template_name,
+                )
+                os.rename(old_path_template, new_path_template)
+                template.template_name = new_template_name
+
+        # 5.3 Update data ke dalam database
+        template.template_name = new_template_name
+
+        db.session.commit()
+        flash("Template update berhasil.", "success")
+        return redirect(url_for("nm.templates"))
+
+    # 3. Tampilkan halaman template_update dengan data file di update page.
+    return render_template(
+        "/network_managers/template_update.html",
+        template=template,
+        template_content=template_content,
+    )
+
+
+# Templates delete
+@nm_bp.route("/network_template_delete/<int:template_id>", methods=["POST"])
+@login_required
+def network_template_delete(template_id):
+
+    # Dapatkan objek dari database berdasarkan ID
+    template = NetworkManager.query.get_or_404(template_id)
+
+    # Hapus file template
+    file_path = os.path.join(
+        current_app.static_folder, GEN_TEMPLATE_FOLDER, str(template.template_name)
+    )
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    # Hapus data dari database
+    db.session.delete(template)
+    db.session.commit()
+
+    # Redirect ke halaman templates
+    return redirect(url_for("nm.templates"))

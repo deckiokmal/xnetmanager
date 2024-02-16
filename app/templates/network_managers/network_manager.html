@@ -4,7 +4,11 @@
 <!-- Begin Page Content -->
 
 
-<!-- Tombol untuk memeriksa status -->
+<div class="d-grid gap-2 d-md-flex justify-content-md-end mb-2">
+    <form action="{{ url_for('nm.templates')}}" method="get">
+        <input class="btn btn-warning" type="submit" value="Manage Templates">
+    </form>
+</div>
 <div class="mb-2 mr-2">
     <button id="checkStatusButton" type="button" class="btn btn-outline-info">Check Status</button>
     <button id="#" type="button" class="btn btn-outline-primary" disabled>Bulk Config</button>

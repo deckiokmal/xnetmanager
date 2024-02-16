@@ -59,6 +59,12 @@ def inject_user():
 
 
 # Network Manager App Starting
+# Upload data template
+RAW_TEMPLATE_FOLDER = "xmanager/raw_templates"
+GEN_TEMPLATE_FOLDER = "xmanager/gen_templates"
+UPLOAD_FOLDER = "network_templates"
+TEMPLE_EXTENSIONS = {"j2"}
+PARAMS_EXTENSIONS = {"yml", "yaml"}
 
 
 # Templates route
@@ -73,12 +79,6 @@ def templates():
     return render_template(
         "/template_managers/template_manager.html", all_templates=all_templates
     )
-
-
-# Upload data template
-UPLOAD_FOLDER = "network_templates"
-TEMPLE_EXTENSIONS = {"j2"}
-PARAMS_EXTENSIONS = {"yml", "yaml"}
 
 
 def allowed_file_temple(filename):
@@ -126,7 +126,7 @@ def template_upload():
         if j2 and allowed_file_temple(j2.filename):
             template_name = secure_filename(j2.filename)
             file_path = os.path.join(
-                current_app.static_folder, UPLOAD_FOLDER, template_name
+                current_app.static_folder, RAW_TEMPLATE_FOLDER, template_name
             )
             j2.save(file_path)
         else:
@@ -137,7 +137,7 @@ def template_upload():
         if yaml and allowed_file_params(yaml.filename):
             parameter_name = secure_filename(yaml.filename)
             file_path = os.path.join(
-                current_app.static_folder, UPLOAD_FOLDER, parameter_name
+                current_app.static_folder, RAW_TEMPLATE_FOLDER, parameter_name
             )
             yaml.save(file_path)
         else:
@@ -169,7 +169,7 @@ def template_update(template_id):
     # Read file J2 template content
     def read_template(filename=template.template_name):
         template_path = os.path.join(
-            current_app.static_folder, "network_templates", filename
+            current_app.static_folder, RAW_TEMPLATE_FOLDER, filename
         )
         with open(template_path, "r") as file:
             template_content = file.read()
@@ -178,7 +178,7 @@ def template_update(template_id):
     # Read file YAML parameter content
     def read_parameter(filename=template.parameter_name):
         parameter_path = os.path.join(
-            current_app.static_folder, "network_templates", filename
+            current_app.static_folder, RAW_TEMPLATE_FOLDER, filename
         )
         with open(parameter_path, "r") as file:
             parameter_content = file.read()
@@ -201,7 +201,7 @@ def template_update(template_id):
         # 5.1 Update file template_content jika ada perubahan
         if new_template_content != read_template():
             template_path = os.path.join(
-                current_app.static_folder, "network_templates", template.template_name
+                current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
             )
             with open(template_path, "w") as file:
                 file.write(new_template_content)
@@ -209,7 +209,7 @@ def template_update(template_id):
         # 5.1 Update file parameter_content jika ada perubahan
         if new_parameter_content != read_parameter():
             parameter_path = os.path.join(
-                current_app.static_folder, "network_templates", template.parameter_name
+                current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
             )
             with open(parameter_path, "w") as file:
                 file.write(new_parameter_content)
@@ -218,7 +218,7 @@ def template_update(template_id):
         if new_template_name != template.template_name:
             # template_path
             new_path_template = os.path.join(
-                current_app.static_folder, "network_templates", new_template_name
+                current_app.static_folder, RAW_TEMPLATE_FOLDER, new_template_name
             )
 
             # cek filename exsisting, filename tidak boleh sama dengan filename exsisting
@@ -228,7 +228,7 @@ def template_update(template_id):
                 # old_path_template
                 old_path_template = os.path.join(
                     current_app.static_folder,
-                    "network_templates",
+                    RAW_TEMPLATE_FOLDER,
                     template.template_name,
                 )
                 os.rename(old_path_template, new_path_template)
@@ -238,7 +238,7 @@ def template_update(template_id):
         if new_parameter_name != template.parameter_name:
             # parameter_path
             new_path_parameter = os.path.join(
-                current_app.static_folder, "network_templates", new_parameter_name
+                current_app.static_folder, RAW_TEMPLATE_FOLDER, new_parameter_name
             )
 
             # cek filename exsisting, filename tidak boleh sama dengan filename exsisting
@@ -248,7 +248,7 @@ def template_update(template_id):
                 # old_path_parameter
                 old_path_parameter = os.path.join(
                     current_app.static_folder,
-                    "network_templates",
+                    RAW_TEMPLATE_FOLDER,
                     template.parameter_name,
                 )
                 os.rename(old_path_parameter, new_path_parameter)
@@ -284,14 +284,14 @@ def template_delete(template_id):
 
     # Hapus file J2 template
     file_path = os.path.join(
-        current_app.static_folder, "network_templates", str(template.template_name)
+        current_app.static_folder, RAW_TEMPLATE_FOLDER, str(template.template_name)
     )
     if os.path.exists(file_path):
         os.remove(file_path)
 
     # Hapus file YAML parameter
     file_path = os.path.join(
-        current_app.static_folder, "network_templates", str(template.parameter_name)
+        current_app.static_folder, RAW_TEMPLATE_FOLDER, str(template.parameter_name)
     )
     if os.path.exists(file_path):
         os.remove(file_path)
@@ -314,12 +314,12 @@ def template_generator(template_id):
 
     # Path ke file template Jinja2
     jinja_template_path = os.path.join(
-        current_app.static_folder, "network_templates", str(template.template_name)
+        current_app.static_folder, RAW_TEMPLATE_FOLDER, str(template.template_name)
     )
 
     # Path ke file parameter YAML
     yaml_params_path = os.path.join(
-        current_app.static_folder, "network_templates", str(template.parameter_name)
+        current_app.static_folder, RAW_TEMPLATE_FOLDER, str(template.parameter_name)
     )
 
     # Baca isi file template Jinja2
@@ -331,7 +331,9 @@ def template_generator(template_id):
         yaml_params = yaml_params_file.read()
 
     # Render template Jinja2 dengan parameter YAML
-    net_auto = NetworkManagerUtils(ip_address="0.0.0.0", username="none", password="none", ssh=22)
+    net_auto = NetworkManagerUtils(
+        ip_address="0.0.0.0", username="none", password="none", ssh=22
+    )
     rendered_config = net_auto.render_template_config(jinja_template, yaml_params)
 
     if rendered_config:
@@ -341,17 +343,15 @@ def template_generator(template_id):
         newFileName = gen_filename + "-" + date_time_string + ".txt"
         # Path ke file baru
         new_file_path = os.path.join(
-            current_app.static_folder, "network_templates", newFileName
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, newFileName
         )
 
         # Tulis rendered_config ke file baru
         with open(new_file_path, "w") as new_file:
             new_file.write(rendered_config)
-        
+
         # Simpan template generate ke dalam database network_manager
-        new_template_generate = NetworkManager(
-            template_name = newFileName
-        )
+        new_template_generate = NetworkManager(template_name=newFileName)
         db.session.add(new_template_generate)
         db.session.commit()
 

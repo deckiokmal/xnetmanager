@@ -1,0 +1,29 @@
+{% extends "/layouts/layout.html" %}
+{% block title %}template_update{% endblock %}
+{% block content %}
+<!-- Begin Page Content -->
+
+
+<div class="card position-relative py-2 px-4">
+    <div class="card-header">
+        Template Update
+    </div>
+    <form action="{{ url_for('nm.network_template_update', template_id=template.id) }}" method="post">
+        <div class="mb-3">
+            <label for="template_name" class="form-label">Template File</label>
+            <input type="text" class="form-control" value="{{ template.template_name }}" id="template_name"
+                name="template_name">
+        </div>
+        <div class="mb-3">
+            <label for="template_content" class="form-label">Template Content</label>
+            <textarea name="template_content" id="template_content" rows="10"
+                class="form-control">{{template_content}}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+        <a class="btn btn-danger" href="{{ url_for('nm.templates') }}">Back</a>
+    </form>
+</div>
+
+
+<!-- End of Page Content -->
+{% endblock %}

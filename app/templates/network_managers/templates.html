@@ -1,0 +1,63 @@
+{% extends "/layouts/layout.html" %}
+{% block title %}network_templates{% endblock %}
+{% block content %}
+<!-- Begin Page Content -->
+
+
+<div class="d-grid gap-2 d-md-flex justify-content-md-end mb-2">
+    <form action="{{ url_for('nm.index')}}" method="get">
+        <input class="btn btn-warning" type="submit" value="Back">
+    </form>
+</div>
+<div class="card position-relative py-1 px-4">
+    <div class="card-header">
+        Templates List
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col" class="justify-content">No</th>
+                    <th scope="col">Template Filename</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for template in templates %}
+                <tr>
+                    <th scope="row">{{ loop.index }}</th>
+                    <td>{{ template.template_name }}</td>
+                    <td>
+                        {% if template %}
+                        {% set template_id = template.id%}
+                        <div class="input-group flex-nowrap">
+                            <div class="position-relative mr-2">
+                                <form action="{{ url_for('nm.network_template_update', template_id=template_id) }}"
+                                    method="get">
+                                    <input class="btn btn-success" type="submit" value="Update">
+                                </form>
+                            </div>
+                            <div class="position-relative mr-2">
+                                <form action="{{ url_for('nm.network_template_delete', template_id=template_id) }}"
+                                    method="post">
+                                    <input class="btn btn-danger"
+                                        onclick="return confirm('Anda yakin ingin menghapus template ini?');"
+                                        type="submit" value="Delete">
+                                </form>
+                            </div>
+                        </div>
+                        {% else %}
+                        {# Handle jika user kosong #}
+                        <span class="text-danger">Data tidak tersedia!</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- End of Page Content -->
+{% endblock %}
