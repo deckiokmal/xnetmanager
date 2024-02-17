@@ -1,4 +1,4 @@
-{% extends "_base.html" %}
+{% extends "/layouts/_base.html" %}
 
 {% block content %}
 
@@ -14,7 +14,7 @@
                             target="_blank">Google Authenticator</a> on your mobile.</li>
                     <li>Set up a new authenticator.</li>
                     <li>Once you have scanned the QR, please click <a
-                            href="{{ url_for('accounts.verify_two_factor_auth') }}">here.</li>
+                            href="{{ url_for('main.verify_two_factor_auth') }}">here.</li>
                 </ul>
                 <div class="text-center">
                     <img src="data:image/png;base64, {{ qr_image }}" alt="Secret Token"
@@ -31,7 +31,7 @@
                 </div>
                 <p class="mt-4 text-center">
                     Once you have scanned the QR, please click <a
-                        href="{{ url_for('accounts.verify_two_factor_auth') }}">here</a>.
+                        href="{{ url_for('main.verify_two_factor_auth') }}">here</a>.
                 </p>
             </form>
         </main>
