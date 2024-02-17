@@ -19,23 +19,6 @@ def page_not_found(error):
     return render_template("/main/404.html"), 404
 
 
-# cek login session. jika user belum memiliki login sesi dan mencoba akses url valid maka kembali ke loginpage.
-def login_required(func):
-    """
-    Decorator untuk memeriksa apakah pengguna sudah login sebelum mengakses halaman tertentu.
-    Jika belum login, pengguna akan diarahkan ke halaman login.
-    """
-
-    @wraps(func)
-    def decorated_view(*args, **kwargs):
-        if not current_user.is_authenticated:
-            flash("You need to login first.", "warning")
-            return redirect(url_for("main.index"))
-        return func(*args, **kwargs)
-
-    return decorated_view
-
-
 # Context processor untuk menambahkan username ke dalam konteks disemua halaman.
 @main_bp.context_processor
 def inject_user():
@@ -46,16 +29,75 @@ def inject_user():
     return dict(username=None)
 
 
+# cek login session. jika user belum memiliki login sesi dan mencoba akses url valid maka kembali ke loginpage.
+def login_required(func):
+    """
+    Decorator untuk memeriksa apakah pengguna sudah login sebelum mengakses halaman tertentu.
+    Jika belum login, pengguna akan diarahkan ke halaman login.
+    """
+
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash("You need to login first.", "error")
+            return redirect(url_for("main.login"))
+        return func(*args, **kwargs)
+
+    return decorated_view
+
+
 # Main APP starting
-HOME_URL = "main.dashboard"
+HOME_URL = "users.dashboard"
 SETUP_2FA_URL = "main.setup_two_factor_auth"
 VERIFY_2FA_URL = "main.verify_two_factor_auth"
 
 
+# Register Page
+@main_bp.route("/register", methods=["GET", "POST"])
+def register():
+    # Jika pengguna sudah terautentikasi, alihkan ke beranda jika 2FA sudah diaktifkan
+    if current_user.is_authenticated:
+        if current_user.is_two_factor_authentication_enabled:
+            flash("You are already registered.", "info")
+            return redirect(url_for(HOME_URL))
+        else:
+            # Jika 2FA belum diaktifkan, arahkan pengguna untuk mengaktifkannya
+            flash(
+                "You have not enabled 2-Factor Authentication. Please enable first to login.",
+                "info",
+            )
+            return redirect(url_for(SETUP_2FA_URL))
+
+    # Validasi form registrasi
+    form = RegisterForm(request.form)
+    if form.validate_on_submit():
+        try:
+            # Buat objek User baru dan simpan ke database
+            user = User(username=form.username.data, password=form.password.data)
+            db.session.add(user)
+            db.session.commit()
+
+            # Autentikasi pengguna setelah registrasi sukses
+            login_user(user)
+            flash(
+                "You are registered. You have to enable 2-Factor Authentication first to login.",
+                "success",
+            )
+
+            # Alihkan pengguna untuk mengatur 2FA setelah registrasi sukses
+            return redirect(url_for(SETUP_2FA_URL))
+        except Exception:
+            # Jika registrasi gagal, batalkan perubahan dan beri pesan kesalahan
+            db.session.rollback()
+            flash("Registration failed. Please try again.", "danger")
+
+    # Render template registrasi dengan form
+    return render_template("/main/register.html", form=form)
+
+
 # Login Page
-@main_bp.route("/")
 @main_bp.route("/login", methods=["GET", "POST"])
-def index():
+def login():
     if current_user.is_authenticated:
         if current_user.is_two_factor_authentication_enabled:
             flash("You are already logged in.", "info")
@@ -84,48 +126,7 @@ def index():
         else:
             flash("Invalid username and/or password.", "danger")
 
-    return render_template("/main/login.html")
-
-
-# Register Page
-@main_bp.route("/register", methods=["GET", "POST"])
-def register():
-    if current_user.is_authenticated:
-        if current_user.is_two_factor_authentication_enabled:
-            flash("You are already registered.", "info")
-            return redirect(url_for(HOME_URL))
-        else:
-            flash(
-                "You have not enabled 2-Factor Authentication. Please enable first to login.",
-                "info",
-            )
-            return redirect(url_for(SETUP_2FA_URL))
-    form = RegisterForm(request.form)
-    if form.validate_on_submit():
-        try:
-            user = User(username=form.username.data, password=form.password.data)
-            db.session.add(user)
-            db.session.commit()
-
-            login_user(user)
-            flash(
-                "You are registered. You have to enable 2-Factor Authentication first to login.",
-                "success",
-            )
-
-            return redirect(url_for(SETUP_2FA_URL))
-        except Exception:
-            db.session.rollback()
-            flash("Registration failed. Please try again.", "danger")
-
-    return render_template("/main/register.html", form=form)
-
-
-# Menampilkan halaman dashboard setelah user login success.
-@main_bp.route("/dashboard")
-@login_required
-def dashboard():
-    return render_template("/main/dashboard.html")
+    return render_template("/main/login.html", form=form)
 
 
 # Log Out
@@ -133,7 +134,7 @@ def dashboard():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for("main.index"))
+    return redirect(url_for("main.login"))
 
 
 @main_bp.route("/setup-2fa")

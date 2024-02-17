@@ -1,30 +1,13 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, session, redirect, url_for, flash
 from flask_login import login_required, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-from src import db
+from src import db, bcrypt
 from src.models.users import User
+from src.utils.forms import RegisterForm
 
 
 # Membuat blueprint users
 users_bp = Blueprint("users", __name__)
-
-
-# cek login session. jika user belum memiliki login sesi dan mencoba akses url valid maka kembali ke loginpage.
-def login_required(func):
-    """
-    Decorator untuk memeriksa apakah pengguna sudah login sebelum mengakses halaman tertentu.
-    Jika belum login, pengguna akan diarahkan ke halaman login.
-    """
-
-    @wraps(func)
-    def decorated_view(*args, **kwargs):
-        if not current_user.is_authenticated:
-            flash("You need to login first.", "warning")
-            return redirect(url_for("main.index"))
-        return func(*args, **kwargs)
-
-    return decorated_view
 
 
 # Context processor untuk menambahkan username ke dalam konteks disemua halaman.
@@ -40,8 +23,15 @@ def inject_user():
 # Users App Starting
 
 
+# Menampilkan halaman dashboard setelah user login success.
+@users_bp.route("/")
+@login_required
+def dashboard():
+    return render_template("/users/dashboard.html")
+
+
 # Users Management Page
-@users_bp.route("/users", methods=["GET"])
+@users_bp.route("/users", methods=["GET", "POST"])
 @login_required
 def index():
     # Tampilkan all users per_page 10
@@ -49,82 +39,74 @@ def index():
     per_page = 10
     all_users = User.query.paginate(page=page, per_page=per_page)
 
-    return render_template("/users/user_manager.html", data=all_users)
-
-
-# Create user
-@users_bp.route("/user_create", methods=["GET", "POST"])
-@login_required
-def user_create():
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-
-        # 1. existing user checking
-        exist_user = User.query.filter_by(username=username).first()
-        if exist_user:
-            flash("User sudah terdaftar!", "error")
-
-        # 2. username dan password field check. - user tidak boleh input data kosong.
-        elif not username or not password:
-            flash("Username dan password tidak boleh kosong!", "error")
-
-        # jika error checking null, maka eksekusi user_create
-        else:
-            new_user = User(
-                username=username,
-                password=generate_password_hash(password, method="pbkdf2:sha256"),
-            )
-            db.session.add(new_user)
+    form = RegisterForm(request.form)
+    if form.validate_on_submit():
+        try:
+            # Buat objek User baru dan simpan ke database
+            user = User(username=form.username.data, password=form.password.data)
+            db.session.add(user)
             db.session.commit()
-            flash("User berhasil dibuat.", "success")
 
-            # kembali ke index
             return redirect(url_for("users.index"))
+        except Exception:
+            # Jika registrasi gagal, batalkan perubahan dan beri pesan kesalahan
+            db.session.rollback()
+            flash("Registration failed. Please try again.", "error")
 
-    return render_template("/users/user_create.html")
+    return render_template("/users/user_manager.html", data=all_users, form=form)
 
 
 # Update user
 @users_bp.route("/user_update/<int:user_id>", methods=["GET", "POST"])
 @login_required
 def user_update(user_id):
-
-    # Get data user by id
+    # Mengambil objek User berdasarkan user_id
     user = User.query.get(user_id)
 
+    # Jika metode request adalah POST, proses update user
     if request.method == "POST":
         new_username = request.form["username"]
-        new_password = request.form["password"]
-        old_password = request.form["old_password"]
+        old_password = request.form["password-input"]
+        new_password = request.form["newpassword-input1"]
+        repeat_new_password = request.form["newpassword-input2"]
 
-        # Check jika username yang dimasukan sudah tersedia dan bukan user saat ini.
+        # Memeriksa apakah username baru sudah ada di database
         exist_user = User.query.filter(
             User.username == new_username, User.id != user.id
         ).first()
         if exist_user:
-            flash("Username sudah ada. Silahkan masukkan username yang lain!", "error")
+            flash("Username already exists. Please choose another username!", "error")
 
-        # Check jika password lama terisi
-        elif not old_password:
-            flash("Old password tidak boleh kosong.", "error")
+        # Memeriksa apakah password lama tidak kosong
+        if not old_password:
+            flash("Password must not be empty.", "error")
             return render_template("/users/user_update.html", user=user)
 
-        elif not check_password_hash(user.password, old_password):
-            flash("Password tidak match!", "error")
+        # Memeriksa apakah password lama benar
+        if not bcrypt.check_password_hash(user.password, old_password):
+            flash("Incorrect password!", "error")
             return render_template("/users/user_update.html", user=user)
         else:
-            # Update the user's username and password
-            user.username = new_username
+            # Memeriksa apakah new_password sama dengan repeat_new_password
+            if new_password != repeat_new_password:
+                flash("New passwords do not match.", "error")
+                return render_template("/users/user_update.html", user=user)
+
+            # Mengupdate password baru jika valid
             if new_password:
-                user.password = generate_password_hash(
-                    new_password, method="pbkdf2:sha256"
+                user.password = bcrypt.generate_password_hash(new_password).decode(
+                    "utf-8"
                 )
 
+            # Mengupdate username dan password baru jika valid
+            user.username = new_username
+
+            # Commit perubahan ke database
             db.session.commit()
             flash("User edited successfully.", "success")
             return redirect(url_for("users.index"))
 
+    # Render halaman update user dengan data user yang akan diupdate
     return render_template("/users/user_update.html", user=user)
 
 
@@ -148,7 +130,7 @@ def user_delete(user_id):
 
 
 # Users profile
-@users_bp.route("/user_profile", methods=["GET","POST"])
+@users_bp.route("/user_profile", methods=["GET", "POST"])
 @login_required
 def user_profile():
     # Get data current user

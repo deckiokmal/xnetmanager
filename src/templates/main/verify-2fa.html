@@ -1,31 +1,29 @@
-{% extends "/layouts/_base.html" %}
+{% extends "/layouts/base.html" %}
+
+{% block bg_content %}
+<div class="col-lg-6 d-none d-lg-block bg-register-image"></div>
+{% endblock %}
+
+{% block head_content %}
+<h1 class="h4 text-gray-900 mb-4">Enter OTP</h1>
+{% endblock %}
 
 {% block content %}
 
-<div class="row">
-    <div class="col-md-4"></div>
-    <div class="col-md-4">
-        <main class="form-signin w-100 m-auto">
-            <form role="form" method="post" action="">
-                {{ form.csrf_token }}
-                <h1 class="h3 mb-3 fw-normal text-center">Enter OTP</h1>
+<form class="user" role="form" method="post" action="">
+    {{ form.csrf_token }}
 
-                <div class="form-floating">
-                    {{ form.otp(placeholder="OTP", class="form-control mb-2") }}
-                    {{ form.otp.label }}
-                    {% if form.otp.errors %}
-                    {% for error in form.otp.errors %}
-                    <div class="alert alert-danger" role="alert">
-                        {{ error }}
-                    </div>
-                    {% endfor %}
-                    {% endif %}
-                </div>
-                <button class="w-100 btn btn-lg btn-primary" type="submit">Verify</button>
-            </form>
-        </main>
+    <div class="form-group">
+        {{ form.otp(placeholder="OTP", class="form-control form-control-user") }}
+        {% if form.otp.errors %}
+        {% for error in form.otp.errors %}
+        <div class="alert alert-danger" role="alert">
+            {{ error }}
+        </div>
+        {% endfor %}
+        {% endif %}
     </div>
-    <div class="col-md-4"></div>
-</div>
+    <button class="btn btn-primary btn-user btn-block" type="submit">Verify</button>
+</form>
 
 {% endblock %}

@@ -3,45 +3,72 @@
 {% block content %}
 <!-- Begin Page Content -->
 
-
-<div class="card position-relative py-2 px-4">
+<div class="card position-relative py-2 px-4" style="max-width: 32rem;">
     <div class="card-header">
         User Update
     </div>
     <form action="{{ url_for('users.user_update', user_id=user.id) }}" method="post">
-        <div class="mb-3">
-            <label for="username" class="form-label">Username</label>
-            <input type="text" class="form-control" value="{{ user.username }}" id="username" name="username">
+        <div class=" password-container mb-3">
+            <div class="mb-3 mt-3">
+                <label for="username" class="small">Username</label>
+                <input type="text" class="form-control" value="{{ user.username }}" id="username" name="username">
+            </div>
+            <div class="password-container mb-3">
+                <label for="password-input" class="small">Password</label>
+                <input type="password" name="password-input" id="password-input" class="form-control" placeholder="Password">
+                <i class="password-toggle fas fa-eye" id="password-toggle"></i>
+            </div>
+            <div class="password-container mb-3">
+                <label for="newpassword-input1" class="small">New Password</label>
+                <input type="password" name="newpassword-input1" id="newpassword-input1" class="form-control" placeholder="Type new password">
+                <i class="password-toggle fas fa-eye" id="newpassword-toggle1"></i>
+            </div>
+            <div class="password-container mb-3">
+                <label for="newpassword-input2" class="small">Retype New Password</label>
+                <input type="password" name="newpassword-input2" id="newpassword-input2" class="form-control" placeholder="Retype new password">
+                <i class="password-toggle fas fa-eye" id="newpassword-toggle2"></i>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+            <a class="btn btn-danger" href="{{ url_for('users.index') }}">Back</a>
         </div>
-        <div class="mb-3">
-            <label for="exampleInputPassword1" class="form-label">Old Password</label>
-            <input type="password" class="form-control" id="old_password" name="old_password">
-        </div>
-        <div class="mb-3">
-            <label for="exampleInputPassword1" class="form-label">New Password</label>
-            <input type="password" class="form-control" id="password" name="password">
-        </div>
-        <div class="mb-3 form-check">
-            <input type="checkbox" class="form-check-input" onclick="showPassword()">
-            <label class="form-check-label" for="exampleCheck1">Show Password</label>
-        </div>
-        <button type="submit" class="btn btn-primary">Submit</button>
-        <a class="btn btn-danger" href="{{ url_for('users.index') }}">Back</a>
     </form>
 </div>
 
-
 <script>
-    function showPassword() {
-        var passwordField = document.getElementById("password");
-        if (passwordField.type === "password") {
-            passwordField.type = "text";
-        } else {
-            passwordField.type = "password";
-        }
-    }
+    const passwordInput = document.getElementById('password-input');
+    const passwordToggle = document.getElementById('password-toggle');
+
+    passwordToggle.addEventListener('click', function () {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        this.classList.toggle('fa-eye-slash');
+        this.classList.toggle('active');
+    });
 </script>
 
+<script>
+    const newpasswordInput1 = document.getElementById('newpassword-input1');
+    const newpasswordToggle1 = document.getElementById('newpassword-toggle1');
+
+    newpasswordToggle1.addEventListener('click', function () {
+        const type = newpasswordInput1.getAttribute('type') === 'password' ? 'text' : 'password';
+        newpasswordInput1.setAttribute('type', type);
+        this.classList.toggle('fa-eye-slash');
+        this.classList.toggle('active');
+    });
+</script>
+
+<script>
+    const newpasswordInput2 = document.getElementById('newpassword-input2');
+    const newpasswordToggle2 = document.getElementById('newpassword-toggle2');
+
+    newpasswordToggle2.addEventListener('click', function () {
+        const type = newpasswordInput2.getAttribute('type') === 'password' ? 'text' : 'password';
+        newpasswordInput2.setAttribute('type', type);
+        this.classList.toggle('fa-eye-slash');
+        this.classList.toggle('active');
+    });
+</script>
 
 <!-- End of Page Content -->
 {% endblock %}
