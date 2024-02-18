@@ -1,0 +1,161 @@
+{% extends "/layouts/layout.html" %}
+{% block title %}role_user{% endblock %}
+{% block content %}
+<!-- Begin Page Content -->
+
+
+<div class="d-grid gap-2 d-md-flex justify-content-md-end mb-2">
+    <!-- Tombol untuk menampilkan modal -->
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#rolecreateModal">
+        Create Role
+    </button>
+    <!-- Tombol untuk menampilkan modal -->
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserToRoleModal">
+        Tambah User ke Role
+    </button>
+</div>
+
+<div class="card position-relative px-4">
+    <div class="card-header">
+        Role Management
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col" class="justify-content">No</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">User</th>
+                    <th scope="col">Permissions</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody class="position-relative py-2 px-4">
+
+                {% for role in all_role %}
+                <tr>
+                    <th scope="row">{{ loop.index }}</th>
+                    <td>
+                        <div class="text-wrap">
+                            {{ role.name }}
+                        </div>
+                    </td>
+                    <td>
+                        {% for user in role.users %}
+                        {{ user.username }}<br>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {{ role.permissions }}
+                    </td>
+                    <td>
+                        <div class="input-group flex-nowrap">
+
+                            <div class="position-relative mr-1">
+                                <form action="{{url_for('users.role_update', role_id=role.id)}}" method="get">
+                                    <input class="btn btn-success" type="submit" value="Edit">
+                                </form>
+                            </div>
+
+                            <div class="position-relative ml-1">
+                                <form action="{{url_for('users.role_delete', role_id=role.id)}}" method="post">
+                                    <input class="btn btn-danger"
+                                        onclick="return confirm('Anda yakin ingin menghapus role ini?');" type="submit"
+                                        value="Delete">
+                                </form>
+                            </div>
+
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- create device Modal -->
+<div class="modal fade" id="rolecreateModal" tabindex="-1" aria-labelledby="rolecreateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rolecreateModalLabel">
+                    Tambah Role Baru
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" enctype="multipart/form-data" action="{{url_for('users.create_role')}}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nama Role</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="permissions" class="form-label">Permissions</label>
+                        <input type="text" class="form-control" id="permissions" name="permissions" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        Create
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal -->
+<div class="modal fade" id="addUserToRoleModal" tabindex="-1" aria-labelledby="addUserToRoleModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addUserToRoleModalLabel">Tambah User ke Role</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addUserToRoleForm">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="role_name" class="form-label">Role Name</label>
+                        <input type="text" class="form-control" id="role_name" name="role_name" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="addUserToRole()">Tambah</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    function addUserToRole() {
+        $.ajax({
+            url: "/add_user_to_role",
+            method: "POST",
+            data: $("#addUserToRoleForm").serialize(),
+            success: function(response) {
+                if (response.status === "success") {
+                    alert(response.message);
+                    window.location.href = "{{ url_for('users.roles') }}"; // Redirect ke halaman users.roles
+                } else {
+                    alert(response.message);
+                }
+            },
+            error: function() {
+                alert("Terjadi kesalahan saat menambahkan user ke role.");
+            }
+        });
+    }
+</script>
+
+
+
+<!-- End of Page Content -->
+{% endblock %}

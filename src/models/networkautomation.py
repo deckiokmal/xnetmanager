@@ -6,11 +6,11 @@ class DeviceManager(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     device_name = db.Column(db.String(100), unique=True, nullable=False)
-    vendor = db.Column(db.String(100), unique=True, nullable=False)
+    vendor = db.Column(db.String(100), nullable=False)
     ip_address = db.Column(db.String(20), unique=True, nullable=False)
-    username = db.Column(db.String(100), unique=True, nullable=False)
+    username = db.Column(db.String(100), nullable=False)
     password = db.Column(db.String(100), nullable=False)
-    ssh = db.Column(db.String(5), unique=True, nullable=False)
+    ssh = db.Column(db.String(5), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
 
 
@@ -19,7 +19,7 @@ class ConfigTemplate(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     template_name = db.Column(db.String(100), unique=True, nullable=False)
-    parameter_name = db.Column(db.String(100), nullable=False)
+    parameter_name = db.Column(db.String(100), unique=True, nullable=False)
     vendor = db.Column(db.String(100), nullable=False)
     version = db.Column(db.String(10), nullable=False)
     info = db.Column(db.Text, nullable=False)

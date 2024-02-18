@@ -1,8 +1,18 @@
-from flask import Blueprint, render_template, request, session, redirect, url_for, flash
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    session,
+    redirect,
+    url_for,
+    flash,
+    abort,
+    jsonify,
+)
 from flask_login import login_required, current_user
 from functools import wraps
 from src import db, bcrypt
-from src.models.users import User
+from src.models.users import User, Role
 from src.utils.forms import RegisterForm
 
 
@@ -20,13 +30,15 @@ def inject_user():
     return dict(username=None)
 
 
+# Decorator untuk user yang belum login
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            flash('You need to login first', 'info')
-            return redirect(url_for('main.login'))
+            flash("You need to login first", "info")
+            return redirect(url_for("main.login"))
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -42,13 +54,14 @@ def dashboard():
 
 # Users Management Page
 @users_bp.route("/users", methods=["GET", "POST"])
-@login_required
+
 def index():
     # Tampilkan all users per_page 10
     page = request.args.get("page", 1, type=int)
     per_page = 10
     all_users = User.query.paginate(page=page, per_page=per_page)
 
+    # Modal Form Create users
     form = RegisterForm(request.form)
     if form.validate_on_submit():
         try:
@@ -148,3 +161,126 @@ def user_profile():
     user = User.query.get(user_id)
 
     return render_template("/users/user_profile.html", user=user)
+
+
+# Users Role Page
+@users_bp.route("/user_role", methods=["GET", "POST"])
+@login_required
+def roles():
+    # Tampilkan all user role per_page 10
+    page = request.args.get("page", 1, type=int)
+    per_page = 10
+    all_role = Role.query.paginate(page=page, per_page=per_page)
+
+    return render_template("/users/role_users.html", all_role=all_role)
+
+
+# Create device
+@users_bp.route("/create_role", methods=["GET", "POST"])
+@login_required
+def create_role():
+    if request.method == "POST":
+        role_name = request.form["name"]
+        role_permissions = request.form["permissions"]
+
+        # 1. existing role name check
+        exist_role = Role.query.filter_by(name=role_name).first()
+        if exist_role:
+            flash("Role sudah ada!", "error")
+
+        # 2. name dan permissions field check. - user tidak boleh input data kosong.
+        elif not role_name or not role_permissions:
+            flash("role name dan permissions tidak boleh kosong!", "warning")
+
+        # jika error checking null, maka eksekusi create_role
+        else:
+            new_role = Role(
+                name=role_name,
+                permissions=role_permissions,
+            )
+            db.session.add(new_role)
+            db.session.commit()
+            flash("Role berhasil ditambah!", "success")
+
+            # kembali ke index
+            return redirect(url_for("users.roles"))
+
+    return redirect(url_for("users.roles"))
+
+
+# Role Update
+@users_bp.route("/role_update/<int:role_id>", methods=["GET", "POST"])
+@login_required
+def role_update(role_id):
+    # Mengambil objek Role berdasarkan role_id
+    role = Role.query.get(role_id)
+
+    # Jika metode request adalah POST, proses update role
+    if request.method == "POST":
+        role_name = request.form["name"]
+        role_permissions = request.form["permissions"]
+
+        # 1. existing role name check
+        exist_role = Role.query.filter(
+            Role.id != role.id, Role.name == role_name
+        ).first()
+        if exist_role:
+            flash("Role dengan nama tersebut sudah ada!", "error")
+        else:
+            # Mengupdate data role name
+            role.name = role_name
+            role.permissions = role_permissions
+
+            # Commit perubahan ke database
+            db.session.commit()
+            flash("Role berhasil diubah.", "success")
+            return redirect(url_for("users.roles"))
+
+    # Render halaman update user dengan data user yang akan diupdate
+    return render_template("/users/role_update.html", role=role)
+
+
+# Role Delete
+@users_bp.route("/role_delete/<int:role_id>", methods=["POST"])
+@login_required
+def role_delete(role_id):
+    role = Role.query.get_or_404(role_id)
+
+    if role.users.count() > 0:
+        flash(
+            "Role tidak dapat dihapus karena masih terasosiasi dengan pengguna.",
+            "warning",
+        )
+        return redirect(url_for("users.roles"))
+
+    db.session.delete(role)
+    db.session.commit()
+    flash("Role berhasil dihapus.", "success")
+    return redirect(url_for("users.roles"))
+
+
+@users_bp.route("/add_user_to_role", methods=["POST"])
+@login_required
+def add_user_to_role():
+    if request.method == "POST":
+        username = request.form["username"]
+        role_name = request.form["role_name"]
+
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            return jsonify({"status": "error", "message": "User not found"})
+
+        role = Role.query.filter_by(name=role_name).first()
+        if not role:
+            return jsonify({"status": "error", "message": "Role not found"})
+
+        user.role = role
+        db.session.commit()
+        return jsonify(
+            {
+                "status": "success",
+                "message": f"User {username} berhasil ditambahkan ke role {role_name}.",
+            }
+        )
+
+    return jsonify({"status": "error", "message": "Invalid request"})

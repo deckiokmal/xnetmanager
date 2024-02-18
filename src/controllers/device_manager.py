@@ -88,7 +88,7 @@ def device_create():
             # kembali ke index
             return redirect(url_for("dm.index"))
 
-    return render_template("/device_managers/device_create.html")
+    return redirect(url_for("dm.index"))
 
 
 # Update device
