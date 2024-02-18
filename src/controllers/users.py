@@ -20,6 +20,16 @@ def inject_user():
     return dict(username=None)
 
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash('You need to login first', 'info')
+            return redirect(url_for('main.login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 # Users App Starting
 
 

@@ -30,21 +30,14 @@ def page_not_found(error):
     return render_template("/main/404.html"), 404
 
 
-# cek login session. jika user belum memiliki login sesi dan mencoba akses url valid maka kembali ke loginpage.
-def login_required(func):
-    """
-    Decorator untuk memeriksa apakah pengguna sudah login sebelum mengakses halaman tertentu.
-    Jika belum login, pengguna akan diarahkan ke halaman login.
-    """
-
-    @wraps(func)
-    def decorated_view(*args, **kwargs):
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            flash("You need to login first.", "warning")
-            return redirect(url_for("main.index"))
-        return func(*args, **kwargs)
-
-    return decorated_view
+            flash('You need to login first', 'info')
+            return redirect(url_for('main.login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 # Context processor untuk menambahkan username ke dalam konteks disemua halaman.

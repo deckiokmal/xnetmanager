@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_user, logout_user, current_user, login_required
 from src import db, bcrypt
 from src.models.users import User
@@ -29,21 +29,14 @@ def inject_user():
     return dict(username=None)
 
 
-# cek login session. jika user belum memiliki login sesi dan mencoba akses url valid maka kembali ke loginpage.
-def login_required(func):
-    """
-    Decorator untuk memeriksa apakah pengguna sudah login sebelum mengakses halaman tertentu.
-    Jika belum login, pengguna akan diarahkan ke halaman login.
-    """
-
-    @wraps(func)
-    def decorated_view(*args, **kwargs):
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            flash("You need to login first.", "error")
-            return redirect(url_for("main.login"))
-        return func(*args, **kwargs)
-
-    return decorated_view
+            flash('You need to login first', 'info')
+            return redirect(url_for('main.login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 # Main APP starting
@@ -122,9 +115,9 @@ def login():
                 return redirect(url_for(SETUP_2FA_URL))
             return redirect(url_for(VERIFY_2FA_URL))
         elif not user:
-            flash("You are not registered. Please register.", "danger")
+            flash("You are not registered. Please register.", "error")
         else:
-            flash("Invalid username and/or password.", "danger")
+            flash("Invalid username and/or password.", "error")
 
     return render_template("/main/login.html", form=form)
 
@@ -134,6 +127,7 @@ def login():
 @login_required
 def logout():
     logout_user()
+    session.pop("authenticated", None)
     return redirect(url_for("main.login"))
 
 
