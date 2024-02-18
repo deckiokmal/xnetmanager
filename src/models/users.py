@@ -38,6 +38,15 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return f"<user {self.username}>"
+    
+    def has_role(self, role):
+        return bool(
+            Role.query
+            .join(Role.users)
+            .filter(User.id == self.id)
+            .filter(Role.name == role)
+            .count() > 0
+        )
 
 
 class Role(db.Model):

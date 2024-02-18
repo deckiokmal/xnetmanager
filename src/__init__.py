@@ -5,6 +5,7 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from dotenv import load_dotenv
+from flask_jwt_extended import JWTManager
 
 
 # Load .env file variable
@@ -13,6 +14,8 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config.from_object(config("APP_SETTINGS"))
+app.config['JWT_SECRET_KEY'] = 'asdfasdfaweradfadt5234adsfa324radf234'
+app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 
 # Flask_Login LoginManager handler
 login_manager = LoginManager()
@@ -21,6 +24,7 @@ bcrypt = Bcrypt(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 login_manager.login_view = "main.login"
+jwt = JWTManager(app)
 
 
 # Registrasi blueprint controller dibawah ini
