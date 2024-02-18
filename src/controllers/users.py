@@ -12,7 +12,7 @@ from flask import (
 from flask_login import login_required, current_user
 from functools import wraps
 from src import db, bcrypt
-from src.models.users import User, Role
+from src.models.users import User, Role, User_role
 from src.utils.forms import RegisterForm
 
 
@@ -54,7 +54,6 @@ def dashboard():
 
 # Users Management Page
 @users_bp.route("/users", methods=["GET", "POST"])
-
 def index():
     # Tampilkan all users per_page 10
     page = request.args.get("page", 1, type=int)
@@ -175,7 +174,7 @@ def roles():
     return render_template("/users/role_users.html", all_role=all_role)
 
 
-# Create device
+# Create role
 @users_bp.route("/create_role", methods=["GET", "POST"])
 @login_required
 def create_role():
@@ -246,7 +245,7 @@ def role_update(role_id):
 def role_delete(role_id):
     role = Role.query.get_or_404(role_id)
 
-    if role.users.count() > 0:
+    if role.users.count(role.users) > 0:
         flash(
             "Role tidak dapat dihapus karena masih terasosiasi dengan pengguna.",
             "warning",
@@ -259,6 +258,7 @@ def role_delete(role_id):
     return redirect(url_for("users.roles"))
 
 
+# tambah user to role
 @users_bp.route("/add_user_to_role", methods=["POST"])
 @login_required
 def add_user_to_role():
@@ -274,8 +274,10 @@ def add_user_to_role():
         if not role:
             return jsonify({"status": "error", "message": "Role not found"})
 
-        user.role = role
+        user_role = User_role(user_id=user.id, role_id=role.id)
+        db.session.add(user_role)
         db.session.commit()
+
         return jsonify(
             {
                 "status": "success",
@@ -284,3 +286,4 @@ def add_user_to_role():
         )
 
     return jsonify({"status": "error", "message": "Invalid request"})
+

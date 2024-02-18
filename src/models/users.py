@@ -1,4 +1,5 @@
 from datetime import datetime
+from sqlite3 import IntegrityError
 from flask_login import UserMixin
 import pyotp
 from src import bcrypt, db
@@ -17,7 +18,8 @@ class User(UserMixin, db.Model):
         db.Boolean, nullable=False, default=False
     )
     secret_token = db.Column(db.String, unique=True)
-    role_id = db.Column(db.Integer, db.ForeignKey("role.id"))
+
+    roles = db.relationship("Role", secondary="user_roles", back_populates="users")
 
     def __init__(self, username, password):
         self.username = username
@@ -39,10 +41,14 @@ class User(UserMixin, db.Model):
 
 
 class Role(db.Model):
+
+    __tablename__ = "roles"
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
     permissions = db.Column(db.String(255), nullable=False)
-    users = db.relationship("User", backref="role", lazy="dynamic")
+
+    users = db.relationship("User", secondary="user_roles", back_populates="roles")
 
     def has_permission(self, permission):
         if self.permissions:
@@ -51,3 +57,11 @@ class Role(db.Model):
 
     def __repr__(self):
         return "<Role {}>".format(self.name)
+
+
+class User_role(db.Model):
+
+    __tablename__ = "user_roles"
+
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), primary_key=True)
