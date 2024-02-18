@@ -106,7 +106,7 @@ def template_upload():
 
         # Cek apakah semua kolom telah diisi
         if not vendor or not version or not info:
-            flash("Data tidak boleh kosong!", "error")
+            flash("Data tidak boleh kosong!", "info")
             return redirect(request.url)
 
         # Cek apakah file dipilih
@@ -215,7 +215,7 @@ def template_update(template_id):
 
             # cek filename exsisting, filename tidak boleh sama dengan filename exsisting
             if os.path.exists(new_path_template):
-                flash("File with the new name already exists.", "error")
+                flash("File with the new name already exists.", "info")
             else:
                 # old_path_template
                 old_path_template = os.path.join(
@@ -235,7 +235,7 @@ def template_update(template_id):
 
             # cek filename exsisting, filename tidak boleh sama dengan filename exsisting
             if os.path.exists(new_path_parameter):
-                flash("File with the new name already exists.", "error")
+                flash("File with the new name already exists.", "info")
             else:
                 # old_path_parameter
                 old_path_parameter = os.path.join(

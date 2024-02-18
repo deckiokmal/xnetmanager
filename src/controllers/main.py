@@ -57,7 +57,7 @@ def register():
             # Jika 2FA belum diaktifkan, arahkan pengguna untuk mengaktifkannya
             flash(
                 "You have not enabled 2-Factor Authentication. Please enable first to login.",
-                "info",
+                "warning",
             )
             return redirect(url_for(SETUP_2FA_URL))
 
@@ -82,7 +82,7 @@ def register():
         except Exception:
             # Jika registrasi gagal, batalkan perubahan dan beri pesan kesalahan
             db.session.rollback()
-            flash("Registration failed. Please try again.", "danger")
+            flash("Registration failed. Please try again.", "error")
 
     # Render template registrasi dengan form
     return render_template("/main/register.html", form=form)
@@ -93,12 +93,12 @@ def register():
 def login():
     if current_user.is_authenticated:
         if current_user.is_two_factor_authentication_enabled:
-            flash("You are already logged in.", "info")
+            flash("You are already logged in.", "success")
             return redirect(url_for(HOME_URL))
         else:
             flash(
                 "You have not enabled 2-Factor Authentication. Please enable first to login.",
-                "info",
+                "warning",
             )
             return redirect(url_for(SETUP_2FA_URL))
 
@@ -110,7 +110,7 @@ def login():
             if not current_user.is_two_factor_authentication_enabled:
                 flash(
                     "You have not enabled 2-Factor Authentication. Please enable first to login.",
-                    "info",
+                    "warning",
                 )
                 return redirect(url_for(SETUP_2FA_URL))
             return redirect(url_for(VERIFY_2FA_URL))
@@ -159,16 +159,16 @@ def verify_two_factor_auth():
                     return redirect(url_for(HOME_URL))
                 except Exception:
                     db.session.rollback()
-                    flash("2FA setup failed. Please try again.", "danger")
+                    flash("2FA setup failed. Please try again.", "error")
                     return redirect(url_for(VERIFY_2FA_URL))
         else:
-            flash("Invalid OTP. Please try again.", "danger")
+            flash("Invalid OTP. Please try again.", "error")
             return redirect(url_for(VERIFY_2FA_URL))
     else:
         if not current_user.is_two_factor_authentication_enabled:
             flash(
                 "You have not enabled 2-Factor Authentication. Please enable it first.",
-                "info",
+                "warning",
             )
         return render_template("main/verify-2fa.html", form=form)
 

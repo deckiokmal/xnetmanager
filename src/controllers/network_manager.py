@@ -116,7 +116,7 @@ def push_config(device_id):
             with open(template_path, "r") as file:
                 return file.read()
         except FileNotFoundError:
-            flash("Error: Template file not found.", "error")
+            flash("Error: Template file not found.", "info")
             return redirect(url_for("nm.index"))  # Redirect on error
         except Exception as e:
             flash("Error reading template: " + str(e), "error")
@@ -249,7 +249,7 @@ def network_template_update(template_id):
 
             # cek filename exsisting, filename tidak boleh sama dengan filename exsisting
             if os.path.exists(new_path_template):
-                flash("File with the new name already exists.", "error")
+                flash("File with the new name already exists.", "info")
             else:
                 # old_path_template
                 old_path_template = os.path.join(

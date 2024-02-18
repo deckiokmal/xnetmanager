@@ -85,7 +85,7 @@ def user_update(user_id):
             User.username == new_username, User.id != user.id
         ).first()
         if exist_user:
-            flash("Username already exists. Please choose another username!", "error")
+            flash("Username already exists. Please choose another username!", "info")
 
         # Memeriksa apakah password lama tidak kosong
         if not old_password:
@@ -125,12 +125,12 @@ def user_update(user_id):
 @login_required
 def user_delete(user_id):
     if current_user.id == user_id:
-        flash("Anda tidak bisa delete akun anda sendiri.", "error")
+        flash("Anda tidak bisa delete akun anda sendiri.", "warning")
         return redirect(url_for("users.index"))
 
     user = User.query.get(user_id)
     if not user:
-        flash("User tidak ditemukan.", "error")
+        flash("User tidak ditemukan.", "info")
         return redirect(url_for("users.index"))
 
     db.session.delete(user)

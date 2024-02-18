@@ -61,11 +61,11 @@ def device_create():
         exist_address = DeviceManager.query.filter_by(ip_address=ip_address).first()
         exist_device = DeviceManager.query.filter_by(device_name=device_name).first()
         if exist_device or exist_address:
-            flash("Device sudah terdaftar!", "error")
+            flash("Device sudah terdaftar!", "info")
 
         # 2. username dan password field check. - user tidak boleh input data kosong.
         elif not username or not password or not ssh:
-            flash("Username, password dan ssh tidak boleh kosong!", "error")
+            flash("Username, password dan ssh tidak boleh kosong!", "info")
 
         # 3. periksa ssh dengan isdigit()
         elif not ssh.isdigit():
@@ -119,7 +119,7 @@ def device_update(device_id):
 
         # Check jika username, password dan ssh kosong
         elif not new_username or not new_password or not new_ssh:
-            flash("username, password dan ssh tidak boleh kosong.", "error")
+            flash("username, password dan ssh tidak boleh kosong.", "info")
             return render_template("/device_managers/device_update.html", device=device)
         
         # 3. periksa ssh dengan isdigit()
@@ -148,7 +148,7 @@ def device_update(device_id):
 def device_delete(device_id):
     device = DeviceManager.query.get(device_id)
     if not device:
-        flash("Device tidak ditemukan.", "error")
+        flash("Device tidak ditemukan.", "info")
         return redirect(url_for("dm.index"))
 
     db.session.delete(device)
