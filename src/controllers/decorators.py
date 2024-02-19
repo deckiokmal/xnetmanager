@@ -1,21 +1,40 @@
 from functools import wraps
-from flask import make_response
+from flask import flash, redirect, request, url_for
+from flask_login import current_user
 
-from flask_jwt_extended import get_current_user
+
+# Decorator untuk user yang belum login
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash("You need to login first", "info")
+            return redirect(url_for("main.login"))
+        return f(*args, **kwargs)
+
+    return decorated_function
 
 
-def auth_role(role):
-    def wrapper(fn):
-        @wraps(fn)
-        def decorator(*args, **kwargs):
-            current_user = get_current_user()
-            roles = role if isinstance(role, list) else [role]
-            if all(not current_user.has_role(r) for r in roles):
-                return make_response(
-                    {"msg": f"Missing any of roles {','.join(roles)}"}, 403
-                )
-            return fn(*args, **kwargs)
+# Decorator Role Based Access Control menggunakan flask session.
+def role_required(role_name, page):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if current_user.is_authenticated:
+                user_roles = [role.name for role in current_user.roles]
+                if role_name not in user_roles:
+                    flash(
+                        f"Access Denied. You do not have permission to access the {page}!",
+                        "error",
+                    )
+                    # Menyimpan URL referer sebelum redirect
+                    return redirect(request.referrer or url_for("users.dashboard"))
+            else:
+                flash("You need to login first.", "danger")
+                return redirect(url_for("login"))
 
-        return decorator
+            return f(*args, **kwargs)
 
-    return wrapper
+        return decorated_function
+
+    return decorator

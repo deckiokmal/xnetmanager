@@ -2,24 +2,28 @@ from flask import (
     Blueprint,
     render_template,
     request,
-    session,
     redirect,
     url_for,
     flash,
-    abort,
     jsonify,
 )
 from flask_login import login_required, current_user
-from functools import wraps
 from src import db, bcrypt
 from src.models.users import User, Role, User_role
 from src.utils.forms import RegisterForm
-from .decorators import auth_role
-from flask_jwt_extended import jwt_required
+from .decorators import login_required, role_required
 
 
 # Membuat blueprint users
 users_bp = Blueprint("users", __name__)
+error_bp = Blueprint("error", __name__)
+error_bp = Blueprint("error_handlers", __name__)
+
+
+# Manangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
+@error_bp.app_errorhandler(404)
+def page_not_found(error):
+    return render_template("/main/404.html"), 404
 
 
 # Context processor untuk menambahkan username ke dalam konteks disemua halaman.
@@ -30,18 +34,6 @@ def inject_user():
         user = User.query.get(user_id)
         return dict(username=user.username)
     return dict(username=None)
-
-
-# Decorator untuk user yang belum login
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated:
-            flash("You need to login first", "info")
-            return redirect(url_for("main.login"))
-        return f(*args, **kwargs)
-
-    return decorated_function
 
 
 # Users App Starting
@@ -57,6 +49,7 @@ def dashboard():
 # Users Management Page
 @users_bp.route("/users", methods=["GET", "POST"])
 @login_required
+@role_required("Admin", "users")
 def index():
     # Tampilkan all users per_page 10
     page = request.args.get("page", 1, type=int)
@@ -138,6 +131,7 @@ def user_update(user_id):
 # Delete user
 @users_bp.route("/user_delete/<int:user_id>", methods=["POST"])
 @login_required
+@role_required("Admin", "user_delete")
 def user_delete(user_id):
     if current_user.id == user_id:
         flash("Anda tidak bisa delete akun anda sendiri.", "warning")
@@ -168,6 +162,7 @@ def user_profile():
 # Users Role Page
 @users_bp.route("/user_role", methods=["GET", "POST"])
 @login_required
+@role_required("Admin", "user_role")
 def roles():
     # Tampilkan all user role per_page 10
     page = request.args.get("page", 1, type=int)
@@ -180,6 +175,7 @@ def roles():
 # Create role
 @users_bp.route("/create_role", methods=["GET", "POST"])
 @login_required
+@role_required("Admin", "create_role")
 def create_role():
     if request.method == "POST":
         role_name = request.form["name"]
@@ -213,6 +209,7 @@ def create_role():
 # Role Update
 @users_bp.route("/role_update/<int:role_id>", methods=["GET", "POST"])
 @login_required
+@role_required("Admin", "role_update")
 def role_update(role_id):
     # Mengambil objek Role berdasarkan role_id
     role = Role.query.get(role_id)
@@ -245,6 +242,7 @@ def role_update(role_id):
 # Role Delete
 @users_bp.route("/role_delete/<int:role_id>", methods=["POST"])
 @login_required
+@role_required("Admin", "role_delete")
 def role_delete(role_id):
     role = Role.query.get_or_404(role_id)
 
@@ -264,6 +262,7 @@ def role_delete(role_id):
 # tambah user to role
 @users_bp.route("/add_user_to_role", methods=["POST"])
 @login_required
+@role_required("Admin", "add_user_to_role")
 def add_user_to_role():
     if request.method == "POST":
         username = request.form["username"]
@@ -289,4 +288,3 @@ def add_user_to_role():
         )
 
     return jsonify({"status": "error", "message": "Invalid request"})
-
