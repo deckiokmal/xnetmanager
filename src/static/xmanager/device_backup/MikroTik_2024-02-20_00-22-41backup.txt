@@ -1,4 +1,4 @@
-# 2024-02-18 00:09:50 by RouterOS 7.13.3
+# 2024-02-20 00:22:38 by RouterOS 7.13.3
 # software id = 
 #
 /interface ethernet
@@ -23,7 +23,7 @@ set api-ssl disabled=yes
 /system clock
 set time-zone-name=Asia/Jakarta
 /system identity
-set name=CHR-DC1
+set name="router dc"
 /system note
 set show-at-login=no
 /tool netwatch
