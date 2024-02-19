@@ -11,4 +11,8 @@ Flask-Migrate==4.0.5
 paramiko==3.4.0
 PyYAML==6.0.1
 Flask-WTF==1.2.1
+<<<<<<< HEAD
 flask-principal==0.4.0
+=======
+werkzeug>=2.3.8 # not directly required, pinned by Snyk to avoid a vulnerability
+>>>>>>> 0ec1bdbd25a80cebc1da29230437b5bdbfc214e3
