@@ -2,20 +2,16 @@ from flask import (
     Blueprint,
     render_template,
     request,
-    session,
     redirect,
     url_for,
     flash,
-    abort,
     jsonify,
 )
 from flask_login import login_required, current_user
-from functools import wraps
 from src import db, bcrypt
 from src.models.users import User, Role, User_role
 from src.utils.forms import RegisterForm
-from .decorators import auth_role
-from flask_jwt_extended import jwt_required
+from .decorators import login_required, role_required
 
 
 # Membuat blueprint users
@@ -32,18 +28,6 @@ def inject_user():
     return dict(username=None)
 
 
-# Decorator untuk user yang belum login
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated:
-            flash("You need to login first", "info")
-            return redirect(url_for("main.login"))
-        return f(*args, **kwargs)
-
-    return decorated_function
-
-
 # Users App Starting
 
 
@@ -57,6 +41,7 @@ def dashboard():
 # Users Management Page
 @users_bp.route("/users", methods=["GET", "POST"])
 @login_required
+@role_required("Admin", "users")
 def index():
     # Tampilkan all users per_page 10
     page = request.args.get("page", 1, type=int)
@@ -289,4 +274,3 @@ def add_user_to_role():
         )
 
     return jsonify({"status": "error", "message": "Invalid request"})
-
