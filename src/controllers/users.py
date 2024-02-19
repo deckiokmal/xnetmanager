@@ -16,6 +16,14 @@ from .decorators import login_required, role_required
 
 # Membuat blueprint users
 users_bp = Blueprint("users", __name__)
+error_bp = Blueprint("error", __name__)
+error_bp = Blueprint("error_handlers", __name__)
+
+
+# Manangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
+@error_bp.app_errorhandler(404)
+def page_not_found(error):
+    return render_template("/main/404.html"), 404
 
 
 # Context processor untuk menambahkan username ke dalam konteks disemua halaman.
@@ -123,6 +131,7 @@ def user_update(user_id):
 # Delete user
 @users_bp.route("/user_delete/<int:user_id>", methods=["POST"])
 @login_required
+@role_required("Admin", "user_delete")
 def user_delete(user_id):
     if current_user.id == user_id:
         flash("Anda tidak bisa delete akun anda sendiri.", "warning")
@@ -153,6 +162,7 @@ def user_profile():
 # Users Role Page
 @users_bp.route("/user_role", methods=["GET", "POST"])
 @login_required
+@role_required("Admin", "user_role")
 def roles():
     # Tampilkan all user role per_page 10
     page = request.args.get("page", 1, type=int)
@@ -165,6 +175,7 @@ def roles():
 # Create role
 @users_bp.route("/create_role", methods=["GET", "POST"])
 @login_required
+@role_required("Admin", "create_role")
 def create_role():
     if request.method == "POST":
         role_name = request.form["name"]
@@ -198,6 +209,7 @@ def create_role():
 # Role Update
 @users_bp.route("/role_update/<int:role_id>", methods=["GET", "POST"])
 @login_required
+@role_required("Admin", "role_update")
 def role_update(role_id):
     # Mengambil objek Role berdasarkan role_id
     role = Role.query.get(role_id)
@@ -230,6 +242,7 @@ def role_update(role_id):
 # Role Delete
 @users_bp.route("/role_delete/<int:role_id>", methods=["POST"])
 @login_required
+@role_required("Admin", "role_delete")
 def role_delete(role_id):
     role = Role.query.get_or_404(role_id)
 
@@ -249,6 +262,7 @@ def role_delete(role_id):
 # tambah user to role
 @users_bp.route("/add_user_to_role", methods=["POST"])
 @login_required
+@role_required("Admin", "add_user_to_role")
 def add_user_to_role():
     if request.method == "POST":
         username = request.form["username"]

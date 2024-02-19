@@ -24,7 +24,7 @@ def role_required(role_name, page):
                 user_roles = [role.name for role in current_user.roles]
                 if role_name not in user_roles:
                     flash(
-                        f"Access Denied. You do not have permission to access the {page} page.",
+                        f"Access Denied. You do not have permission to access the {page}!",
                         "error",
                     )
                     # Menyimpan URL referer sebelum redirect

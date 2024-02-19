@@ -1,13 +1,11 @@
 from flask import (
     Blueprint,
-    make_response,
     render_template,
     redirect,
     url_for,
     flash,
     request,
     session,
-    jsonify,
 )
 from flask_login import login_user, logout_user, current_user, login_required
 from src import db, bcrypt
@@ -15,8 +13,7 @@ from src.models.users import User
 from functools import wraps
 from src.utils.forms import RegisterForm, LoginForm, TwoFactorForm
 from src.utils.qrcode import get_b64encoded_qr_image
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from datetime import timedelta
+from .decorators import login_required
 
 
 # Membuat blueprint main_bp dan error_bp
@@ -39,17 +36,6 @@ def inject_user():
         user = User.query.get(user_id)
         return dict(username=user.username)
     return dict(username=None)
-
-
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated:
-            flash("You need to login first", "info")
-            return redirect(url_for("main.login"))
-        return f(*args, **kwargs)
-
-    return decorated_function
 
 
 # Main APP starting

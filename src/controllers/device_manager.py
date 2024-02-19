@@ -4,20 +4,19 @@ from functools import wraps
 from src import db
 from src.models.users import User
 from src.models.networkautomation import DeviceManager
+from .decorators import login_required, role_required
 
 
 # Membuat blueprint users
 dm_bp = Blueprint("dm", __name__)
+error_bp = Blueprint("error", __name__)
+error_bp = Blueprint("error_handlers", __name__)
 
 
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated:
-            flash('You need to login first', 'info')
-            return redirect(url_for('main.login'))
-        return f(*args, **kwargs)
-    return decorated_function
+# Manangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
+@error_bp.app_errorhandler(404)
+def page_not_found(error):
+    return render_template("/main/404.html"), 404
 
 
 # Context processor untuk menambahkan username ke dalam konteks disemua halaman.
@@ -79,7 +78,7 @@ def device_create():
                 ip_address=ip_address,
                 username=username,
                 password=password,
-                ssh=ssh
+                ssh=ssh,
             )
             db.session.add(new_device)
             db.session.commit()
@@ -115,13 +114,16 @@ def device_update(device_id):
             DeviceManager.ip_address == new_ip_address, DeviceManager.id != device.id
         ).first()
         if exist_device or exist_address:
-            flash("Device name atau IP Address sudah ada. Silahkan masukkan yang lain!", "error")
+            flash(
+                "Device name atau IP Address sudah ada. Silahkan masukkan yang lain!",
+                "error",
+            )
 
         # Check jika username, password dan ssh kosong
         elif not new_username or not new_password or not new_ssh:
             flash("username, password dan ssh tidak boleh kosong.", "info")
             return render_template("/device_managers/device_update.html", device=device)
-        
+
         # 3. periksa ssh dengan isdigit()
         elif not new_ssh.isdigit():
             flash("ssh port harus angka!", "error")
@@ -134,7 +136,7 @@ def device_update(device_id):
             device.username = new_username
             device.password = new_password
             device.ssh = new_ssh
-            
+
             db.session.commit()
             flash("Device update berhasil.", "success")
             return redirect(url_for("dm.index"))
@@ -145,6 +147,7 @@ def device_update(device_id):
 # Delete device
 @dm_bp.route("/device_delete/<int:device_id>", methods=["POST"])
 @login_required
+@role_required('Admin', 'device_delete')
 def device_delete(device_id):
     device = DeviceManager.query.get(device_id)
     if not device:

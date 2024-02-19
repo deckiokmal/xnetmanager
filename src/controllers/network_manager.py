@@ -16,6 +16,7 @@ from src.utils.network_manager_class import NetworkManagerUtils
 from datetime import datetime
 from src import db
 import os
+from .decorators import login_required, role_required
 
 
 # Membuat blueprint main_bp dan error_bp
@@ -28,16 +29,6 @@ error_bp = Blueprint("error_handlers", __name__)
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
     return render_template("/main/404.html"), 404
-
-
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated:
-            flash('You need to login first', 'info')
-            return redirect(url_for('main.login'))
-        return f(*args, **kwargs)
-    return decorated_function
 
 
 # Context processor untuk menambahkan username ke dalam konteks disemua halaman.
@@ -197,15 +188,14 @@ def backup_config(device_id):
         flash("Backup berhasil.", "success")
         return redirect(url_for("nm.index"))
 
+
 # Template view page
 @nm_bp.route("/templates")
 @login_required
 def templates():
     templates = NetworkManager.query.all()
 
-    return render_template(
-        "/network_managers/templates.html", templates=templates
-    )
+    return render_template("/network_managers/templates.html", templates=templates)
 
 
 # Templates update
@@ -278,6 +268,7 @@ def network_template_update(template_id):
 # Templates delete
 @nm_bp.route("/network_template_delete/<int:template_id>", methods=["POST"])
 @login_required
+@role_required('Admin', 'network_template_delete')
 def network_template_delete(template_id):
 
     # Dapatkan objek dari database berdasarkan ID
