@@ -8,7 +8,6 @@ from flask import (
     current_app,
 )
 from flask_login import login_required, current_user
-from functools import wraps
 from src import db
 from src.models.users import User
 from src.models.networkautomation import ConfigTemplate, NetworkManager

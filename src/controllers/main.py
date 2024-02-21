@@ -10,7 +10,6 @@ from flask import (
 from flask_login import login_user, logout_user, current_user, login_required
 from src import db, bcrypt
 from src.models.users import User
-from functools import wraps
 from src.utils.forms import RegisterForm, LoginForm, TwoFactorForm
 from src.utils.qrcode import get_b64encoded_qr_image
 from .decorators import login_required
