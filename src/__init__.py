@@ -20,7 +20,6 @@ login_manager.init_app(app)
 bcrypt = Bcrypt(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-login_manager.login_view = "main.login"
 
 
 # Registrasi blueprint controller dibawah ini
@@ -63,6 +62,8 @@ app.register_blueprint(error_bp)
 
 # import User class dari model users.py
 from .models.users import User
+
+login_manager.login_view = "main.login"
 
 
 # definisikan fungsi load_user yang digunakan oleh login_manager untuk memuat pengguna
