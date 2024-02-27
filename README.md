@@ -142,8 +142,8 @@ Visit xnetmanager app using domain or ip address:
 http://yourdomain
 
 default admin user: Adminx/adminx
-your must activated 2FA using google authenticator.
 ```
+`your must activated 2FA using google authenticator.`
 
 ## Additional
 ### change hostname
