@@ -137,6 +137,10 @@ If this returns without indicating any issues, restart the Nginx process to read
 ```bash
 sudo systemctl restart nginx
 ```
+Visit xnetmanager app using domain or ip address:
+```bash
+http://yourdomain
+```
 
 ## Additional
 ### change hostname
