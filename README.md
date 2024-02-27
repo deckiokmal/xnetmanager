@@ -129,3 +129,86 @@ To enable the Nginx server block configuration you’ve just created, link the f
 ```bash
 sudo ln -s /etc/nginx/sites-available/xnetmanager /etc/nginx/sites-enabled
 ```
+With the file in that directory, you can test for syntax errors:
+```bash
+sudo nginx -t
+```
+If this returns without indicating any issues, restart the Nginx process to read the new configuration:
+```bash
+sudo systemctl restart nginx
+```
+
+## Additional
+### change hostname
+```bash
+sudo hostnamectl set-hostname xnetmanager
+```
+change /etc/hosts and add the following line:
+```bash
+[sudo nano /etc/hosts]
+
+	127.0.0.1 localhost
+	127.0.0.1 xnetmanager
+```
+and the reboot.
+
+### change ip addresses
+change ip addresses using netplan:
+```bash
+sudo nano /etc/netplan/00-installer-config.yaml
+```
+add the following line:
+```bash
+	network:
+	  version: 2
+	  ethernets:
+	    ens18:
+	      addresses:
+	        - 192.168.100.206/24
+	      gateway4: 192.168.100.1
+	      nameservers:
+	        addresses: [192.168.100.101]
+```
+apply configuration:
+```bash
+sudo netplan apply
+```
+check ip addresses
+```bash
+ip a
+```
+```bash
+[output]
+
+2: ens18: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether bc:24:11:18:4f:a2 brd ff:ff:ff:ff:ff:ff
+    altname enp0s18
+    inet 192.168.100.206/24 brd 192.168.100.255 scope global ens18
+       valid_lft forever preferred_lft forever
+    inet6 fe80::be24:11ff:fe18:4fa2/64 scope link 
+       valid_lft forever preferred_lft forever
+```
+
+## If any error on your website, you may can check ownership of the file.
+you can change ownership xnetmanager to user:group www-data
+```bash
+sudo chown ubuntu:www-data *
+```
+```bash
+[output]
+
+-rwxrwxrwx 1 ubuntu www-data  283 Feb 27 21:27 README.md
+drwxrwxrwx 2 ubuntu www-data 4096 Feb 27 22:25 __pycache__
+-rwxrwxrwx 1 ubuntu www-data  965 Feb 27 21:27 config.py
+drwxrwxrwx 2 ubuntu www-data 4096 Feb 27 23:41 instance
+drwxrwxrwx 3 ubuntu www-data 4096 Feb 27 21:27 migrations
+-rwxrwxrwx 1 ubuntu www-data  805 Feb 27 21:27 requirements.txt
+-rwxrwxrwx 1 ubuntu www-data  794 Feb 27 21:27 seed.py
+drwxrwxrwx 8 ubuntu www-data 4096 Feb 27 21:27 src
+drwxr-xr-x 5 ubuntu www-data 4096 Feb 27 21:35 venv
+-rwxrwxrwx 1 ubuntu www-data   62 Feb 27 22:08 wsgi.py
+srwxrwxrwx 1 ubuntu ubuntu      0 Feb 27 23:24 xnetmanager.sock
+```
+
+done!
+Salam [Decki Okmal Pratama]
