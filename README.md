@@ -141,7 +141,8 @@ Visit xnetmanager app using domain or ip address:
 ```bash
 http://yourdomain
 
-default admin user: Admin/admin
+default admin user: Adminx/adminx
+your must activated 2FA using google authenticator.
 ```
 
 ## Additional
