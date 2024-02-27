@@ -140,6 +140,8 @@ sudo systemctl restart nginx
 Visit xnetmanager app using domain or ip address:
 ```bash
 http://yourdomain
+
+default admin user: Admin/admin
 ```
 
 ## Additional
