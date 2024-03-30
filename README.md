@@ -1,5 +1,30 @@
 # Deployment XNETMANAGER
 
+## Using Docker
+### Step 1 - Install Docker
+```bash
+sudo apt install docker.io -y
+```
+### Step 2 - Create Directory and Create Dockerfile
+```bash
+mkdir xnetmanager
+cd xnetmanager
+sudo nano Dockerfile
+```
+### Step 3 - Copy Dockerfile command from github and save. Then run docker build
+- Using Private Repository
+```bash
+sudo docker build --build-arg GITHUB_USERNAME=your_username --build-arg GITHUB_PAT=your_token -t xnetmanager .
+```
+- Using Public Repository
+```bash
+sudo docker build -t xnetmanager .
+```
+### Step 4 - Running your Aplication
+```bash
+sudo docker run -d -p 80:80 xnetmanager
+```
+
 ### Requirements
 - Linux ubuntu 22.04
 - Python3
