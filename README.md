@@ -1,6 +1,6 @@
 # Deployment XNETMANAGER
 
-## Using Docker
+## 1. Using Docker
 ### Step 1 - Install Docker
 ```bash
 sudo apt install docker.io -y
@@ -24,7 +24,7 @@ sudo docker build -t xnetmanager .
 ```bash
 sudo docker run -d -p 80:80 xnetmanager
 ```
-
+## 2. Local Host Machine
 ### Requirements
 - Linux ubuntu 22.04
 - Python3
