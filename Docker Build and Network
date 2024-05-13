@@ -1,0 +1,31 @@
+1. Create Dockerfile
+
+2. Build
+sudo docker build --build-arg GITHUB_USERNAME=deckiokmal --build-arg GITHUB_PAT=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 -t xnetmanager:latest .
+
+3. Run
+sudo docker run -d -p 8008:80 --name xnetmanager-dev --restart=always xnetmanager:latest
+
+4. Network
+sudo docker network create -d ipvlan --subnet 10.0.210.0/24 -o parent=ens18 -o ipvlan_mode=l3 frontend_l3
+
+5. Done
+ip_address:8008
+
+
+##########################################################################################################
+How to configure DNS and Install ping utils in Container
+
+login to container
+sudo docker exec -it xnetmanager-dev sh
+
+1. DNS
+echo "nameserver 8.8.8.8" > /etc/resolv.conf
+
+2. PING
+apt update
+apt install -y iputils-ping
+
+3. Testing
+- from container: ping 8.8.8.8
+- form docker host: docker exec xnetmanager-dev ping 8.8.8.8
