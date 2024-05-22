@@ -1,7 +1,7 @@
 1. Create Dockerfile
 
 2. Build
-sudo docker build --build-arg GITHUB_USERNAME=deckiokmal --build-arg GITHUB_PAT=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 -t xnetmanager:latest .
+sudo docker build --build-arg GITHUB_USERNAME=$USERNAME --build-arg GITHUB_PAT=$TOKEN -t xnetmanager:latest .
 
 3. Run
 sudo docker run -d -p 8008:80 --name xnetmanager-dev --restart=always xnetmanager:latest
