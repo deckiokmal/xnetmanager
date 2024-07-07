@@ -79,9 +79,13 @@ sudo docker network create -d ipvlan --subnet 10.0.210.0/24 -o parent=ens18 -o i
 ```
 
 ### 5. Testing
-Anda dapat menguji konektivitas dan ping dari dalam kontainer:
+- Anda dapat menguji konektivitas dan ping dari dalam kontainer:
 ```docker ping
 docker exec xnetmanager ping 8.8.8.8
+```
+- Akses Web Interface:
+```web access
+http://ip-address-dockerhost:8008
 ```
 
 ## Jika perlu menginstal ulang, jalankan:
