@@ -14,7 +14,32 @@ XNetManager adalah aplikasi web berbasis Python yang dirancang untuk mengotomati
 - Docker dan Docker Compose terinstal di sistem Anda
 - GitHub untuk mengakses repositori
 
-## Langkah-Langkah
+## Deployment dengan docker-compose
+docker-compose
+```docker-compose.yml
+version: '3'
+
+services:
+  xnetmanager:
+    image: deckyokmal177/xnetmanager:latest
+    ports:
+      - "8008:80"
+    restart: always
+    networks:
+      - frontend_l3  # Sesuaikan dengan nama jaringan yang diperlukan
+    dns:
+      - 8.8.8.8  # DNS server yang diinginkan
+
+networks:
+  frontend_l3:
+    driver: ipvlan
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.0.210.0/24  # Sesuaikan subnet dengan yang diperlukan, jika perlu
+```
+
+## Langkah-Langkah Manual Docker Image
 
 ### 1. Buat Dockerfile
 Buat file `Dockerfile` dengan konten berikut:
@@ -90,6 +115,8 @@ docker exec xnetmanager ping 8.8.8.8
 ```web access
 http://ip-address-dockerhost:8008
 ```
+default username: `Adminx`
+default password: `adminx`
 
 ## Jika perlu menginstal ulang, jalankan:
 ```
