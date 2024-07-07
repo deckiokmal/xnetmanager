@@ -47,9 +47,6 @@ RUN echo "server { \
     } \
 }" > /etc/nginx/sites-available/default
 
-# Configure DNS
-RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf
-
 # Install ping utils
 RUN apt-get install -y iputils-ping
 
@@ -67,7 +64,12 @@ sudo docker build -t xnetmanager:latest .
 ```
 
 ### 3. Jalankan Kontainer Docker
-Jalankan kontainer dengan perintah berikut:
+- Konfigurasi DNS Server pada Docker image:
+```DNS
+sudo docker exec -it xnetmanager echo "nameserver 8.8.8.8" > /etc/resolv.conf
+```
+
+- Jalankan kontainer dengan perintah berikut:
 ```docker run
 sudo docker run -d -p 8008:80 --name xnetmanager --restart=always xnetmanager:latest
 ```
