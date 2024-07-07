@@ -64,14 +64,15 @@ sudo docker build -t xnetmanager:latest .
 ```
 
 ### 3. Jalankan Kontainer Docker
-- Konfigurasi DNS Server pada Docker image:
-```DNS
-sudo docker exec -it xnetmanager echo "nameserver 8.8.8.8" > /etc/resolv.conf
-```
-
 - Jalankan kontainer dengan perintah berikut:
 ```docker run
 sudo docker run -d -p 8008:80 --name xnetmanager --restart=always xnetmanager:latest
+```
+
+- Konfigurasi DNS Server pada Docker image:
+```DNS
+sudo docker exec -it xnetmanager bin/sh
+echo "nameserver 8.8.8.8" > /etc/resolv.conf
 ```
 
 ### 4. (Opsional) Buat Jaringan Docker
