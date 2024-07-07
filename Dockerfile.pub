@@ -25,9 +25,6 @@ RUN echo "server { \
     } \
 }" > /etc/nginx/sites-available/default
 
-# Configure DNS
-RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf
-
 # Install ping utils
 RUN apt-get install -y iputils-ping
 
