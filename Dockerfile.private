@@ -1,12 +1,9 @@
 # Base image
 FROM python:3.9-slim
 
-# Install Nginx
+# Install Nginx dan git
 RUN apt-get update && \
-    apt-get install -y nginx
-
-# Install git
-RUN apt-get install -y git
+    apt-get install -y nginx git iputils-ping
 
 # Set your GitHub username and Personal Access Token (PAT)
 ARG GITHUB_USERNAME
@@ -31,6 +28,12 @@ RUN echo "server { \
         proxy_set_header X-Forwarded-Proto \$scheme; \
     } \
 }" > /etc/nginx/sites-available/default
+
+# Configure DNS
+RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf
+
+# Install ping utils
+RUN apt-get install -y iputils-ping
 
 # Expose ports
 EXPOSE 80
