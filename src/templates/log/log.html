@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Log History</title>
+</head>
+<body>
+    <h1>Log History</h1>
+    <pre>
+        {% with open('logs/app.log') as f %}
+            {{ f.read() }}
+        {% endwith %}
+    </pre>
+</body>
+</html>
