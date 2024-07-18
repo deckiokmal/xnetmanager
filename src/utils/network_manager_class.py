@@ -36,7 +36,7 @@ class NetworkManagerUtils:
             stdout.channel.recv_exit_status()
             response = stdout.read().decode()
             ssh_client.close()
-            return flash(respone, "success")
+            return flash(str(respone), "success")
         except paramiko.AuthenticationException:
             print("Authentication failed, please verify your credentials.")
         except paramiko.SSHException as sshException:
