@@ -28,12 +28,19 @@ class NetworkManagerUtils:
                 username=self.username,
                 password=self.password,
                 port=self.ssh,
-                timeout=3,
+                timeout=10,
             )
-            ssh_client.exec_command(command, timeout=3)
+            stdin, stdout, stderr = ssh_client.exec_command(command)
 
+            # Menunggu hingga perintah selesai dieksekusi
+            stdout.channel.recv_exit_status()
+            response = stdout.read().decode()
             ssh_client.close()
-            return flash("konfigurasi sukses.", "success")
+            return flash(respone, "success")
+        except paramiko.AuthenticationException:
+            print("Authentication failed, please verify your credentials.")
+        except paramiko.SSHException as sshException:
+            print(f"Unable to establish SSH connection: {sshException}")
         except Exception as e:
             print("Error:", e)
             return False
