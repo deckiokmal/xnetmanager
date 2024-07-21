@@ -20,6 +20,10 @@ class NetworkManagerUtils:
         self.device_status = None
 
     def configure_device(self, command):
+        """
+        Konfigurasi perangkat melalui SSH dengan perintah yang diberikan.
+        Mengembalikan pesan sukses atau kesalahan.
+        """
         try:
             ssh_client = paramiko.SSHClient()
             ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -36,16 +40,29 @@ class NetworkManagerUtils:
             stdout.channel.recv_exit_status()
             response = stdout.read().decode()
             ssh_client.close()
-            return flash("Push konfigurasi sukses !", "success")
+
+            # Jika sukses, kembalikan pesan sukses
+            return "Push konfigurasi sukses!", "success"
         except paramiko.AuthenticationException:
-            print("Authentication failed, please verify your credentials.")
+            # Jika gagal otentikasi
+            error_message = "Authentication failed, please verify your credentials."
+            print(error_message)
+            return error_message, "danger"
         except paramiko.SSHException as sshException:
-            print(f"Unable to establish SSH connection: {sshException}")
+            # Jika gagal membuat koneksi SSH
+            error_message = f"Unable to establish SSH connection: {sshException}"
+            print(error_message)
+            return error_message, "danger"
         except Exception as e:
-            print("Error:", e)
-            return False
+            # Jika terjadi kesalahan lain
+            error_message = f"Error: {e}"
+            print(error_message)
+            return error_message, "danger"
 
     def check_device_status(self):
+        """
+        Memeriksa status perangkat dengan menggunakan ping.
+        """
         try:
             # Tentukan perintah ping berdasarkan sistem operasi
             if platform.system() == "Windows":
@@ -53,27 +70,39 @@ class NetworkManagerUtils:
             elif platform.system() == "Linux":
                 command = ["ping", "-c", "1", self.ip_address]
             else:
-                print("Unsupported operating system.")
-                return False
+                error_message = "Unsupported operating system."
+                print(error_message)
+                self.device_status = False
+                return error_message
 
             # Jalankan ping
             response = subprocess.run(command, capture_output=True, text=True)
             if response.returncode == 0:
                 self.device_status = True
+                return "Device is reachable", "success"
             else:
                 self.device_status = False
+                return "Device is not reachable", "danger"
         except Exception as e:
-            print("Error:", e)
+            # Jika terjadi kesalahan saat memeriksa status perangkat
+            error_message = f"Error: {e}"
+            print(error_message)
             self.device_status = False
+            return error_message, "danger"
 
     def check_device_status_threaded(self):
+        """
+        Memeriksa status perangkat dalam thread terpisah.
+        """
         thread = threading.Thread(target=self.check_device_status)
         thread.start()
         thread.join()
 
     def open_console(self):
+        """
+        Membuka konsol SSH atau web berdasarkan sistem operasi.
+        """
         try:
-            # Periksa platform sistem operasi
             if platform.system() == "Windows":
                 # Jalankan PuTTY di Windows
                 subprocess.Popen(
@@ -105,6 +134,9 @@ class NetworkManagerUtils:
             return False
 
     def open_webconsole(self):
+        """
+        Membuka konsol web dengan URL perangkat.
+        """
         try:
             url = f"http://{self.ip_address}"
             webbrowser.open_new_tab(url)
@@ -133,6 +165,9 @@ class NetworkManagerUtils:
             return None
 
     def backup_config(self, command):
+        """
+        Membuat backup konfigurasi perangkat melalui SSH.
+        """
         try:
             ssh_client = paramiko.SSHClient()
             ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -150,14 +185,4 @@ class NetworkManagerUtils:
 
         except Exception as e:
             print("Error:", e)
-            return False
-
-
-# Examples
-list = ["192.168.100.49"]
-
-for ip in list:
-    myob = NetworkManagerUtils(
-        ip_address=ip, username="admin", password="admin", ssh=22
-    )
-    myob.configure_device(command="config router static\n edit 1\n set device\n")
+            return None

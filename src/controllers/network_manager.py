@@ -90,14 +90,38 @@ def open_console(device_id):
         return redirect(url_for("nm.index"))
 
 
-# Push Config
-@nm_bp.route("/push_config/<int:device_id>", methods=["POST"])
+# Push Config for multiple devices
+@nm_bp.route("/push_configs", methods=["POST"])
 @login_required
-def push_config(device_id):
-    device = DeviceManager.query.get_or_404(device_id)
-    templates = NetworkManager.query.all()  # Use template_id from device
+def push_configs():
+    # Ambil data JSON dari request
+    data = request.get_json()
+    device_ips = data.get("devices", [])
+    template_id = data.get("template_id")
 
-    # Read template content with error handling
+    # Jika tidak ada perangkat yang dipilih, kembalikan respons dengan pesan error
+    if not device_ips:
+        flash("No devices selected.", "warning")
+        return jsonify({"success": False, "message": "No devices selected."}), 400
+
+    # Jika template tidak dipilih, kembalikan respons dengan pesan error
+    if not template_id:
+        flash("No template selected.", "warning")
+        return jsonify({"success": False, "message": "No template selected."}), 400
+
+    # Ambil perangkat dari database berdasarkan IP yang dipilih
+    devices = DeviceManager.query.filter(DeviceManager.ip_address.in_(device_ips)).all()
+    template = NetworkManager.query.get(template_id)
+
+    # Jika template tidak ditemukan, kembalikan respons dengan pesan error
+    if not template:
+        flash("Selected template not found.", "danger")
+        return (
+            jsonify({"success": False, "message": "Selected template not found."}),
+            404,
+        )
+
+    # Baca isi template dari file
     def read_template(filename):
         template_path = os.path.join(
             current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
@@ -106,13 +130,22 @@ def push_config(device_id):
             with open(template_path, "r") as file:
                 return file.read()
         except FileNotFoundError:
-            flash("Error: Template file not found.", "info")
-            return redirect(url_for("nm.index"))  # Redirect on error
+            flash("Template file not found.", "danger")
+            return None
         except Exception as e:
-            flash("Error reading template: " + str(e), "error")
-            return redirect(url_for("nm.index"))  # Redirect on other errors
+            flash(f"Error reading template: {e}", "danger")
+            return None
 
-    if request.method == "POST":
+    # Baca template content
+    template_content = read_template(template.template_name)
+    if not template_content:
+        return jsonify({"success": False, "message": "Error reading template."}), 500
+
+    results = []
+    success = True
+
+    # Proses konfigurasi untuk setiap perangkat
+    for device in devices:
         config = NetworkManagerUtils(
             ip_address=device.ip_address,
             username=device.username,
@@ -120,20 +153,22 @@ def push_config(device_id):
             ssh=device.ssh,
         )
 
-        # Get template content using the improved read_template()
-        for template in templates:
-            command = read_template(template.template_name)
+        # Terapkan konfigurasi ke perangkat dan ambil hasil
+        message, status = config.configure_device(template_content)
+        results.append(
+            {
+                "device_name": device.device_name,
+                "ip": device.ip_address,
+                "status": status,
+                "message": message,
+            }
+        )
 
-        # Check if command was read successfully before proceeding
-        if command:
-            try:
-                config.configure_device(command)
-                return redirect(url_for("nm.index"))
-            except Exception as e:
-                flash("Error pushing config: " + str(e), "error")
-                return redirect(url_for("nm.index"))
-        else:
-            return redirect(url_for("nm.index"))
+        if status != "success":
+            success = False
+
+    # Kembalikan hasil dalam format JSON
+    return jsonify({"success": success, "results": results})
 
 
 # Backup Config
@@ -267,7 +302,7 @@ def network_template_update(template_id):
 # Templates delete
 @nm_bp.route("/network_template_delete/<int:template_id>", methods=["POST"])
 @login_required
-@role_required('Admin', 'network_template_delete')
+@role_required("Admin", "network_template_delete")
 def network_template_delete(template_id):
 
     # Dapatkan objek dari database berdasarkan ID

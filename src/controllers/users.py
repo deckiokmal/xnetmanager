@@ -10,6 +10,7 @@ from flask import (
 from flask_login import login_required, current_user
 from src import db, bcrypt
 from src.models.users import User, Role, User_role
+from src.models.networkautomation import DeviceManager, NetworkManager
 from src.utils.forms import RegisterForm
 from .decorators import login_required, role_required
 
@@ -43,7 +44,15 @@ def inject_user():
 @users_bp.route("/")
 @login_required
 def dashboard():
-    return render_template("/users/dashboard.html")
+    # Fetch the count of templates and devices
+    template_count = NetworkManager.query.count()
+    device_count = DeviceManager.query.count()
+
+    return render_template(
+        "/users/dashboard.html",
+        template_count=template_count,
+        device_count=device_count,
+    )
 
 
 # Users Management Page
