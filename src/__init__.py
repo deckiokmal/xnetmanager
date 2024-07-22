@@ -5,6 +5,7 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from dotenv import load_dotenv
+from src.utils.is_active import is_active
 
 
 # Load .env file variable
@@ -13,6 +14,12 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config.from_object(config("APP_SETTINGS"))
+
+
+@app.context_processor
+def utility_processor():
+    return dict(is_active=is_active)
+
 
 # Flask_Login LoginManager handler
 login_manager = LoginManager()

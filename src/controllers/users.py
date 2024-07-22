@@ -10,7 +10,7 @@ from flask import (
 from flask_login import login_required, current_user
 from src import db, bcrypt
 from src.models.users import User, Role, User_role
-from src.models.networkautomation import DeviceManager, NetworkManager
+from src.models.networkautomation import DeviceManager, NetworkManager, ConfigTemplate
 from src.utils.forms import RegisterForm
 from .decorators import login_required, role_required
 
@@ -44,14 +44,34 @@ def inject_user():
 @users_bp.route("/")
 @login_required
 def dashboard():
-    # Fetch the count of templates and devices
-    template_count = NetworkManager.query.count()
-    device_count = DeviceManager.query.count()
+    # Mengambil semua perangkat dan template konfigurasi dari database
+    devices = DeviceManager.query.all()
+    templates = ConfigTemplate.query.all()
+
+    # Menghitung jumlah perangkat berdasarkan vendor
+    device_vendor_count = {}
+    for device in devices:
+        vendor = device.vendor
+        if vendor in device_vendor_count:
+            device_vendor_count[vendor] += 1
+        else:
+            device_vendor_count[vendor] = 1
+    
+    # Menghitung jumlah template berdasarkan vendor
+    template_vendor_count = {}
+    for template in templates:
+        vendor = template.vendor
+        if vendor in template_vendor_count:
+            template_vendor_count[vendor] += 1
+        else:
+            template_vendor_count[vendor] = 1
 
     return render_template(
         "/users/dashboard.html",
-        template_count=template_count,
-        device_count=device_count,
+        device_vendor_keys=list(device_vendor_count.keys()),
+        device_vendor_values=list(device_vendor_count.values()),
+        template_vendor_keys=list(template_vendor_count.keys()),
+        template_vendor_values=list(template_vendor_count.values()),
     )
 
 

@@ -16,6 +16,7 @@ from datetime import datetime
 from src import db
 import os
 from .decorators import login_required, role_required
+from flask_paginate import Pagination, get_page_args
 
 
 # Membuat blueprint main_bp dan error_bp
@@ -52,12 +53,41 @@ SFTP_ADDRESS = "192.168.1.1"
 @nm_bp.route("/nm", methods=["GET"])
 @login_required
 def index():
-    # Mengambil semua perangkat dan template konfigurasi dari database
-    devices = DeviceManager.query.all()
+    search_query = request.args.get("search", "")
+
+    # Ambil halaman dan per halaman dari argumen URL
+    page, per_page, offset = get_page_args(
+        page_parameter="page", per_page_parameter="per_page", per_page=10
+    )
+
+    if search_query:
+        # Jika ada pencarian, filter perangkat berdasarkan query
+        devices_query = DeviceManager.query.filter(
+            DeviceManager.device_name.ilike(f"%{search_query}%")
+            | DeviceManager.ip_address.ilike(f"%{search_query}%")
+            | DeviceManager.vendor.ilike(f"%{search_query}%")
+        )
+    else:
+        # Jika tidak ada pencarian, ambil semua perangkat
+        devices_query = DeviceManager.query
+
+    total_devices = devices_query.count()
+    devices = devices_query.limit(per_page).offset(offset).all()
+
     templates = NetworkManager.query.all()
 
+    pagination = Pagination(
+        page=page, per_page=per_page, total=total_devices, css_framework="bootstrap4"
+    )
+
     return render_template(
-        "/network_managers/network_manager.html", devices=devices, templates=templates
+        "/network_managers/network_manager.html",
+        devices=devices,
+        templates=templates,
+        page=page,
+        per_page=per_page,
+        pagination=pagination,
+        search_query=search_query,
     )
 
 

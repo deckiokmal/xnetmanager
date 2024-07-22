@@ -56,6 +56,113 @@
         .password-toggle.active {
             color: #333;
         }
+
+        .sidebar-dark {
+            background-color: #343a40 !important;
+        }
+
+        .sidebar .nav-link .fas {
+            margin-right: 10px;
+        }
+
+        .sidebar .nav-link span {
+            font-weight: bold;
+        }
+
+        .sidebar .nav-link:hover {
+            background-color: #1d2124;
+        }
+
+        .sidebar .nav-link.active {
+            background-color: #007bff;
+        }
+
+        .sidebar .nav-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            /* Warna latar belakang dengan transparansi */
+            backdrop-filter: blur(10px);
+            /* Efek blur */
+            -webkit-backdrop-filter: blur(10px);
+            /* Efek blur untuk Safari */
+            border-radius: 5px;
+            /* Sudut yang melengkung */
+        }
+
+        .sidebar .nav-item.active .nav-link {
+            color: #fff;
+            /* Warna teks yang kontras */
+        }
+
+        /* Chatbot Button */
+        .chatbot-button {
+            position: fixed;
+            bottom: 65px;
+            right: 12px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            padding: 12px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+
+        /* Chatbot Modal */
+        .chatbot-modal {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Modal Header */
+        .chatbot-header {
+            background-color: #007bff;
+            color: #fff;
+            padding: 10px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chatbot-header h5 {
+            margin: 0;
+        }
+
+        .close-chatbot {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        /* Modal Body */
+        .chatbot-body {
+            padding: 10px;
+        }
+
+        #chatInput {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px;
+        }
+
+        #sendMessage {
+            margin-top: 10px;
+        }
     </style>
 
     {% block head %}{% endblock %}
@@ -81,10 +188,11 @@
             <hr class="sidebar-divider my-0">
 
             <!-- Nav Item - Dashboard -->
-            <li class="nav-item">
+            <li class="nav-item {{ is_active('/') }}">
                 <a class="nav-link" href="/">
-                    <i class="fas fa-fw fa-cube"></i>
-                    <span><b>Dashboard</b></span></a>
+                    <i class="fas fa-fw fa-tachometer-alt"></i>
+                    <span><b>Dashboard</b></span>
+                </a>
             </li>
 
             <!-- Divider -->
@@ -95,25 +203,28 @@
                 Users Management
             </div>
 
-            <!-- Nav Item - Charts -->
-            <li class="nav-item">
+            <!-- Nav Item - Users Management -->
+            <li class="nav-item {{ is_active('/users') }}">
                 <a class="nav-link" href="/users">
-                    <i class="fas fa-fw fa-user"></i>
-                    <span>Users Management</span></a>
+                    <i class="fas fa-fw fa-users"></i>
+                    <span>Users Management</span>
+                </a>
             </li>
 
-            <!-- Nav Item - Charts -->
-            <li class="nav-item">
+            <!-- Nav Item - Users Role -->
+            <li class="nav-item {{ is_active('/user_role') }}">
                 <a class="nav-link" href="/user_role">
-                    <i class="fas fa-fw fa-user"></i>
-                    <span>Users Role</span></a>
+                    <i class="fas fa-fw fa-user-tag"></i>
+                    <span>Users Role</span>
+                </a>
             </li>
 
-            <!-- Nav Item - Charts -->
-            <li class="nav-item">
+            <!-- Nav Item - Profile -->
+            <li class="nav-item {{ is_active('/user_profile') }}">
                 <a class="nav-link" href="/user_profile">
-                    <i class="fas fa-fw fa-address-card"></i>
-                    <span>Profile</span></a>
+                    <i class="fas fa-fw fa-id-badge"></i>
+                    <span>Profile</span>
+                </a>
             </li>
 
             <!-- Divider -->
@@ -124,33 +235,34 @@
                 X-Manager
             </div>
 
-            <!-- Nav Item - Charts -->
-            <li class="nav-item">
+            <!-- Nav Item - Devices List -->
+            <li class="nav-item {{ is_active('/dm') }}">
                 <a class="nav-link" href="/dm">
-                    <i class="fas fa-fw fa-home"></i>
-                    <span>Devices Manager</span></a>
+                    <i class="fas fa-fw fa-list"></i>
+                    <span>Devices List</span>
+                </a>
             </li>
 
-            <!-- Nav Item - Charts -->
-            <li class="nav-item">
+            <!-- Nav Item - Templates Management -->
+            <li class="nav-item {{ is_active('/tm') }}">
                 <a class="nav-link" href="/tm">
-                    <i class="fas fa-fw fa-ethernet"></i>
-                    <span>Templates Manager</span></a>
+                    <i class="fas fa-fw fa-layer-group"></i>
+                    <span>Templates Management</span>
+                </a>
             </li>
 
-            <!-- Nav Item - Charts -->
-            <li class="nav-item">
+            <!-- Nav Item - Configuration Management -->
+            <li class="nav-item {{ is_active('/nm') }}">
                 <a class="nav-link" href="/nm">
-                    <i class="fas fa-fw fa-globe"></i>
-                    <span>Network Manager</span></a>
+                    <i class="fas fa-fw fa-cogs"></i>
+                    <span>Config Management</span>
+                </a>
             </li>
-
 
             <!-- Sidebar Toggler (Sidebar) -->
             <div class="text-center d-none d-md-inline">
                 <button class="rounded-circle border-0" id="sidebarToggle"></button>
             </div>
-
         </ul>
         <!-- End of Sidebar -->
 
@@ -169,7 +281,7 @@
                     </button>
 
                     <!-- Topbar Search -->
-                    <form
+                    <!-- <form
                         class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search">
                         <div class="input-group">
                             <input type="text" class="form-control bg-light border-0 small" placeholder="Search for..."
@@ -180,7 +292,7 @@
                                 </button>
                             </div>
                         </div>
-                    </form>
+                    </form> -->
                     <!-- Topbar Navbar -->
 
                     <ul class="navbar-nav ml-auto">
@@ -246,31 +358,6 @@
                             <!-- End Flash Messages -->
                         </li>
 
-                        <!-- Nav Item - Search Dropdown (Visible Only XS) -->
-                        <li class="nav-item dropdown no-arrow d-sm-none">
-                            <a class="nav-link dropdown-toggle" href="#" id="searchDropdown" role="button"
-                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="fas fa-search fa-fw"></i>
-                            </a>
-                            <!-- Dropdown - Messages -->
-                            <div class="dropdown-menu dropdown-menu-right p-3 shadow animated--grow-in"
-                                aria-labelledby="searchDropdown">
-                                <form class="form-inline mr-auto w-100 navbar-search">
-                                    <div class="input-group">
-                                        <input type="text" class="form-control bg-light border-0 small"
-                                            placeholder="Search for..." aria-label="Search"
-                                            aria-describedby="basic-addon2">
-                                        <div class="input-group-append">
-                                            <button class="btn btn-primary" type="button">
-                                                <i class="fas fa-search fa-sm"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
-                        </li>
-
-
                         <div class="topbar-divider d-none d-sm-block"></div>
 
                         <!-- Nav Item - User Information -->
@@ -334,6 +421,11 @@
         <i class="fas fa-angle-up"></i>
     </a>
 
+    <!-- Chatbot Button -->
+    <div id="chatbotButton" class="chatbot-button">
+        <i class="fas fa-comments"></i>
+    </div>
+
     <!-- Logout Modal-->
     <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
         aria-hidden="true">
@@ -354,11 +446,23 @@
         </div>
     </div>
 
+    <!-- Chatbot Modal -->
+    <div id="chatbotModal" class="chatbot-modal" style="display: none;">
+        <div class="chatbot-header">
+            <h5>Chat with AI</h5>
+            <button id="closeChatbot" class="close-chatbot">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="chatbot-body">
+            <textarea id="chatInput" rows="5" placeholder="Ask me anything..."></textarea>
+            <button id="sendMessage" class="btn btn-primary">Send</button>
+        </div>
+    </div>
+
     <!-- Bootstrap core JavaScript-->
     <script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
     <script src="{{ url_for('static', filename='vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
-
-
 
     <!-- Custom scripts for all pages-->
     <script src="{{ url_for('static', filename='js/sb-admin-2.min.js') }}"></script>
@@ -384,6 +488,39 @@
             document.cookie = `access_token_cookie=${token}; path=/;`;
         }
     </script>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // JavaScript to handle chatbot button and modal
+        document.addEventListener("DOMContentLoaded", function () {
+            const chatbotButton = document.getElementById('chatbotButton');
+            const chatbotModal = document.getElementById('chatbotModal');
+            const closeChatbot = document.getElementById('closeChatbot');
+
+            chatbotButton.addEventListener('click', function () {
+                chatbotModal.style.display = 'block';
+            });
+
+            closeChatbot.addEventListener('click', function () {
+                chatbotModal.style.display = 'none';
+            });
+
+            document.getElementById('sendMessage').addEventListener('click', function () {
+                const chatInput = document.getElementById('chatInput').value;
+                if (chatInput.trim()) {
+                    // Placeholder for sending the message to AI
+                    alert("Sending message: " + chatInput);
+                    // Clear input field
+                    document.getElementById('chatInput').value = '';
+                }
+            });
+        });
+    </script>
+    {% block scripts %}{% endblock %}
 </body>
 
 </html>
