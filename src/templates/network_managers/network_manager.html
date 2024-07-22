@@ -16,62 +16,83 @@
     <button id="pushConfigBtn" type="button" class="btn btn-success">Push Config</button>
 </div>
 
-<!-- Search Input -->
-<div class="mb-3">
-    <form method="get" action="{{ url_for('nm.index') }}" class="d-flex">
-        <input id="searchInput" type="text" name="search" class="form-control"
-            placeholder="Search by Device Name, IP Address, or Vendor" value="{{ search_query }}">
-        <button class="btn btn-primary ms-2" type="submit">
-            <i class="fa-solid fa-magnifying-glass"></i>
-        </button>
-    </form>
-</div>
 
-<div class="card position-relative py-1 px-4">
-    <div class="card-header">
-        Network Configurations
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Device Config List</h6>
     </div>
-    <div class="table-responsive">
-        <table class="table table-hover" style="text-align: left;" id="deviceTable">
-            <thead class="table-dark">
-                <tr>
-                    <th scope="col"></th>
-                    <th scope="col" class="justify-content">No</th>
-                    <th scope="col">Device Name</th>
-                    <th scope="col">IP Address</th>
-                    <th scope="col">Vendor</th>
-                    <th scope="col">Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for device in devices %}
-                <tr>
-                    <th>
-                        <div class="container">
-                            <!-- Checklist Buttons (initially hidden) -->
-                            <div id="checklistButtons{{ loop.index }}" class="checklist-buttons" style="display: none;">
-                                <div class="btn-group" role="group" aria-label="Basic checkbox toggle button group">
-                                    <input type="checkbox" class="btn-check" id="btncheck{{ loop.index }}"
-                                        data-ip="{{ device.ip_address }}" autocomplete="off">
-                                    <label class="btn btn-outline-primary" for="btncheck{{ loop.index }}">Select</label>
-                                </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <div id="dataTable_wrapper" class="dataTables_wrapper dt-bootstrap4">
+                <div class="row">
+                    <div class="col-sm-12 col-md-6">
+
+                    </div>
+                    <div class="col-sm-12 col-md-6">
+                        <div class="dataTables_filter">
+                            <!-- Search Input -->
+                            <div class="row mb-3">
+                                <form method="get" action="{{ url_for('nm.index') }}" class="d-flex">
+                                    <input id="searchInput" type="text" name="search" class="form-control"
+                                        placeholder="Search by Device Name, IP Address, or Vendor"
+                                        value="{{ search_query }}">
+                                    <button class="btn btn-primary ms-2" type="submit">
+                                        <i class="fa-solid fa-magnifying-glass"></i>
+                                    </button>
+                                </form>
                             </div>
                         </div>
-                    </th>
-                    <th scope="row">{{ loop.index }}</th>
-                    <td>{{ device.device_name }}</td>
-                    <td>{{ device.ip_address }}</td>
-                    <td>{{ device.vendor }}</td>
-                    <td>
-                        <div id="statusIndicator{{ device.id }}" class="status-indicator"></div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <div class="d-flex justify-content-end pagination-sm">
-        {{ pagination.links }}
+                    </div>
+                </div>
+                <div class="row">
+                    <table class="table table-hover" style="text-align: left;" id="deviceTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th scope="col"></th>
+                                <th scope="col" class="justify-content">No</th>
+                                <th scope="col">Device Name</th>
+                                <th scope="col">IP Address</th>
+                                <th scope="col">Vendor</th>
+                                <th scope="col">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for device in devices %}
+                            <tr>
+                                <th>
+                                    <div class="container">
+                                        <!-- Checklist Buttons (initially hidden) -->
+                                        <div id="checklistButtons{{ loop.index }}" class="checklist-buttons"
+                                            style="display: none;">
+                                            <div class="btn-group" role="group"
+                                                aria-label="Basic checkbox toggle button group">
+                                                <input type="checkbox" class="btn-check" id="btncheck{{ loop.index }}"
+                                                    data-ip="{{ device.ip_address }}" autocomplete="off">
+                                                <label class="btn btn-outline-primary"
+                                                    for="btncheck{{ loop.index }}">Select</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </th>
+                                <th scope="row">{{ loop.index }}</th>
+                                <td>{{ device.device_name }}</td>
+                                <td>{{ device.ip_address }}</td>
+                                <td>{{ device.vendor }}</td>
+                                <td>
+                                    <div id="statusIndicator{{ device.id }}" class="status-indicator"></div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="row">
+                    <div class="d-flex justify-content-end pagination-sm">
+                        {{ pagination.links }}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
