@@ -1,12 +1,10 @@
 import threading
 import subprocess
 import paramiko
-import os
 import webbrowser
 import platform
 from jinja2 import Template
 import yaml
-from flask import flash
 
 
 class NetworkManagerUtils:

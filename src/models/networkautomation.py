@@ -11,6 +11,7 @@ class DeviceManager(db.Model):
     username = db.Column(db.String(100), nullable=False)
     password = db.Column(db.String(100), nullable=False)
     ssh = db.Column(db.String(5), nullable=False)
+    status = db.Column(db.String(20), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
 
 

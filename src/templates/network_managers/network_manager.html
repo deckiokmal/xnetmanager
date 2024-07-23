@@ -4,18 +4,20 @@
 <!-- Begin Page Content -->
 
 <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-2">
+    <!-- Tombol Manage Templates -->
     <form action="{{ url_for('nm.templates')}}" method="get">
         <input class="btn btn-warning" type="submit" value="Manage Templates">
     </form>
 </div>
+
 <div class="mb-2 mr-2">
+    <!-- Tombol Check Status -->
     <button id="checkStatusButton" type="button" class="btn btn-info">Check Status</button>
-    <!-- Bulk Config Button -->
+    <!-- Tombol Bulk Config -->
     <button id="bulkConfigBtn" type="button" class="btn btn-primary">Select Device</button>
-    <!-- Button to Push Config -->
+    <!-- Tombol Push Config -->
     <button id="pushConfigBtn" type="button" class="btn btn-success">Push Config</button>
 </div>
-
 
 <div class="card shadow mb-4">
     <div class="card-header py-3">
@@ -24,27 +26,45 @@
     <div class="card-body">
         <div class="table-responsive">
             <div id="dataTable_wrapper" class="dataTables_wrapper dt-bootstrap4">
-                <div class="row">
-                    <div class="col-sm-12 col-md-6">
-
+                <div class="row mb-3">
+                    <div class="col-12 col-md-6 d-flex align-items-center mb-2 mb-md-0">
+                        <!-- Dropdown Show Entries -->
+                        <div class="dataTables_length" id="dataTable_length">
+                            <form id="perPageForm" action="{{ url_for('nm.index') }}" method="get">
+                                <label class="d-flex align-items-center">
+                                    <span>Show</span>
+                                    <select name="per_page" aria-controls="dataTable"
+                                        class="custom-select custom-select-sm form-control form-control-sm mx-2"
+                                        style="padding-right: 1.75rem;"
+                                        onchange="document.getElementById('perPageForm').submit()">
+                                        <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
+                                        <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
+                                        <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
+                                    </select>
+                                    <span>entries</span>
+                                </label>
+                                <input type="hidden" name="search" value="{{ search_query }}">
+                            </form>
+                        </div>
                     </div>
-                    <div class="col-sm-12 col-md-6">
+                    <div class="col-12 col-md-6 d-flex justify-content-md-end">
+                        <!-- Form Pencarian -->
                         <div class="dataTables_filter">
-                            <!-- Search Input -->
-                            <div class="row mb-3">
-                                <form method="get" action="{{ url_for('nm.index') }}" class="d-flex">
-                                    <input id="searchInput" type="text" name="search" class="form-control"
-                                        placeholder="Search by Device Name, IP Address, or Vendor"
-                                        value="{{ search_query }}">
-                                    <button class="btn btn-primary ms-2" type="submit">
-                                        <i class="fa-solid fa-magnifying-glass"></i>
-                                    </button>
-                                </form>
-                            </div>
+                            <form method="get" action="{{ url_for('nm.index') }}" class="form-inline d-flex">
+                                <input id="searchInput" type="text" name="search"
+                                    class="form-control form-control-sm mr-2"
+                                    placeholder="Search by Device Name, IP Address, or Vendor"
+                                    value="{{ search_query }}">
+                                <button class="btn btn-outline-success btn-sm" type="submit">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                </button>
+                                <input type="hidden" name="per_page" value="{{ per_page }}">
+                            </form>
                         </div>
                     </div>
                 </div>
                 <div class="row">
+                    <!-- Tabel Perangkat -->
                     <table class="table table-hover" style="text-align: left;" id="deviceTable">
                         <thead class="table-dark">
                             <tr>
@@ -61,7 +81,7 @@
                             <tr>
                                 <th>
                                     <div class="container">
-                                        <!-- Checklist Buttons (initially hidden) -->
+                                        <!-- Checklist Buttons -->
                                         <div id="checklistButtons{{ loop.index }}" class="checklist-buttons"
                                             style="display: none;">
                                             <div class="btn-group" role="group"
@@ -74,7 +94,7 @@
                                         </div>
                                     </div>
                                 </th>
-                                <th scope="row">{{ loop.index }}</th>
+                                <th scope="row">{{ loop.index + (page-1) * per_page }}</th>
                                 <td>{{ device.device_name }}</td>
                                 <td>{{ device.ip_address }}</td>
                                 <td>{{ device.vendor }}</td>
@@ -86,194 +106,202 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="row">
-                    <div class="d-flex justify-content-end pagination-sm">
-                        {{ pagination.links }}
+                <div class="row mb-3">
+                    <div class="col-12 col-md-5 d-flex align-items-center mb-2 mb-md-0">
+                        <!-- Informasi jumlah data yang ditampilkan -->
+                        <div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
+                            Showing {{ (page - 1) * per_page + 1 }} to {{ (page - 1) * per_page + per_page if (page - 1)
+                            * per_page + per_page < total_devices else total_devices }} of {{ total_devices }} entries
+                                </div>
+                        </div>
+                        <div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
+                            <!-- Pagination Links -->
+                            {{ pagination.links }}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Modal for displaying push config results -->
-<div class="modal fade" id="pushConfigResultModal" tabindex="-1" aria-labelledby="pushConfigResultModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="pushConfigResultModalLabel">Push Config Results</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="pushConfigResultTable">
-                    <!-- Tabel hasil push config akan dimuat di sini -->
+    <!-- Modal untuk menampilkan hasil push config -->
+    <div class="modal fade" id="pushConfigResultModal" tabindex="-1" aria-labelledby="pushConfigResultModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="pushConfigResultModalLabel">Push Config Results</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="pushConfigResultTable">
+                        <!-- Tabel hasil push config akan dimuat di sini -->
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Modal for selecting template -->
-<div class="modal fade" id="selectTemplateModal" tabindex="-1" aria-labelledby="selectTemplateModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="selectTemplateModalLabel">Select Template for Push Config</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="templateSelectionForm">
-                    <div class="mb-3">
-                        <label for="templateSelect" class="form-label">Select Template</label>
-                        <select id="templateSelect" class="form-select" required>
-                            <option value="" selected disabled>Select a template</option>
-                            {% for template in templates %}
-                            <option value="{{ template.id }}">{{ template.template_name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <button type="button" class="btn btn-primary" id="confirmPushConfigBtn">Push Config</button>
-                </form>
+    <!-- Modal untuk memilih template -->
+    <div class="modal fade" id="selectTemplateModal" tabindex="-1" aria-labelledby="selectTemplateModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="selectTemplateModalLabel">Select Template for Push Config</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="templateSelectionForm">
+                        <div class="mb-3">
+                            <label for="templateSelect" class="form-label">Select Template</label>
+                            <select id="templateSelect" class="form-select" required>
+                                <option value="" selected disabled>Select a template</option>
+                                {% for template in templates %}
+                                <option value="{{ template.id }}">{{ template.template_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-primary" id="confirmPushConfigBtn">Push Config</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Script for handling user actions -->
-<script>
-    // Check status button click event
-    document.getElementById("checkStatusButton").addEventListener("click", function () {
-        fetch("/check_status", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            }
-        })
-            .then(response => response.json())
-            .then(data => {
-                Object.keys(data).forEach(deviceId => {
-                    const statusIndicator = document.getElementById("statusIndicator" + deviceId);
-                    statusIndicator.classList.remove("status-indicator-green", "status-indicator-red");
-
-                    if (data[deviceId]) {
-                        statusIndicator.classList.add("status-indicator-green");
-                    } else {
-                        statusIndicator.classList.add("status-indicator-red");
-                    }
-                });
-            })
-            .catch(error => console.error("Error:", error));
-    });
-
-    // Show/Hide checklist buttons for bulk config
-    document.getElementById('bulkConfigBtn').addEventListener('click', function () {
-        document.querySelectorAll('.checklist-buttons').forEach(function (checklistButton) {
-            checklistButton.style.display = (checklistButton.style.display === 'none') ? 'block' : 'none';
-        });
-    });
-
-    // Push config button click event
-    document.getElementById('pushConfigBtn').addEventListener('click', function () {
-        const selectedDevices = [];
-        document.querySelectorAll('.btn-check:checked').forEach(function (checkbox) {
-            selectedDevices.push(checkbox.getAttribute('data-ip'));
-        });
-
-        if (selectedDevices.length > 0) {
-            // Show template selection modal
-            const selectTemplateModal = new bootstrap.Modal(document.getElementById('selectTemplateModal'));
-            selectTemplateModal.show();
-        } else {
-            alert('No devices selected.');
-        }
-    });
-
-    // Confirm push config button click event
-    document.getElementById('confirmPushConfigBtn').addEventListener('click', function () {
-        const selectedTemplate = document.getElementById('templateSelect').value;
-        const selectedDevices = [];
-        document.querySelectorAll('.btn-check:checked').forEach(function (checkbox) {
-            selectedDevices.push(checkbox.getAttribute('data-ip'));
-        });
-
-        if (selectedTemplate && selectedDevices.length > 0) {
-            fetch('/push_configs', {
-                method: 'POST',
+    <!-- Script untuk menangani aksi pengguna -->
+    <script>
+        // Event klik tombol Check Status
+        document.getElementById("checkStatusButton").addEventListener("click", function () {
+            fetch("/check_status", {
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ devices: selectedDevices, template_id: selectedTemplate })
+                    "Content-Type": "application/json"
+                }
             })
                 .then(response => response.json())
                 .then(data => {
-                    // Prepare HTML for the push config results table
-                    let tableHTML = '<table class="table table-bordered"><thead><tr><th>Device Name</th><th>IP Address</th><th>Status</th><th>Message</th></tr></thead><tbody>';
+                    Object.keys(data).forEach(deviceId => {
+                        const statusIndicator = document.getElementById("statusIndicator" + deviceId);
+                        statusIndicator.classList.remove("status-indicator-green", "status-indicator-red");
 
-                    data.results.forEach(result => {
-                        tableHTML += `<tr><td>${result.device_name}</td><td>${result.ip}</td><td>${result.status}</td><td>${result.message}</td></tr>`;
+                        if (data[deviceId]) {
+                            statusIndicator.classList.add("status-indicator-green");
+                        } else {
+                            statusIndicator.classList.add("status-indicator-red");
+                        }
                     });
-
-                    tableHTML += '</tbody></table>';
-
-                    // Display results in modal
-                    document.getElementById('pushConfigResultTable').innerHTML = tableHTML;
-
-                    // Hide template selection modal and show push config results modal
-                    const selectTemplateModal = bootstrap.Modal.getInstance(document.getElementById('selectTemplateModal'));
-                    selectTemplateModal.hide();
-
-                    const pushConfigResultModal = new bootstrap.Modal(document.getElementById('pushConfigResultModal'));
-                    pushConfigResultModal.show();
                 })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error pushing configurations: ' + error.message);
-                });
-        } else {
-            alert('Please select a template.');
-        }
-    });
+                .catch(error => console.error("Error:", error));
+        });
 
-    // Function to filter table rows based on search input
-    document.getElementById('searchInput').addEventListener('input', function () {
-        const query = this.value.toLowerCase();
-        const rows = document.querySelectorAll('#deviceTable tbody tr');
-
-        rows.forEach(row => {
-            const deviceName = row.cells[2].textContent.toLowerCase();
-            const ipAddress = row.cells[3].textContent.toLowerCase();
-            const vendor = row.cells[4].textContent.toLowerCase();
-
-            if (
-                deviceName.includes(query) ||
-                ipAddress.includes(query) ||
-                vendor.includes(query)
-            ) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
+        // Event klik tombol Select Device
+        document.getElementById("bulkConfigBtn").addEventListener("click", function () {
+            const checklistButtons = document.getElementsByClassName("checklist-buttons");
+            for (let i = 0; i < checklistButtons.length; i++) {
+                checklistButtons[i].style.display = checklistButtons[i].style.display === "none" ? "block" : "none";
             }
         });
-    });
 
-    // Reload page and reset checklist on modal close
-    document.getElementById('pushConfigResultModal').addEventListener('hidden.bs.modal', function () {
-        // Reset checklist
-        document.querySelectorAll('.btn-check').forEach(function (checkbox) {
-            checkbox.checked = false;
+        // Event klik tombol Push Config
+        document.getElementById("pushConfigBtn").addEventListener("click", function () {
+            const selectedDevices = [];
+            document.querySelectorAll(".btn-check:checked").forEach(function (checkbox) {
+                selectedDevices.push(checkbox.getAttribute("data-ip"));
+            });
+
+            if (selectedDevices.length > 0) {
+                const selectTemplateModal = new bootstrap.Modal(document.getElementById("selectTemplateModal"));
+                selectTemplateModal.show();
+            } else {
+                alert("Please select at least one device.");
+            }
         });
 
-        // Preserve search input value
-        const searchInput = document.getElementById('searchInput');
-        const searchQuery = searchInput.value;
+        // Event klik tombol Confirm Push Config
+        document.getElementById("confirmPushConfigBtn").addEventListener("click", function () {
+            const selectedTemplate = document.getElementById("templateSelect").value;
+            const selectedDevices = [];
+            document.querySelectorAll(".btn-check:checked").forEach(function (checkbox) {
+                selectedDevices.push(checkbox.getAttribute("data-ip"));
+            });
 
-        // Reload page to reset the search input
-        location.reload();
-        searchInput.value = searchQuery;
-    });
-</script>
+            if (selectedTemplate && selectedDevices.length > 0) {
+                fetch("/push_configs", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ devices: selectedDevices, template_id: selectedTemplate })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Siapkan HTML untuk tabel hasil push config
+                        let tableHTML = '<table class="table table-bordered"><thead><tr><th>Device Name</th><th>IP Address</th><th>Status</th><th>Message</th></tr></thead><tbody>';
 
-<!-- End of Page Content -->
-{% endblock %}
+                        data.results.forEach(result => {
+                            tableHTML += `<tr><td>${result.device_name}</td><td>${result.ip}</td><td>${result.status}</td><td>${result.message}</td></tr>`;
+                        });
+
+                        tableHTML += '</tbody></table>';
+
+                        // Tampilkan hasil dalam modal
+                        document.getElementById("pushConfigResultTable").innerHTML = tableHTML;
+
+                        // Sembunyikan modal pemilihan template dan tampilkan modal hasil push config
+                        const selectTemplateModal = bootstrap.Modal.getInstance(document.getElementById("selectTemplateModal"));
+                        selectTemplateModal.hide();
+
+                        const pushConfigResultModal = new bootstrap.Modal(document.getElementById("pushConfigResultModal"));
+                        pushConfigResultModal.show();
+                    })
+                    .catch(error => {
+                        console.error("Error:", error);
+                        alert("Error pushing configurations: " + error.message);
+                    });
+            } else {
+                alert("Please select a template.");
+            }
+        });
+
+        // Fungsi untuk memfilter baris tabel berdasarkan input pencarian
+        document.getElementById("searchInput").addEventListener("input", function () {
+            const query = this.value.toLowerCase();
+            const rows = document.querySelectorAll("#deviceTable tbody tr");
+
+            rows.forEach(row => {
+                const deviceName = row.cells[2].textContent.toLowerCase();
+                const ipAddress = row.cells[3].textContent.toLowerCase();
+                const vendor = row.cells[4].textContent.toLowerCase();
+
+                if (
+                    deviceName.includes(query) ||
+                    ipAddress.includes(query) ||
+                    vendor.includes(query)
+                ) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+        });
+
+        // Muat ulang halaman dan reset checklist saat modal ditutup
+        document.getElementById("pushConfigResultModal").addEventListener("hidden.bs.modal", function () {
+            // Reset checklist
+            document.querySelectorAll(".btn-check").forEach(function (checkbox) {
+                checkbox.checked = false;
+            });
+
+            // Simpan nilai input pencarian
+            const searchInput = document.getElementById("searchInput");
+            const searchQuery = searchInput.value;
+
+            // Muat ulang halaman untuk mereset input pencarian
+            location.reload();
+            searchInput.value = searchQuery;
+        });
+    </script>
+
+    <!-- End of Page Content -->
+    {% endblock %}

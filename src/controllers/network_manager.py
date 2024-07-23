@@ -17,6 +17,7 @@ from src import db
 import os
 from .decorators import login_required, role_required
 from flask_paginate import Pagination, get_page_args
+from threading import Thread
 
 
 # Membuat blueprint main_bp dan error_bp
@@ -88,21 +89,39 @@ def index():
         per_page=per_page,
         pagination=pagination,
         search_query=search_query,
+        total_devices=total_devices,
     )
 
 
-# Check status perangkat
+# Endpoint untuk cek status perangkat
 @nm_bp.route("/check_status", methods=["POST"])
 @login_required
 def check_status():
     devices = DeviceManager.query.all()
-
     device_status = {}
-    for device in devices:
+
+    # Daftar untuk menyimpan thread
+    threads = []
+
+    def check_device(device):
+        nonlocal device_status  # Membuat device_status bisa diakses di dalam thread
         check_device_status = NetworkManagerUtils(ip_address=device.ip_address)
         check_device_status.check_device_status_threaded()
 
         device_status[device.id] = check_device_status.device_status
+        # Update status perangkat di database
+        device.status = check_device_status.device_status
+        db.session.commit()
+
+    # Membuat dan memulai thread untuk setiap perangkat
+    for device in devices:
+        thread = Thread(target=check_device, args=(device,))
+        threads.append(thread)
+        thread.start()
+
+    # Menunggu semua thread selesai
+    for thread in threads:
+        thread.join()
 
     return jsonify(device_status)
 
