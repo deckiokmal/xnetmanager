@@ -3,205 +3,266 @@
 {% block content %}
 <!-- Begin Page Content -->
 
-<div class="position-relative py-1 px-4">
-    <!-- Search and Filter Controls -->
-    <div class="d-flex justify-content-between mb-3">
-        <div class="d-flex align-items-center">
-            <label for="entriesPerPage" class="form-label me-2">Show:</label>
-            <select id="entriesPerPage" class="form-select me-3" aria-label="Show entries per page"
-                onchange="updateEntriesPerPage()">
-                <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
-                <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
-                <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
-            </select>
-            <form class="d-flex" method="get" action="{{ url_for('dm.index') }}">
-                <input class="form-control me-2" type="search" name="search" placeholder="Search devices"
-                    value="{{ search_query }}">
-                <button class="btn btn-outline-success" type="submit">
-                    <i class="fas fa-search"></i>
+<!-- Button Group -->
+<div class="d-flex justify-content-between mb-3">
+    <div>
+        <div class="row">
+            <div class="col">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                    data-bs-target="#createdeviceModal">
+                    <i class="fas fa-plus"></i>
                 </button>
-            </form>
+            </div>
         </div>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createdeviceModal">
-            <i class="fas fa-plus"></i>
-        </button>
     </div>
+    <form class="d-flex" method="get" action="{{ url_for('dm.index') }}">
+        <input class="form-control me-2" type="search" name="search" placeholder="Search devices"
+            value="{{ search_query }}" id="searchInput">
+        <button class="btn btn-outline-success" type="submit">
+            <i class="fas fa-search"></i>
+        </button>
+        <input type="hidden" name="per_page" value="{{ per_page }}">
+    </form>
+</div>
 
-    <!-- Device Table -->
-    <div class="card position-relative py-1 px-4">
-        <div class="card-header">
-            Asset & Device List
-        </div>
+<!-- Data Table -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Device List</h6>
+    </div>
+    <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover">
-                <thead class="table-dark">
-                    <tr>
-                        <th scope="col">No</th>
-                        <th scope="col">Device Name</th>
-                        <th scope="col">Vendor</th>
-                        <th scope="col">IP Address</th>
-                        <th scope="col">Username</th>
-                        <th scope="col">Password</th>
-                        <th scope="col">SSH Port</th>
-                        <th scope="col">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for device in data %}
-                    <tr>
-                        <th scope="row">{{ start_index + loop.index0 }}</th>
-                        <td>{{ device.device_name }}</td>
-                        <td>{{ device.vendor }}</td>
-                        <td>{{ device.ip_address }}</td>
-                        <td>{{ device.username }}</td>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <span class="password-display">{{ device.password | mask_password }}</span>
-                                <!-- <i class="fas fa-eye ms-2 password-toggle" data-toggle="password"
-                                    data-id="{{ device.id }}"></i> -->
-                            </div>
-                        </td>
-                        <td>{{ device.ssh }}</td>
-                        <td>
-                            <button class="btn btn-info btn-sm" data-bs-toggle="modal"
-                                data-bs-target="#detailModal{{ device.id }}">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <a href="{{ url_for('dm.device_update', device_id=device.id) }}"
-                                class="btn btn-success btn-sm">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <form action="{{ url_for('dm.device_delete', device_id=device.id) }}" method="post"
-                                style="display:inline;">
-                                <button type="submit" class="btn btn-danger btn-sm"
-                                    onclick="return confirm('Are you sure you want to delete this device?');">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+            <div id="dataTable_wrapper" class="dataTables_wrapper dt-bootstrap4">
+                <div class="row mb-3">
+                    <div class="col-12 col-md-6 d-flex align-items-center mb-2 mb-md-0">
+                        <!-- Dropdown Show Entries -->
+                        <div class="dataTables_length" id="dataTable_length">
+                            <form id="perPageForm" action="{{ url_for('dm.index') }}" method="get">
+                                <label class="d-flex align-items-center">
+                                    <span>Show</span>
+                                    <select name="per_page" aria-controls="dataTable"
+                                        class="custom-select custom-select-sm form-control form-control-sm mx-2"
+                                        style="padding-right: 1.75rem;"
+                                        onchange="document.getElementById('perPageForm').submit()">
+                                        <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
+                                        <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
+                                        <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
+                                    </select>
+                                    <span>entries</span>
+                                </label>
+                                <input type="hidden" name="search" value="{{ search_query }}">
                             </form>
-                        </td>
-                    </tr>
-
-                    <!-- Detail Modal -->
-                    <div class="modal fade" id="detailModal{{ device.id }}" tabindex="-1"
-                        aria-labelledby="detailModalLabel{{ device.id }}" aria-hidden="true">
-                        <div class="modal-dialog modal-lg">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="detailModalLabel{{ device.id }}">Device Details</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                        aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p><strong>Device Name:</strong> {{ device.device_name }}</p>
-                                    <p><strong>Vendor:</strong> {{ device.vendor }}</p>
-                                    <p><strong>IP Address:</strong> {{ device.ip_address }}</p>
-                                    <p><strong>Username:</strong> {{ device.username }}</p>
-                                    <p><strong>Password:</strong> {{ device.password }}</p>
-                                    <p><strong>SSH Port:</strong> {{ device.ssh }}</p>
-                                </div>
-                            </div>
                         </div>
                     </div>
+                    <div class="col-12 col-md-6 d-flex justify-content-md-end">
 
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        <div class="card-footer d-flex justify-content-between align-items-center">
-            <div>
-                Showing {{ start_index }} to {{ end_index }} of {{ total_count }} entries
+                    </div>
+                </div>
+                <div class="row">
+                    <!-- Device Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th scope="col">No</th>
+                                    <th scope="col">Device Name</th>
+                                    <th scope="col">Vendor</th>
+                                    <th scope="col">IP Address</th>
+                                    <th scope="col">Username</th>
+                                    <th scope="col">Password</th>
+                                    <th scope="col">SSH Port</th>
+                                    <th scope="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for device in data %}
+                                <tr>
+                                    <th scope="row">{{ start_index + loop.index0 }}</th>
+                                    <td>{{ device.device_name }}</td>
+                                    <td>{{ device.vendor }}</td>
+                                    <td>{{ device.ip_address }}</td>
+                                    <td>{{ device.username }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="password-display">{{ device.password | mask_password
+                                                }}</span>
+                                        </div>
+                                    </td>
+                                    <td>{{ device.ssh }}</td>
+                                    <td>
+                                        <button class="btn btn-info btn-sm" data-bs-toggle="modal"
+                                            data-bs-target="#detailModal{{ device.id }}">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <a href="{{ url_for('dm.device_update', device_id=device.id) }}"
+                                            class="btn btn-success btn-sm">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form action="{{ url_for('dm.device_delete', device_id=device.id) }}"
+                                            method="post" style="display:inline;">
+                                            <button type="submit" class="btn btn-danger btn-sm"
+                                                onclick="return confirm('Are you sure you want to delete this device?');">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+
+                                <!-- Detail Modal -->
+                                <div class="modal fade" id="detailModal{{ device.id }}" tabindex="-1"
+                                    aria-labelledby="detailModalLabel{{ device.id }}" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="detailModalLabel{{ device.id }}">Device
+                                                    Details
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p><strong>Device Name:</strong> {{ device.device_name }}</p>
+                                                <p><strong>Vendor:</strong> {{ device.vendor }}</p>
+                                                <p><strong>IP Address:</strong> {{ device.ip_address }}</p>
+                                                <p><strong>Username:</strong> {{ device.username }}</p>
+                                                <p><strong>Password:</strong> {{ device.password }}</p>
+                                                <p><strong>SSH Port:</strong> {{ device.ssh }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- End of Device Table -->
+                </div>
+                <div class="row mb-3">
+                    <div class="card-footer d-flex justify-content-between align-items-center">
+                        <div>
+                            Showing {{ start_index }} to {{ end_index }} of {{ total_count }} entries
+                        </div>
+                        <nav>
+                            <ul class="pagination">
+                                {% if all_devices.has_prev %}
+                                <li class="page-item"><a class="page-link"
+                                        href="{{ url_for('dm.index', page=all_devices.prev_num, per_page=per_page, search=search_query) }}">Previous</a>
+                                </li>
+                                {% endif %}
+                                {% for p in all_devices.iter_pages() %}
+                                {% if p %}
+                                <li class="page-item {% if p == page %}active{% endif %}">
+                                    <a class="page-link"
+                                        href="{{ url_for('dm.index', page=p, per_page=per_page, search=search_query) }}">{{
+                                        p
+                                        }}</a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                                {% endif %}
+                                {% endfor %}
+                                {% if all_devices.has_next %}
+                                <li class="page-item"><a class="page-link"
+                                        href="{{ url_for('dm.index', page=all_devices.next_num, per_page=per_page, search=search_query) }}">Next</a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
             </div>
-            <nav>
-                <ul class="pagination">
-                    {% if all_devices.has_prev %}
-                    <li class="page-item"><a class="page-link"
-                            href="{{ url_for('dm.index', page=all_devices.prev_num, per_page=per_page, search=search_query) }}">Previous</a>
-                    </li>
-                    {% endif %}
-                    {% for p in all_devices.iter_pages() %}
-                    {% if p %}
-                    <li class="page-item {% if p == page %}active{% endif %}">
-                        <a class="page-link"
-                            href="{{ url_for('dm.index', page=p, per_page=per_page, search=search_query) }}">{{ p }}</a>
-                    </li>
-                    {% else %}
-                    <li class="page-item disabled"><span class="page-link">...</span></li>
-                    {% endif %}
-                    {% endfor %}
-                    {% if all_devices.has_next %}
-                    <li class="page-item"><a class="page-link"
-                            href="{{ url_for('dm.index', page=all_devices.next_num, per_page=per_page, search=search_query) }}">Next</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
         </div>
     </div>
-</div>
 
-<!-- Create Device Modal -->
-<div class="modal fade" id="createdeviceModal" tabindex="-1" aria-labelledby="createdeviceModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="createdeviceModalLabel">Create New Device</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form method="post" action="{{ url_for('dm.device_create') }}">
-                    <div class="mb-3">
-                        <label for="device_name" class="form-label">Device Name</label>
-                        <input type="text" class="form-control" id="device_name" name="device_name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="vendor" class="form-label">Vendor</label>
-                        <input type="text" class="form-control" id="vendor" name="vendor" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="ip_address" class="form-label">IP Address</label>
-                        <input type="text" class="form-control" id="ip_address" name="ip_address" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="ssh" class="form-label">SSH Port</label>
-                        <input type="text" class="form-control" id="ssh" name="ssh" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </form>
+    <!-- Create Device Modal -->
+    <div class="modal fade" id="createdeviceModal" tabindex="-1" aria-labelledby="createdeviceModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createdeviceModalLabel">Create New Device</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="post" action="{{ url_for('dm.device_create') }}">
+                        <div class="mb-3">
+                            <label for="device_name" class="form-label">Device Name</label>
+                            <input type="text" class="form-control" id="device_name" name="device_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="vendor" class="form-label">Vendor</label>
+                            <input type="text" class="form-control" id="vendor" name="vendor" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="ip_address" class="form-label">IP Address</label>
+                            <input type="text" class="form-control" id="ip_address" name="ip_address" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="ssh" class="form-label">SSH Port</label>
+                            <input type="text" class="form-control" id="ssh" name="ssh" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- End of Page Content -->
-{% endblock %}
 
-<!-- JavaScript for password visibility toggle -->
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        document.querySelectorAll('.password-toggle').forEach(function (toggle) {
-            toggle.addEventListener('click', function () {
-                var passwordDisplay = toggle.previousElementSibling;
-                var isVisible = passwordDisplay.textContent !== '*'.repeat(passwordDisplay.textContent.length);
-                passwordDisplay.textContent = isVisible ? '*'.repeat(passwordDisplay.textContent.length) : passwordDisplay.dataset.password;
-                toggle.classList.toggle('fa-eye', isVisible);
-                toggle.classList.toggle('fa-eye-slash', !isVisible);
+    <!-- JavaScript for password visibility toggle -->
+    <script>
+        // Fungsi untuk memfilter baris tabel berdasarkan input pencarian
+        document.getElementById("searchInput").addEventListener("input", function () {
+            const query = this.value.toLowerCase();
+            const rows = document.querySelectorAll("#deviceTable tbody tr");
+
+            rows.forEach(row => {
+                const deviceName = row.cells[2].textContent.toLowerCase();
+                const ipAddress = row.cells[3].textContent.toLowerCase();
+                const vendor = row.cells[4].textContent.toLowerCase();
+                const info = row.cells[4].textContent.toLowerCase();
+
+                if (
+                    deviceName.includes(query) ||
+                    ipAddress.includes(query) ||
+                    vendor.includes(query) ||
+                    info.includes(query)
+                ) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
             });
         });
-    });
 
-    function updateEntriesPerPage() {
-        var perPage = document.getElementById('entriesPerPage').value;
-        window.location.href = "{{ url_for('dm.index') }}?per_page=" + perPage + "&search={{ search_query }}";
-    }
-</script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.password-toggle').forEach(function (toggle) {
+                toggle.addEventListener('click', function () {
+                    var passwordDisplay = toggle.previousElementSibling;
+                    var isVisible = passwordDisplay.textContent !== '*'.repeat(passwordDisplay.textContent.length);
+                    passwordDisplay.textContent = isVisible ? '*'.repeat(passwordDisplay.textContent.length) : passwordDisplay.dataset.password;
+                    toggle.classList.toggle('fa-eye', isVisible);
+                    toggle.classList.toggle('fa-eye-slash', !isVisible);
+                });
+            });
+        });
+
+        function updateEntriesPerPage() {
+            var perPage = document.getElementById('entriesPerPage').value;
+            window.location.href = "{{ url_for('dm.index') }}?per_page=" + perPage + "&search={{ search_query }}";
+        }
+    </script>
+
+    <!-- End of Page Content -->
+    {% endblock %}
