@@ -6,6 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from dotenv import load_dotenv
 from src.utils.is_active import is_active
+from src.utils.mask_password import mask_password
 
 
 # Load .env file variable
@@ -14,6 +15,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config.from_object(config("APP_SETTINGS"))
+app.jinja_env.filters['mask_password'] = mask_password
 
 
 @app.context_processor
