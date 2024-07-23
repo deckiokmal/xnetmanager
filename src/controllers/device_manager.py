@@ -4,7 +4,7 @@ from src import db
 from src.models.users import User
 from src.models.networkautomation import DeviceManager
 from .decorators import login_required, role_required
-from src.utils.mask_password import mask_password
+from src.utils.validasi_ip import is_valid_ip
 
 
 # Membuat blueprint users
@@ -73,12 +73,16 @@ def device_create():
     password = request.form["password"]
     ssh = request.form["ssh"]
 
+    # Cek apakah device sudah terdaftar
     exist_address = DeviceManager.query.filter_by(ip_address=ip_address).first()
     exist_device = DeviceManager.query.filter_by(device_name=device_name).first()
     if exist_device or exist_address:
         flash("Device sudah terdaftar!", "info")
+    # Validasi input
     elif not username or not password or not ssh:
-        flash("Username, password dan ssh tidak boleh kosong!", "info")
+        flash("Username, password, dan SSH tidak boleh kosong!", "info")
+    elif not is_valid_ip(ip_address):
+        flash("IP Address tidak valid!", "error")
     elif not ssh.isdigit():
         flash("SSH port harus angka!", "error")
     else:
