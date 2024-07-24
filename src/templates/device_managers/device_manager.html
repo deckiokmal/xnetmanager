@@ -220,6 +220,28 @@
                     document.getElementById('searchForm').submit();
                 }, 1000); // 1000 ms = 1 detik
             });
+
+            // Fungsi untuk memfilter baris tabel berdasarkan input pencarian
+            document.getElementById("searchInput").addEventListener("input", function () {
+                const query = this.value.toLowerCase();
+                const rows = document.querySelectorAll("#deviceTable tbody tr");
+
+                rows.forEach(row => {
+                    const deviceName = row.cells[2].textContent.toLowerCase();
+                    const ipAddress = row.cells[3].textContent.toLowerCase();
+                    const vendor = row.cells[4].textContent.toLowerCase();
+
+                    if (
+                        deviceName.includes(query) ||
+                        ipAddress.includes(query) ||
+                        vendor.includes(query)
+                    ) {
+                        row.style.display = "";
+                    } else {
+                        row.style.display = "none";
+                    }
+                });
+            });
         </script>
 
         <!-- Akhir Konten Halaman -->
