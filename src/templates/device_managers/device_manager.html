@@ -1,13 +1,14 @@
 {% extends "/layouts/layout.html" %}
 {% block title %}Device Manager{% endblock %}
 {% block content %}
-<!-- Begin Page Content -->
+<!-- Mulai Konten Halaman -->
 
-<!-- Button Group -->
+<!-- Grup Tombol -->
 <div class="d-flex justify-content-between mb-3">
     <div>
         <div class="row">
             <div class="col">
+                <!-- Tombol untuk membuka modal pembuatan perangkat baru -->
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal"
                     data-bs-target="#createdeviceModal">
                     <i class="fas fa-plus"></i>
@@ -15,31 +16,23 @@
             </div>
         </div>
     </div>
-    <form class="d-flex" method="get" action="{{ url_for('dm.index') }}">
-        <input class="form-control me-2" type="search" name="search" placeholder="Search devices"
-            value="{{ search_query }}" id="searchInput">
-        <button class="btn btn-outline-success" type="submit">
-            <i class="fas fa-search"></i>
-        </button>
-        <input type="hidden" name="per_page" value="{{ per_page }}">
-    </form>
 </div>
 
-<!-- Data Table -->
+<!-- Tabel Data Perangkat -->
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Device List</h6>
+        <h6 class="m-0 font-weight-bold text-primary">Daftar Perangkat</h6>
     </div>
     <div class="card-body">
         <div class="table-responsive">
             <div id="dataTable_wrapper" class="dataTables_wrapper dt-bootstrap4">
                 <div class="row mb-3">
                     <div class="col-12 col-md-6 d-flex align-items-center mb-2 mb-md-0">
-                        <!-- Dropdown Show Entries -->
+                        <!-- Dropdown untuk mengubah jumlah entri yang ditampilkan per halaman -->
                         <div class="dataTables_length" id="dataTable_length">
                             <form id="perPageForm" action="{{ url_for('dm.index') }}" method="get">
                                 <label class="d-flex align-items-center">
-                                    <span>Show</span>
+                                    <span>Tampilkan</span>
                                     <select name="per_page" aria-controls="dataTable"
                                         class="custom-select custom-select-sm form-control form-control-sm mx-2"
                                         style="padding-right: 1.75rem;"
@@ -48,85 +41,97 @@
                                         <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
                                         <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
                                     </select>
-                                    <span>entries</span>
+                                    <span>entri</span>
                                 </label>
                                 <input type="hidden" name="search" value="{{ search_query }}">
                             </form>
                         </div>
                     </div>
                     <div class="col-12 col-md-6 d-flex justify-content-md-end">
-
+                        <!-- Form Pencarian -->
+                        <form id="searchForm" method="get" action="{{ url_for('dm.index') }}"
+                            class="form-inline d-flex">
+                            <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2"
+                                placeholder="Cari perangkat" value="{{ search_query }}">
+                            <button class="btn btn-outline-success btn-sm" type="submit">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </button>
+                            <input type="hidden" name="per_page" value="{{ per_page }}">
+                        </form>
                     </div>
                 </div>
                 <div class="row">
-                    <!-- Device Table -->
+                    <!-- Tabel Perangkat -->
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead class="table-dark">
                                 <tr>
                                     <th scope="col">No</th>
-                                    <th scope="col">Device Name</th>
+                                    <th scope="col">Nama Perangkat</th>
                                     <th scope="col">Vendor</th>
                                     <th scope="col">IP Address</th>
                                     <th scope="col">Username</th>
                                     <th scope="col">Password</th>
-                                    <th scope="col">SSH Port</th>
-                                    <th scope="col">Actions</th>
+                                    <th scope="col">Port SSH</th>
+                                    <th scope="col">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for device in data %}
+                                {% for device in devices %}
                                 <tr>
-                                    <th scope="row">{{ start_index + loop.index0 }}</th>
+                                    <th scope="row">{{ loop.index + (page - 1) * per_page }}</th>
                                     <td>{{ device.device_name }}</td>
                                     <td>{{ device.vendor }}</td>
                                     <td>{{ device.ip_address }}</td>
                                     <td>{{ device.username }}</td>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <span class="password-display">{{ device.password | mask_password
-                                                }}</span>
+                                            <!-- Menampilkan password dengan masker -->
+                                            <span class="password-display">{{ device.password | mask_password }}</span>
                                         </div>
                                     </td>
                                     <td>{{ device.ssh }}</td>
                                     <td>
+                                        <!-- Tombol Detail Perangkat -->
                                         <button class="btn btn-info btn-sm" data-bs-toggle="modal"
                                             data-bs-target="#detailModal{{ device.id }}">
                                             <i class="fas fa-eye"></i>
                                         </button>
+                                        <!-- Tombol Edit Perangkat -->
                                         <a href="{{ url_for('dm.device_update', device_id=device.id) }}"
                                             class="btn btn-success btn-sm">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                        <!-- Form untuk Menghapus Perangkat -->
                                         <form action="{{ url_for('dm.device_delete', device_id=device.id) }}"
                                             method="post" style="display:inline;">
                                             <button type="submit" class="btn btn-danger btn-sm"
-                                                onclick="return confirm('Are you sure you want to delete this device?');">
+                                                onclick="return confirm('Apakah Anda yakin ingin menghapus perangkat ini?');">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </form>
                                     </td>
                                 </tr>
 
-                                <!-- Detail Modal -->
+                                <!-- Modal Detail Perangkat -->
                                 <div class="modal fade" id="detailModal{{ device.id }}" tabindex="-1"
                                     aria-labelledby="detailModalLabel{{ device.id }}" aria-hidden="true">
                                     <div class="modal-dialog modal-lg">
                                         <div class="modal-content">
                                             <div class="modal-header">
-                                                <h5 class="modal-title" id="detailModalLabel{{ device.id }}">Device
-                                                    Details
+                                                <h5 class="modal-title" id="detailModalLabel{{ device.id }}">Detail
+                                                    Perangkat
                                                 </h5>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                                    aria-label="Close"></button>
+                                                    aria-label="Tutup"></button>
                                             </div>
                                             <div class="modal-body">
-                                                <p><strong>Device Name:</strong> {{ device.device_name }}</p>
+                                                <p><strong>Nama Perangkat:</strong> {{ device.device_name }}</p>
                                                 <p><strong>Vendor:</strong> {{ device.vendor }}</p>
                                                 <p><strong>IP Address:</strong> {{ device.ip_address }}</p>
                                                 <p><strong>Username:</strong> {{ device.username }}</p>
                                                 <p><strong>Password:</strong> {{ device.password }}</p>
-                                                <p><strong>SSH Port:</strong> {{ device.ssh }}</p>
+                                                <p><strong>Port SSH:</strong> {{ device.ssh }}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -136,133 +141,86 @@
                             </tbody>
                         </table>
                     </div>
-                    <!-- End of Device Table -->
+                    <!-- Akhir Tabel Perangkat -->
                 </div>
                 <div class="row mb-3">
-                    <div class="card-footer d-flex justify-content-between align-items-center">
-                        <div>
-                            Showing {{ start_index }} to {{ end_index }} of {{ total_count }} entries
+                    <div class="col-12 col-md-5 d-flex align-items-center mb-2 mb-md-0">
+                        <!-- Informasi jumlah data yang ditampilkan -->
+                        <div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
+                            Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if
+                            (page - 1)
+                            * per_page + per_page < total_devices else total_devices }} dari {{ total_devices }} entri
+                                </div>
                         </div>
-                        <nav>
-                            <ul class="pagination">
-                                {% if all_devices.has_prev %}
-                                <li class="page-item"><a class="page-link"
-                                        href="{{ url_for('dm.index', page=all_devices.prev_num, per_page=per_page, search=search_query) }}">Previous</a>
-                                </li>
-                                {% endif %}
-                                {% for p in all_devices.iter_pages() %}
-                                {% if p %}
-                                <li class="page-item {% if p == page %}active{% endif %}">
-                                    <a class="page-link"
-                                        href="{{ url_for('dm.index', page=p, per_page=per_page, search=search_query) }}">{{
-                                        p
-                                        }}</a>
-                                </li>
-                                {% else %}
-                                <li class="page-item disabled"><span class="page-link">...</span></li>
-                                {% endif %}
-                                {% endfor %}
-                                {% if all_devices.has_next %}
-                                <li class="page-item"><a class="page-link"
-                                        href="{{ url_for('dm.index', page=all_devices.next_num, per_page=per_page, search=search_query) }}">Next</a>
-                                </li>
-                                {% endif %}
-                            </ul>
-                        </nav>
+                        <div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
+                            <!-- Link Pagination -->
+                            {{ pagination.links }}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Create Device Modal -->
-    <div class="modal fade" id="createdeviceModal" tabindex="-1" aria-labelledby="createdeviceModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="createdeviceModalLabel">Create New Device</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form method="post" action="{{ url_for('dm.device_create') }}">
-                        <div class="mb-3">
-                            <label for="device_name" class="form-label">Device Name</label>
-                            <input type="text" class="form-control" id="device_name" name="device_name" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="vendor" class="form-label">Vendor</label>
-                            <input type="text" class="form-control" id="vendor" name="vendor" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="ip_address" class="form-label">IP Address</label>
-                            <input type="text" class="form-control" id="ip_address" name="ip_address" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="username" name="username" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" name="password" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="ssh" class="form-label">SSH Port</label>
-                            <input type="text" class="form-control" id="ssh" name="ssh" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </form>
+        <!-- Modal Pembuatan Perangkat -->
+        <div class="modal fade" id="createdeviceModal" tabindex="-1" aria-labelledby="createdeviceModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 600px;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="createdeviceModalLabel">Buat Perangkat Baru</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="{{ url_for('dm.device_create') }}">
+                            <div class="mb-3">
+                                <label for="device_name" class="form-label">Nama Perangkat</label>
+                                <input type="text" class="form-control" id="device_name" name="device_name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="vendor" class="form-label">Vendor</label>
+                                <input type="text" class="form-control" id="vendor" name="vendor" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="ip_address" class="form-label">IP Address</label>
+                                <input type="text" class="form-control" id="ip_address" name="ip_address" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="username" name="username" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="password" name="password" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="ssh" class="form-label">Port SSH</label>
+                                <input type="text" class="form-control" id="ssh" name="ssh" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
 
-    <!-- JavaScript for password visibility toggle -->
-    <script>
-        // Fungsi untuk memfilter baris tabel berdasarkan input pencarian
-        document.getElementById("searchInput").addEventListener("input", function () {
-            const query = this.value.toLowerCase();
-            const rows = document.querySelectorAll("#deviceTable tbody tr");
+        <!-- JavaScript untuk mengatur visibilitas password dan penundaan pencarian -->
+        <script>
+            let timeout = null;
 
-            rows.forEach(row => {
-                const deviceName = row.cells[2].textContent.toLowerCase();
-                const ipAddress = row.cells[3].textContent.toLowerCase();
-                const vendor = row.cells[4].textContent.toLowerCase();
-                const info = row.cells[4].textContent.toLowerCase();
+            // Menangani input pada form pencarian dengan penundaan 1 detik
+            document.getElementById("searchInput").addEventListener("input", function () {
+                // Batalkan timer yang ada sebelumnya jika ada
+                clearTimeout(timeout);
 
-                if (
-                    deviceName.includes(query) ||
-                    ipAddress.includes(query) ||
-                    vendor.includes(query) ||
-                    info.includes(query)
-                ) {
-                    row.style.display = "";
-                } else {
-                    row.style.display = "none";
-                }
+                // Setel timer baru untuk submit form setelah 1 detik
+                timeout = setTimeout(function () {
+                    document.getElementById('searchForm').submit();
+                }, 1000); // 1000 ms = 1 detik
             });
-        });
+        </script>
 
-        document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('.password-toggle').forEach(function (toggle) {
-                toggle.addEventListener('click', function () {
-                    var passwordDisplay = toggle.previousElementSibling;
-                    var isVisible = passwordDisplay.textContent !== '*'.repeat(passwordDisplay.textContent.length);
-                    passwordDisplay.textContent = isVisible ? '*'.repeat(passwordDisplay.textContent.length) : passwordDisplay.dataset.password;
-                    toggle.classList.toggle('fa-eye', isVisible);
-                    toggle.classList.toggle('fa-eye-slash', !isVisible);
-                });
-            });
-        });
-
-        function updateEntriesPerPage() {
-            var perPage = document.getElementById('entriesPerPage').value;
-            window.location.href = "{{ url_for('dm.index') }}?per_page=" + perPage + "&search={{ search_query }}";
-        }
-    </script>
-
-    <!-- End of Page Content -->
-    {% endblock %}
+        <!-- Akhir Konten Halaman -->
+        {% endblock %}

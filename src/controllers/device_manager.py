@@ -5,21 +5,22 @@ from src.models.users import User
 from src.models.networkautomation import DeviceManager
 from .decorators import login_required, role_required
 from src.utils.validasi_ip import is_valid_ip
+from flask_paginate import Pagination, get_page_args
 
-
-# Membuat blueprint users
+# Membuat blueprint untuk device manager
 dm_bp = Blueprint("dm", __name__)
-error_bp = Blueprint("error", __name__)
+
+# Blueprint untuk menangani error
 error_bp = Blueprint("error_handlers", __name__)
 
 
-# Manangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
+# Menangani error 404 dengan menampilkan halaman 404.html
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
     return render_template("/main/404.html"), 404
 
 
-# Context processor untuk menambahkan username ke dalam konteks disemua halaman.
+# Menambahkan username ke dalam konteks halaman
 @dm_bp.context_processor
 def inject_user():
     if current_user.is_authenticated:
@@ -29,40 +30,51 @@ def inject_user():
     return dict(username=None)
 
 
-# Device Manager Page
+# Halaman utama Device Manager
 @dm_bp.route("/dm", methods=["GET"])
 @login_required
 def index():
-    page = request.args.get("page", 1, type=int)
-    per_page = request.args.get("per_page", 10, type=int)
-    search_query = request.args.get("search", "")
+    # Mendapatkan parameter pencarian dari URL
+    search_query = request.args.get("search", "").lower()
 
-    query = DeviceManager.query
+    # Mendapatkan halaman saat ini dan jumlah entri per halaman
+    page, per_page, offset = get_page_args(
+        page_parameter="page", per_page_parameter="per_page", per_page=10
+    )
+
     if search_query:
-        query = query.filter(
+        # Jika ada pencarian, filter perangkat berdasarkan query
+        devices_query = DeviceManager.query.filter(
             DeviceManager.device_name.ilike(f"%{search_query}%")
-            | DeviceManager.vendor.ilike(f"%{search_query}%")
             | DeviceManager.ip_address.ilike(f"%{search_query}%")
+            | DeviceManager.vendor.ilike(f"%{search_query}%")
         )
+    else:
+        # Jika tidak ada pencarian, ambil semua perangkat
+        devices_query = DeviceManager.query
 
-    all_devices = query.paginate(page=page, per_page=per_page)
+    # Menghitung total perangkat dan mengambil perangkat untuk halaman saat ini
+    total_devices = devices_query.count()
+    devices = devices_query.limit(per_page).offset(offset).all()
 
-    start_index = (page - 1) * per_page + 1
-    end_index = min(start_index + per_page - 1, all_devices.total)
+    # Membuat objek pagination
+    pagination = Pagination(
+        page=page, per_page=per_page, total=total_devices, css_framework="bootstrap4"
+    )
 
+    # Menampilkan template dengan data perangkat dan pagination
     return render_template(
         "/device_managers/device_manager.html",
-        data=all_devices.items,
-        total_count=all_devices.total,
-        start_index=start_index,
-        end_index=end_index,
+        devices=devices,
+        page=page,
+        per_page=per_page,
+        pagination=pagination,
         search_query=search_query,
-        per_page=per_page,  # Pass per_page to the template
-        all_devices=all_devices,  # Pass all_devices to handle pagination in the template
+        total_devices=total_devices,
     )
 
 
-# Create device
+# Menambahkan perangkat baru
 @dm_bp.route("/device_create", methods=["POST"])
 @login_required
 def device_create():
@@ -73,12 +85,12 @@ def device_create():
     password = request.form["password"]
     ssh = request.form["ssh"]
 
-    # Cek apakah device sudah terdaftar
+    # Mengecek apakah perangkat dengan IP atau nama sudah ada
     exist_address = DeviceManager.query.filter_by(ip_address=ip_address).first()
     exist_device = DeviceManager.query.filter_by(device_name=device_name).first()
     if exist_device or exist_address:
         flash("Device sudah terdaftar!", "info")
-    # Validasi input
+    # Validasi input dari form
     elif not username or not password or not ssh:
         flash("Username, password, dan SSH tidak boleh kosong!", "info")
     elif not is_valid_ip(ip_address):
@@ -86,6 +98,7 @@ def device_create():
     elif not ssh.isdigit():
         flash("SSH port harus angka!", "error")
     else:
+        # Menambahkan perangkat baru ke database
         new_device = DeviceManager(
             device_name=device_name,
             vendor=vendor,
@@ -102,7 +115,7 @@ def device_create():
     return redirect(url_for("dm.index"))
 
 
-# Update device
+# Mengupdate informasi perangkat
 @dm_bp.route("/device_update/<int:device_id>", methods=["GET", "POST"])
 @login_required
 def device_update(device_id):
@@ -116,6 +129,7 @@ def device_update(device_id):
         new_password = request.form["password"]
         new_ssh = request.form["ssh"]
 
+        # Mengecek apakah nama perangkat atau IP sudah ada di perangkat lain
         exist_device = DeviceManager.query.filter(
             DeviceManager.device_name == new_device_name, DeviceManager.id != device.id
         ).first()
@@ -133,6 +147,7 @@ def device_update(device_id):
         elif not new_ssh.isdigit():
             flash("SSH port harus angka!", "error")
         else:
+            # Memperbarui informasi perangkat
             device.device_name = new_device_name
             device.vendor = new_vendor
             device.ip_address = new_ip_address
@@ -147,7 +162,7 @@ def device_update(device_id):
     return render_template("/device_managers/device_update.html", device=device)
 
 
-# Delete device
+# Menghapus perangkat
 @dm_bp.route("/device_delete/<int:device_id>", methods=["POST"])
 @login_required
 @role_required("Admin", "device_delete")

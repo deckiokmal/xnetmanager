@@ -3,15 +3,23 @@
 {% block content %}
 <!-- Begin Page Content -->
 
+<!-- Button Group -->
 <div class="mb-2 mr-2">
     <!-- Tombol Check Status -->
-    <button id="checkStatusButton" type="button" class="btn btn-info">Check Status</button>
+    <button id="checkStatusButton" type="button" class="btn btn-info">
+        <i class="fas fa-check-circle"></i> Check Status
+    </button>
     <!-- Tombol Bulk Config -->
-    <button id="bulkConfigBtn" type="button" class="btn btn-primary">Select Device</button>
+    <button id="bulkConfigBtn" type="button" class="btn btn-primary">
+        <i class="fas fa-cogs"></i> Select Device
+    </button>
     <!-- Tombol Push Config -->
-    <button id="pushConfigBtn" type="button" class="btn btn-success">Push Config</button>
+    <button id="pushConfigBtn" type="button" class="btn btn-success">
+        <i class="fas fa-upload"></i> Push Config
+    </button>
 </div>
 
+<!-- Data Table -->
 <div class="card shadow mb-4">
     <div class="card-header py-3">
         <h6 class="m-0 font-weight-bold text-primary">Device Config List</h6>
@@ -45,8 +53,7 @@
                         <div class="dataTables_filter">
                             <form method="get" action="{{ url_for('nm.index') }}" class="form-inline d-flex">
                                 <input id="searchInput" type="text" name="search"
-                                    class="form-control form-control-sm mr-2"
-                                    placeholder="Search devices"
+                                    class="form-control form-control-sm mr-2" placeholder="Search devices"
                                     value="{{ search_query }}">
                                 <button class="btn btn-outline-success btn-sm" type="submit">
                                     <i class="fa-solid fa-magnifying-glass"></i>

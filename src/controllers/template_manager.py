@@ -18,6 +18,7 @@ from datetime import datetime
 from .decorators import login_required, role_required
 import random
 import string
+from flask_paginate import Pagination, get_page_args
 
 # Blueprint untuk template manager
 tm_bp = Blueprint("tm", __name__)
@@ -28,11 +29,13 @@ GEN_TEMPLATE_FOLDER = "xmanager/gen_templates"
 TEMPLE_EXTENSIONS = {"j2"}
 PARAMS_EXTENSIONS = {"yml", "yaml"}
 
+
 # Fungsi pembantu untuk menghasilkan nama file acak
 def generate_random_filename(vendor_name):
-    random_str = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    random_str = "".join(random.choices(string.ascii_letters + string.digits, k=8))
     date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
     return f"{vendor_name}_{random_str}_{date_str}"
+
 
 # Route untuk menampilkan daftar template
 @tm_bp.route("/tm", methods=["GET"])
@@ -41,32 +44,35 @@ def index():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
     search_query = request.args.get("search", "")
-    
+
     # Mencari template berdasarkan query pencarian
     query = ConfigTemplate.query
     if search_query:
         query = query.filter(
-            ConfigTemplate.template_name.ilike(f"%{search_query}%") |
-            ConfigTemplate.parameter_name.ilike(f"%{search_query}%") |
-            ConfigTemplate.vendor.ilike(f"%{search_query}%") |
-            ConfigTemplate.version.ilike(f"%{search_query}%")
+            ConfigTemplate.template_name.ilike(f"%{search_query}%")
+            | ConfigTemplate.parameter_name.ilike(f"%{search_query}%")
+            | ConfigTemplate.vendor.ilike(f"%{search_query}%")
+            | ConfigTemplate.version.ilike(f"%{search_query}%")
         )
-        
+
     all_templates = query.paginate(page=page, per_page=per_page)
 
     return render_template(
         "/template_managers/template_manager.html",
         all_templates=all_templates,
         per_page=per_page,
-        search_query=search_query
+        search_query=search_query,
     )
+
 
 # Validasi ekstensi file untuk template dan parameter
 def allowed_file_temple(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in TEMPLE_EXTENSIONS
 
+
 def allowed_file_params(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in PARAMS_EXTENSIONS
+
 
 # Route untuk meng-upload template
 @tm_bp.route("/template_upload", methods=["POST"])
@@ -88,7 +94,9 @@ def template_upload():
 
     if j2.filename and allowed_file_temple(j2.filename):
         template_name = secure_filename(j2.filename)
-        file_path = os.path.join(current_app.static_folder, RAW_TEMPLATE_FOLDER, template_name)
+        file_path = os.path.join(
+            current_app.static_folder, RAW_TEMPLATE_FOLDER, template_name
+        )
         j2.save(file_path)
     else:
         flash("Jenis file yang dimasukkan tidak sesuai. hint j2.", "error")
@@ -96,7 +104,9 @@ def template_upload():
 
     if yaml.filename and allowed_file_params(yaml.filename):
         parameter_name = secure_filename(yaml.filename)
-        file_path = os.path.join(current_app.static_folder, RAW_TEMPLATE_FOLDER, parameter_name)
+        file_path = os.path.join(
+            current_app.static_folder, RAW_TEMPLATE_FOLDER, parameter_name
+        )
         yaml.save(file_path)
     else:
         flash("Jenis file yang dimasukkan tidak sesuai. hint yml, yaml.", "error")
@@ -116,6 +126,7 @@ def template_upload():
     flash("File berhasil upload.", "success")
     return redirect(url_for("tm.index"))
 
+
 # Route untuk memperbarui template
 @tm_bp.route("/template_update/<int:template_id>", methods=["GET", "POST"])
 @login_required
@@ -123,7 +134,9 @@ def template_update(template_id):
     template = ConfigTemplate.query.get_or_404(template_id)
 
     def read_file(filename):
-        file_path = os.path.join(current_app.static_folder, RAW_TEMPLATE_FOLDER, filename)
+        file_path = os.path.join(
+            current_app.static_folder, RAW_TEMPLATE_FOLDER, filename
+        )
         with open(file_path, "r") as file:
             return file.read()
 
@@ -141,31 +154,47 @@ def template_update(template_id):
 
         # Update konten file jika ada perubahan
         if new_template_content != read_file(template.template_name):
-            template_path = os.path.join(current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name)
+            template_path = os.path.join(
+                current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
+            )
             with open(template_path, "w") as file:
                 file.write(new_template_content)
 
         if new_parameter_content != read_file(template.parameter_name):
-            parameter_path = os.path.join(current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name)
+            parameter_path = os.path.join(
+                current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
+            )
             with open(parameter_path, "w") as file:
                 file.write(new_parameter_content)
 
         # Update nama file jika ada perubahan
         if new_template_name != template.template_name:
-            new_path_template = os.path.join(current_app.static_folder, RAW_TEMPLATE_FOLDER, new_template_name)
+            new_path_template = os.path.join(
+                current_app.static_folder, RAW_TEMPLATE_FOLDER, new_template_name
+            )
             if os.path.exists(new_path_template):
                 flash("File with the new name already exists.", "info")
             else:
-                old_path_template = os.path.join(current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name)
+                old_path_template = os.path.join(
+                    current_app.static_folder,
+                    RAW_TEMPLATE_FOLDER,
+                    template.template_name,
+                )
                 os.rename(old_path_template, new_path_template)
                 template.template_name = new_template_name
 
         if new_parameter_name != template.parameter_name:
-            new_path_parameter = os.path.join(current_app.static_folder, RAW_TEMPLATE_FOLDER, new_parameter_name)
+            new_path_parameter = os.path.join(
+                current_app.static_folder, RAW_TEMPLATE_FOLDER, new_parameter_name
+            )
             if os.path.exists(new_path_parameter):
                 flash("File with the new name already exists.", "info")
             else:
-                old_path_parameter = os.path.join(current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name)
+                old_path_parameter = os.path.join(
+                    current_app.static_folder,
+                    RAW_TEMPLATE_FOLDER,
+                    template.parameter_name,
+                )
                 os.rename(old_path_parameter, new_path_parameter)
                 template.parameter_name = new_parameter_name
 
@@ -187,20 +216,25 @@ def template_update(template_id):
         parameter_content=parameter_content,
     )
 
+
 # Route untuk menghapus template
 @tm_bp.route("/template_delete/<int:template_id>", methods=["POST"])
 @login_required
-@role_required('Admin', 'template_delete')
+@role_required("Admin", "template_delete")
 def template_delete(template_id):
     template = ConfigTemplate.query.get_or_404(template_id)
 
     # Hapus file template
-    file_path = os.path.join(current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name)
+    file_path = os.path.join(
+        current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
+    )
     if os.path.exists(file_path):
         os.remove(file_path)
 
     # Hapus file parameter
-    file_path = os.path.join(current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name)
+    file_path = os.path.join(
+        current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
+    )
     if os.path.exists(file_path):
         os.remove(file_path)
 
@@ -211,14 +245,19 @@ def template_delete(template_id):
     flash("Template berhasil dihapus.", "success")
     return redirect(url_for("tm.index"))
 
+
 # Route untuk menghasilkan template dari template Jinja dan parameter YAML
 @tm_bp.route("/template_generator/<int:template_id>", methods=["POST"])
 @login_required
 def template_generator(template_id):
     template = ConfigTemplate.query.get_or_404(template_id)
 
-    jinja_template_path = os.path.join(current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name)
-    yaml_params_path = os.path.join(current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name)
+    jinja_template_path = os.path.join(
+        current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
+    )
+    yaml_params_path = os.path.join(
+        current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
+    )
 
     # Baca konten template Jinja dan parameter YAML
     with open(jinja_template_path, "r") as jinja_template_file:
@@ -238,7 +277,9 @@ def template_generator(template_id):
         date_time_string = now.strftime("%Y%m%d_%H%M%S")
         gen_filename = generate_random_filename(template.vendor)
         newFileName = f"{gen_filename}.txt"
-        new_file_path = os.path.join(current_app.static_folder, GEN_TEMPLATE_FOLDER, newFileName)
+        new_file_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, newFileName
+        )
 
         # Simpan konfigurasi yang dirender ke file baru
         with open(new_file_path, "w") as new_file:
@@ -255,6 +296,7 @@ def template_generator(template_id):
 
     return redirect(url_for("tm.index"))
 
+
 # Route untuk melihat detail template
 @tm_bp.route("/template_detail/<int:template_id>", methods=["GET"])
 @login_required
@@ -262,7 +304,9 @@ def template_detail(template_id):
     template = ConfigTemplate.query.get_or_404(template_id)
 
     def read_file(filename):
-        file_path = os.path.join(current_app.static_folder, RAW_TEMPLATE_FOLDER, filename)
+        file_path = os.path.join(
+            current_app.static_folder, RAW_TEMPLATE_FOLDER, filename
+        )
         with open(file_path, "r") as file:
             return file.read()
 
@@ -273,44 +317,188 @@ def template_detail(template_id):
         "/template_managers/template_detail.html",
         template=template,
         template_content=template_content,
-        parameter_content=parameter_content
+        parameter_content=parameter_content,
     )
+
 
 # Route untuk membuat template manual
 @tm_bp.route("/template_manual_create", methods=["POST"])
 @login_required
 def template_manual_create():
-    vendor = request.form.get("vendor")
-    version = request.form.get("version")
-    info = request.form.get("info")
-    template_content = request.form.get("template_content")
-    parameter_content = request.form.get("parameter_content")
+    filename = request.form.get("filename")
+    configuration_content = request.form.get("configuration_content")
 
-    if not vendor or not version or not info:
+    # Memastikan newline konsisten dan tidak ada newline tambahan
+    if configuration_content:
+        # Gantikan semua jenis newline dengan newline Unix (\n) dan hapus newline tambahan di akhir
+        configuration_content = (
+            configuration_content.replace("\r\n", "\n").replace("\r", "\n").strip()
+        )
+
+    # Cek jika data filename kosong
+    if not filename:
         flash("Data tidak boleh kosong!", "info")
         return redirect(request.url)
 
-    template_name = f"{generate_random_filename(vendor)}.j2"
-    parameter_name = f"{generate_random_filename(vendor)}.yaml"
+    # Generate nama file dengan ekstensi .txt
+    configuration_name = f"{filename}.txt"
 
-    template_path = os.path.join(current_app.static_folder, RAW_TEMPLATE_FOLDER, template_name)
-    parameter_path = os.path.join(current_app.static_folder, RAW_TEMPLATE_FOLDER, parameter_name)
-
-    with open(template_path, "w") as template_file:
-        template_file.write(template_content)
-
-    with open(parameter_path, "w") as parameter_file:
-        parameter_file.write(parameter_content)
-
-    new_template = ConfigTemplate(
-        template_name=template_name,
-        parameter_name=parameter_name,
-        vendor=vendor,
-        version=version,
-        info=info,
+    # Tentukan path file
+    file_path = os.path.join(
+        current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration_name
     )
-    db.session.add(new_template)
+
+    # Simpan konten ke dalam file .txt
+    with open(file_path, "w", encoding="utf-8") as configuration_file:
+        configuration_file.write(configuration_content)
+
+    # Simpan data ke dalam database
+    new_configuration = NetworkManager(
+        template_name=configuration_name,
+    )
+    db.session.add(new_configuration)
     db.session.commit()
 
     flash("Template berhasil dibuat.", "success")
-    return redirect(url_for("tm.index"))
+    return redirect(url_for("tm.template_results"))
+
+
+# Template view page
+@tm_bp.route("/template_results")
+@login_required
+def template_results():
+    # Ambil halaman dan per halaman dari argumen URL
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
+    search_query = request.args.get("search", "")
+
+    # Mencari template berdasarkan query pencarian
+    query = NetworkManager.query
+    if search_query:
+        query = query.filter(NetworkManager.template_name.ilike(f"%{search_query}%"))
+
+    # Mengambil total item dan pagination
+    total_templates = query.count()
+    all_templates = query.paginate(page=page, per_page=per_page)
+
+    # Membuat objek pagination
+    pagination = Pagination(
+        page=page, per_page=per_page, total=total_templates, css_framework="bootstrap4"
+    )
+
+    # Read content for all templates
+    template_contents = {}
+    for template in all_templates.items:
+        template_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, template.template_name
+        )
+        if os.path.exists(template_path):
+            with open(template_path, "r", encoding="utf-8") as file:
+                template_contents[template.id] = file.read()
+        else:
+            template_contents[template.id] = "File tidak ditemukan"
+
+    return render_template(
+        "/template_managers/template_results.html",
+        all_templates=all_templates.items,
+        template_contents=template_contents,
+        per_page=per_page,
+        search_query=search_query,
+        pagination=pagination,
+    )
+
+
+# Templates update
+@tm_bp.route(
+    "/template_result_update/<int:template_result_id>", methods=["GET", "POST"]
+)
+@login_required
+def template_result_update(template_result_id):
+    # 1. Dapatkan objek dari database berdasarkan ID
+    template = NetworkManager.query.get_or_404(template_result_id)
+
+    # Fungsi untuk membaca isi file template
+    def read_template(filename):
+        template_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
+        )
+        with open(template_path, "r", encoding="utf-8") as file:
+            return file.read()
+
+    # Membaca konten template
+    template_content = read_template(template.template_name)
+
+    # Ketika user mengirimkan form dengan method 'POST'
+    if request.method == "POST":
+        new_template_name = request.form["template_name"]
+        new_template_content = request.form["template_content"].strip()
+
+        # Memastikan newline konsisten
+        new_template_content = new_template_content.replace("\r\n", "\n").replace(
+            "\r", "\n"
+        )
+
+        # 5.1 Update file template_content jika ada perubahan
+        if new_template_content != template_content:
+            template_path = os.path.join(
+                current_app.static_folder, GEN_TEMPLATE_FOLDER, template.template_name
+            )
+            with open(template_path, "w", encoding="utf-8") as file:
+                file.write(new_template_content)
+
+        # 5.2 Update file name jika ada perubahan
+        if new_template_name != template.template_name:
+            new_path_template = os.path.join(
+                current_app.static_folder, GEN_TEMPLATE_FOLDER, new_template_name
+            )
+
+            # cek filename exsisting, filename tidak boleh sama dengan filename exsisting
+            if os.path.exists(new_path_template):
+                flash("File with the new name already exists.", "info")
+            else:
+                # old_path_template
+                old_path_template = os.path.join(
+                    current_app.static_folder,
+                    GEN_TEMPLATE_FOLDER,
+                    template.template_name,
+                )
+                os.rename(old_path_template, new_path_template)
+                template.template_name = new_template_name
+
+        # 5.3 Update data ke dalam database
+        template.template_name = new_template_name
+
+        db.session.commit()
+        flash("Template update berhasil.", "success")
+        return redirect(url_for("tm.template_results"))
+
+    # 3. Tampilkan halaman template_update dengan data file di update page.
+    return render_template(
+        "/template_managers/template_result_update.html",
+        template=template,
+        template_content=template_content,
+    )
+
+
+# Templates delete
+@tm_bp.route("/template_result_delete/<int:template_id>", methods=["POST"])
+@login_required
+@role_required("Admin", "template_result_delete")
+def template_result_delete(template_id):
+
+    # Dapatkan objek dari database berdasarkan ID
+    template = NetworkManager.query.get_or_404(template_id)
+
+    # Hapus file template
+    file_path = os.path.join(
+        current_app.static_folder, GEN_TEMPLATE_FOLDER, str(template.template_name)
+    )
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    # Hapus data dari database
+    db.session.delete(template)
+    db.session.commit()
+
+    # Redirect ke halaman templates
+    return redirect(url_for("tm.template_results"))

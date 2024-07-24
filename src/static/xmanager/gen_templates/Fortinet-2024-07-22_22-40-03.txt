@@ -1,10 +1,7 @@
 config system global
     set hostname "Testing XNetManager"
 end
-
 ip address add address=192.168.1.1
-
-
 sdfasfd
 aasfdsafasd
 asfdsadfdsa

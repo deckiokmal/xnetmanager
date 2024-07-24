@@ -8,7 +8,7 @@
     <div class="card-header">
         Template Update
     </div>
-    <form action="{{ url_for('nm.network_template_update', template_id=template.id) }}" method="post">
+    <form action="{{ url_for('tm.template_result_update', template_result_id=template.id) }}" method="post">
         <div class="mb-3">
             <label for="template_name" class="form-label">Template File</label>
             <input type="text" class="form-control" value="{{ template.template_name }}" id="template_name"
@@ -20,7 +20,7 @@
                 class="form-control">{{template_content}}</textarea>
         </div>
         <button type="submit" class="btn btn-primary">Submit</button>
-        <a class="btn btn-danger" href="{{ url_for('nm.templates') }}">Back</a>
+        <a class="btn btn-danger" href="{{ url_for('tm.template_results') }}">Back</a>
     </form>
 </div>
 
