@@ -13,6 +13,7 @@ from src.models.users import User, Role, User_role
 from src.models.networkautomation import DeviceManager, NetworkManager, ConfigTemplate
 from src.utils.forms import RegisterForm
 from .decorators import login_required, role_required
+from flask_paginate import Pagination, get_page_args
 
 
 # Membuat blueprint users
@@ -56,7 +57,7 @@ def dashboard():
             device_vendor_count[vendor] += 1
         else:
             device_vendor_count[vendor] = 1
-    
+
     # Menghitung jumlah template berdasarkan vendor
     template_vendor_count = {}
     for template in templates:
@@ -80,10 +81,29 @@ def dashboard():
 @login_required
 @role_required("Admin", "users")
 def index():
-    # Tampilkan all users per_page 10
-    page = request.args.get("page", 1, type=int)
-    per_page = 10
-    all_users = User.query.paginate(page=page, per_page=per_page)
+    # Mendapatkan parameter pencarian dari URL
+    search_query = request.args.get("search", "").lower()
+
+    # Mendapatkan halaman saat ini dan jumlah entri per halaman
+    page, per_page, offset = get_page_args(
+        page_parameter="page", per_page_parameter="per_page", per_page=10
+    )
+
+    if search_query:
+        # Jika ada pencarian, filter perangkat berdasarkan query
+        user_query = User.query.filter(User.username.ilike(f"%{search_query}%"))
+    else:
+        # Jika tidak ada pencarian, ambil semua perangkat
+        user_query = User.query
+
+    # Menghitung total perangkat dan mengambil perangkat untuk halaman saat ini
+    total_user = user_query.count()
+    users = user_query.limit(per_page).offset(offset).all()
+
+    # Membuat objek pagination
+    pagination = Pagination(
+        page=page, per_page=per_page, total=total_user, css_framework="bootstrap4"
+    )
 
     # Modal Form Create users
     form = RegisterForm(request.form)
@@ -100,7 +120,16 @@ def index():
             db.session.rollback()
             flash("Registration failed. Please try again.", "error")
 
-    return render_template("/users/user_manager.html", data=all_users, form=form)
+    return render_template(
+        "/users/user_manager.html",
+        users=users,
+        page=page,
+        per_page=per_page,
+        pagination=pagination,
+        search_query=search_query,
+        total_user=total_user,
+        form=form,
+    )
 
 
 # Update user
@@ -113,9 +142,9 @@ def user_update(user_id):
     # Jika metode request adalah POST, proses update user
     if request.method == "POST":
         new_username = request.form["username"]
-        old_password = request.form["password-input"]
-        new_password = request.form["newpassword-input1"]
-        repeat_new_password = request.form["newpassword-input2"]
+        old_password = request.form["password_input"]
+        new_password = request.form["new_password"]
+        repeat_new_password = request.form["retype_password"]
 
         # Memeriksa apakah username baru sudah ada di database
         exist_user = User.query.filter(
@@ -193,12 +222,39 @@ def user_profile():
 @login_required
 @role_required("Admin", "user_role")
 def roles():
-    # Tampilkan all user role per_page 10
-    page = request.args.get("page", 1, type=int)
-    per_page = 10
-    all_role = Role.query.paginate(page=page, per_page=per_page)
+    # Mendapatkan parameter pencarian dari URL
+    search_query = request.args.get("search", "").lower()
 
-    return render_template("/users/role_users.html", all_role=all_role)
+    # Mendapatkan halaman saat ini dan jumlah entri per halaman
+    page, per_page, offset = get_page_args(
+        page_parameter="page", per_page_parameter="per_page", per_page=10
+    )
+
+    if search_query:
+        # Jika ada pencarian, filter perangkat berdasarkan query
+        role_query = Role.query.filter(Role.name.ilike(f"%{search_query}%"))
+    else:
+        # Jika tidak ada pencarian, ambil semua perangkat
+        role_query = Role.query
+
+    # Menghitung total perangkat dan mengambil perangkat untuk halaman saat ini
+    total_roles = role_query.count()
+    roles = role_query.limit(per_page).offset(offset).all()
+
+    # Membuat objek pagination
+    pagination = Pagination(
+        page=page, per_page=per_page, total=total_roles, css_framework="bootstrap4"
+    )
+
+    return render_template(
+        "/users/role_users.html",
+        roles=roles,
+        page=page,
+        per_page=per_page,
+        pagination=pagination,
+        search_query=search_query,
+        total_roles=total_roles,
+    )
 
 
 # Create role

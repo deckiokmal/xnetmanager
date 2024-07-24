@@ -1,161 +1,270 @@
 {% extends "/layouts/layout.html" %}
-{% block title %}role_user{% endblock %}
+{% block title %}User Role Management{% endblock %}
 {% block content %}
 <!-- Begin Page Content -->
 
-
-<div class="d-grid gap-2 d-md-flex justify-content-md-end mb-2">
-    <!-- Tombol untuk menampilkan modal -->
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#rolecreateModal">
-        Create Role
-    </button>
-    <!-- Tombol untuk menampilkan modal -->
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserToRoleModal">
-        Tambah User ke Role
-    </button>
-</div>
-
-<div class="card position-relative px-4">
-    <div class="card-header">
-        Role Management
-    </div>
-    <div class="table-responsive">
-        <table class="table table-hover">
-            <thead class="table-dark">
-                <tr>
-                    <th scope="col" class="justify-content">No</th>
-                    <th scope="col">Role</th>
-                    <th scope="col">User</th>
-                    <th scope="col">Permissions</th>
-                    <th scope="col">Action</th>
-                </tr>
-            </thead>
-            <tbody class="position-relative py-2 px-4">
-
-                {% for role in all_role %}
-                <tr>
-                    <th scope="row">{{ loop.index }}</th>
-                    <td>
-                        <div class="text-wrap">
-                            {{ role.name }}
-                        </div>
-                    </td>
-                    <td>
-                        {% for user in role.users %}
-                        {{ user.username }}<br>
-                        {% endfor %}
-                    </td>
-                    <td>
-                        {{ role.permissions }}
-                    </td>
-                    <td>
-                        <div class="input-group flex-nowrap">
-
-                            <div class="position-relative mr-1">
-                                <form action="{{url_for('users.role_update', role_id=role.id)}}" method="get">
-                                    <input class="btn btn-success" type="submit" value="Edit">
-                                </form>
-                            </div>
-
-                            <div class="position-relative ml-1">
-                                <form action="{{url_for('users.role_delete', role_id=role.id)}}" method="post">
-                                    <input class="btn btn-danger"
-                                        onclick="return confirm('Anda yakin ingin menghapus role ini?');" type="submit"
-                                        value="Delete">
-                                </form>
-                            </div>
-
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- create device Modal -->
-<div class="modal fade" id="rolecreateModal" tabindex="-1" aria-labelledby="rolecreateModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="rolecreateModalLabel">
-                    Tambah Role Baru
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form method="post" enctype="multipart/form-data" action="{{url_for('users.create_role')}}">
-                    <div class="mb-3">
-                        <label for="name" class="form-label">Nama Role</label>
-                        <input type="text" class="form-control" id="name" name="name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="permissions" class="form-label">Permissions</label>
-                        <input type="text" class="form-control" id="permissions" name="permissions" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">
-                        Create
-                    </button>
-                </form>
+<!-- Grup Tombol -->
+<div class="d-flex justify-content-between mb-3">
+    <div>
+        <div class="row">
+            <div class="col">
+                <!-- Tombol untuk menampilkan modal -->
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#rolecreateModal">
+                    Create Role
+                </button>
+                <!-- Tombol untuk menampilkan modal -->
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                    data-bs-target="#addUserToRoleModal">
+                    Tambah User ke Role
+                </button>
             </div>
         </div>
     </div>
 </div>
 
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Role Management</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <div id="dataTable_wrapper" class="dataTables_wrapper dt-bootstrap4">
+                <div class="row mb-3">
+                    <div class="col-12 col-md-6 d-flex align-items-center mb-2 mb-md-0">
+                        <!-- Dropdown untuk mengubah jumlah entri yang ditampilkan per halaman -->
+                        <div class="dataTables_length" id="dataTable_length">
+                            <form id="perPageForm" action="{{ url_for('users.roles') }}" method="get">
+                                <label class="d-flex align-items-center">
+                                    <span>Tampilkan</span>
+                                    <select name="per_page" aria-controls="dataTable"
+                                        class="custom-select custom-select-sm form-control form-control-sm mx-2"
+                                        style="padding-right: 1.75rem;"
+                                        onchange="document.getElementById('perPageForm').submit()">
+                                        <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
+                                        <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
+                                        <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
+                                    </select>
+                                    <span>entri</span>
+                                </label>
+                                <input type="hidden" name="search" value="{{ search_query }}">
+                            </form>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6 d-flex justify-content-md-end">
+                        <!-- Form Pencarian -->
+                        <form id="searchForm" method="get" action="{{ url_for('users.roles') }}"
+                            class="form-inline d-flex">
+                            <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2"
+                                placeholder="Cari username" value="{{ search_query }}">
+                            <button class="btn btn-outline-success btn-sm" type="submit">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </button>
+                            <input type="hidden" name="per_page" value="{{ per_page }}">
+                        </form>
+                    </div>
+                </div>
+                <div class="row">
+                    <!-- Tabel Roles -->
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th scope="col" class="justify-content">No</th>
+                                    <th scope="col">Roles</th>
+                                    <th scope="col">Akun Pengguna</th>
+                                    <th scope="col">Hak Akses</th>
+                                    <th scope="col">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for role in roles %}
 
-<!-- Modal -->
-<div class="modal fade" id="addUserToRoleModal" tabindex="-1" aria-labelledby="addUserToRoleModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addUserToRoleModalLabel">Tambah User ke Role</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="addUserToRoleForm">
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
+                                <tr>
+                                    <th scope="row">{{ loop.index + (page - 1) * per_page }}</th>
+                                    <td>{{ role.name }}</td>
+                                    <td>{{ role.users }}</td>
+                                    <td>{{ role.permissions }}</td>
+                                    <td>
+                                        <!-- Tombol Detail Role -->
+                                        <button class="btn btn-info btn-sm" data-bs-toggle="modal"
+                                            data-bs-target="#detailModal{{ role.id }}">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <!-- Tombol Edit Perangkat -->
+                                        <a href="{{url_for('users.role_update', role_id=role.id)}}"
+                                            class="btn btn-success btn-sm">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <!-- Form untuk Menghapus Perangkat -->
+                                        <form action="{{url_for('users.role_delete', role_id=role.id)}}" method="post"
+                                            style="display:inline;">
+                                            <button type="submit" class="btn btn-danger btn-sm"
+                                                onclick="return confirm('Apakah Anda yakin ingin menghapus role ini?');">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+
+                                <!-- Modal Detail Roles -->
+                                <div class="modal fade" id="detailModal{{ role.id }}" tabindex="-1"
+                                    aria-labelledby="detailModalLabel{{ role.id }}" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="detailModalLabel{{ role.id }}">Detail
+                                                    Roles
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="Tutup"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p><strong>Nama Role:</strong> {{ role.name }}</p>
+                                                <p><strong>Pengguna terasosiasi:</strong> {{ role.users }}</p>
+                                                <p><strong>Hak akses:</strong> {{
+                                                    role.permissions }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="mb-3">
-                        <label for="role_name" class="form-label">Role Name</label>
-                        <input type="text" class="form-control" id="role_name" name="role_name" required>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-12 col-md-5 d-flex align-items-center mb-2 mb-md-0">
+                        <!-- Informasi jumlah data yang ditampilkan -->
+                        <div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
+                            Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if
+                            (page - 1)
+                            * per_page + per_page < total_roles else total_roles }} dari {{ total_roles }} entri </div>
+                        </div>
+                        <div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
+                            <!-- Link Pagination -->
+                            {{ pagination.links }}
+                        </div>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="addUserToRole()">Tambah</button>
+                </div>
             </div>
         </div>
-    </div>
-</div>
 
+        <!-- create device Modal -->
+        <div class="modal fade" id="rolecreateModal" tabindex="-1" aria-labelledby="rolecreateModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="rolecreateModalLabel">
+                            Tambah Role Baru
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" enctype="multipart/form-data" action="{{url_for('users.create_role')}}">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Nama Role</label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="permissions" class="form-label">Permissions</label>
+                                <input type="text" class="form-control" id="permissions" name="permissions" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                Create
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-<script>
-    function addUserToRole() {
-        $.ajax({
-            url: "/add_user_to_role",
-            method: "POST",
-            data: $("#addUserToRoleForm").serialize(),
-            success: function(response) {
-                if (response.status === "success") {
-                    alert(response.message);
-                    window.location.href = "{{ url_for('users.roles') }}"; // Redirect ke halaman users.roles
-                } else {
-                    alert(response.message);
-                }
-            },
-            error: function() {
-                alert("Terjadi kesalahan saat menambahkan user ke role.");
+        <!-- Modal -->
+        <div class="modal fade" id="addUserToRoleModal" tabindex="-1" aria-labelledby="addUserToRoleModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addUserToRoleModalLabel">Tambah User ke Role</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="addUserToRoleForm">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="username" name="username" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="role_name" class="form-label">Role Name</label>
+                                <input type="text" class="form-control" id="role_name" name="role_name" required>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="addUserToRole()">Tambah</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            let timeout = null;
+
+            // Menangani input pada form pencarian dengan penundaan 1 detik
+            document.getElementById("searchInput").addEventListener("input", function () {
+                // Batalkan timer yang ada sebelumnya jika ada
+                clearTimeout(timeout);
+
+                // Setel timer baru untuk submit form setelah 1 detik
+                timeout = setTimeout(function () {
+                    document.getElementById('searchForm').submit();
+                }, 1000); // 1000 ms = 1 detik
+            });
+
+            // Fungsi untuk memfilter baris tabel berdasarkan input pencarian
+            document.getElementById("searchInput").addEventListener("input", function () {
+                const query = this.value.toLowerCase();
+                const rows = document.querySelectorAll("#deviceTable tbody tr");
+
+                rows.forEach(row => {
+                    const deviceName = row.cells[2].textContent.toLowerCase();
+                    const ipAddress = row.cells[3].textContent.toLowerCase();
+                    const vendor = row.cells[4].textContent.toLowerCase();
+
+                    if (
+                        deviceName.includes(query) ||
+                        ipAddress.includes(query) ||
+                        vendor.includes(query)
+                    ) {
+                        row.style.display = "";
+                    } else {
+                        row.style.display = "none";
+                    }
+                });
+            });
+
+            // Fungsi menambahkan pengguna ke role tertentu
+            function addUserToRole() {
+                $.ajax({
+                    url: "/add_user_to_role",
+                    method: "POST",
+                    data: $("#addUserToRoleForm").serialize(),
+                    success: function (response) {
+                        if (response.status === "success") {
+                            alert(response.message);
+                            window.location.href = "{{ url_for('users.roles') }}"; // Redirect ke halaman users.roles
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        alert("Terjadi kesalahan saat menambahkan user ke role.");
+                    }
+                });
             }
-        });
-    }
-</script>
+        </script>
 
-
-
-<!-- End of Page Content -->
-{% endblock %}
+        <!-- End of Page Content -->
+        {% endblock %}
