@@ -1,29 +1,33 @@
 {% extends "/layouts/layout.html" %}
-{% block title %}template_update{% endblock %}
+{% block title %}Update Template{% endblock %}
 {% block content %}
-<!-- Begin Page Content -->
+<!-- Konten Halaman Update Template -->
 
-
-<div class="card position-relative py-2 px-4">
-    <div class="card-header">
-        Template Update
+<div class="card position-relative py-4 px-4">
+    <div class="card-header mb-3">
+        Update Template
     </div>
+    <!-- Form untuk memperbarui informasi template -->
     <form action="{{ url_for('tm.template_result_update', template_result_id=template.id) }}" method="post">
         <div class="mb-3">
-            <label for="template_name" class="form-label">Template File</label>
+            <label for="template_name" class="form-label">Nama Template</label>
             <input type="text" class="form-control" value="{{ template.template_name }}" id="template_name"
                 name="template_name">
         </div>
         <div class="mb-3">
-            <label for="template_content" class="form-label">Template Content</label>
+            <label for="template_content" class="form-label">Konten Template</label>
             <textarea name="template_content" id="template_content" rows="10"
-                class="form-control">{{template_content}}</textarea>
+                class="form-control">{{ template_content }}</textarea>
         </div>
-        <button type="submit" class="btn btn-primary">Submit</button>
-        <a class="btn btn-danger" href="{{ url_for('tm.template_results') }}">Back</a>
+        <!-- Tombol untuk menyimpan perubahan dan tombol untuk kembali ke halaman utama -->
+        <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-check"></i>
+        </button>
+        <a class="btn btn-secondary" href="{{ url_for('tm.template_results') }}">
+            <i class="fa-solid fa-arrow-left"></i>
+        </a>
     </form>
 </div>
 
-
-<!-- End of Page Content -->
+<!-- Akhir Konten Halaman -->
 {% endblock %}
