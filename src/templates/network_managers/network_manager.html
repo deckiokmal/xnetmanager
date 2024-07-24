@@ -7,22 +7,22 @@
 <div class="mb-2 mr-2">
     <!-- Tombol Check Status -->
     <button id="checkStatusButton" type="button" class="btn btn-info">
-        <i class="fas fa-check-circle"></i> Check Status
+        <i class="fas fa-check-circle"></i> Cek Status
     </button>
     <!-- Tombol Bulk Config -->
     <button id="bulkConfigBtn" type="button" class="btn btn-primary">
-        <i class="fas fa-cogs"></i> Select Device
+        <i class="fas fa-cogs"></i> Pilih Perangkat
     </button>
     <!-- Tombol Push Config -->
     <button id="pushConfigBtn" type="button" class="btn btn-success">
-        <i class="fas fa-upload"></i> Push Config
+        <i class="fas fa-upload"></i> Kirim Konfigurasi
     </button>
 </div>
 
 <!-- Data Table -->
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Device Config List</h6>
+        <h6 class="m-0 font-weight-bold text-primary">Daftar Perangkat</h6>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -33,7 +33,7 @@
                         <div class="dataTables_length" id="dataTable_length">
                             <form id="perPageForm" action="{{ url_for('nm.index') }}" method="get">
                                 <label class="d-flex align-items-center">
-                                    <span>Show</span>
+                                    <span>Tampilkan</span>
                                     <select name="per_page" aria-controls="dataTable"
                                         class="custom-select custom-select-sm form-control form-control-sm mx-2"
                                         style="padding-right: 1.75rem;"
@@ -42,7 +42,7 @@
                                         <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
                                         <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
                                     </select>
-                                    <span>entries</span>
+                                    <span>entri</span>
                                 </label>
                                 <input type="hidden" name="search" value="{{ search_query }}">
                             </form>
@@ -68,8 +68,8 @@
                             <tr>
                                 <th scope="col"></th>
                                 <th scope="col" class="justify-content">No</th>
-                                <th scope="col">Device Name</th>
-                                <th scope="col">IP Address</th>
+                                <th scope="col">Nama Perangkat</th>
+                                <th scope="col">Alamat IP</th>
                                 <th scope="col">Vendor</th>
                                 <th scope="col">Status</th>
                             </tr>
@@ -108,8 +108,8 @@
                     <div class="col-12 col-md-5 d-flex align-items-center mb-2 mb-md-0">
                         <!-- Informasi jumlah data yang ditampilkan -->
                         <div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
-                            Showing {{ (page - 1) * per_page + 1 }} to {{ (page - 1) * per_page + per_page if (page - 1)
-                            * per_page + per_page < total_devices else total_devices }} of {{ total_devices }} entries
+                            Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if (page - 1)
+                            * per_page + per_page < total_devices else total_devices }} dari {{ total_devices }} entri
                                 </div>
                         </div>
                         <div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
