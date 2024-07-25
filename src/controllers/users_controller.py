@@ -5,12 +5,11 @@ from flask import (
     redirect,
     url_for,
     flash,
-    jsonify,
 )
 from flask_login import login_required, current_user
 from src import db, bcrypt
-from src.models.users_model import User, Role, User_role
-from src.models.xmanager_model import DeviceManager, NetworkManager, ConfigTemplate
+from src.models.users_model import User
+from src.models.xmanager_model import DeviceManager, ConfigTemplate
 from src.utils.forms_utils import RegisterForm
 from .decorators import login_required, role_required
 from flask_paginate import Pagination, get_page_args
@@ -68,7 +67,7 @@ def dashboard():
             template_vendor_count[vendor] = 1
 
     return render_template(
-        "/users/dashboard.html",
+        "/users_management/dashboard.html",
         device_vendor_keys=list(device_vendor_count.keys()),
         device_vendor_values=list(device_vendor_count.values()),
         template_vendor_keys=list(template_vendor_count.keys()),
@@ -121,7 +120,7 @@ def index():
             flash("Registration failed. Please try again.", "error")
 
     return render_template(
-        "/users/user_manager.html",
+        "/users_management/index.html",
         users=users,
         page=page,
         per_page=per_page,
@@ -156,17 +155,17 @@ def user_update(user_id):
         # Memeriksa apakah password lama tidak kosong
         if not old_password:
             flash("Password must not be empty.", "error")
-            return render_template("/users/user_update.html", user=user)
+            return render_template("/users_management/user_update.html", user=user)
 
         # Memeriksa apakah password lama benar
         if not bcrypt.check_password_hash(user.password, old_password):
             flash("Incorrect password!", "error")
-            return render_template("/users/user_update.html", user=user)
+            return render_template("/users_management/user_update.html", user=user)
         else:
             # Memeriksa apakah new_password sama dengan repeat_new_password
             if new_password != repeat_new_password:
                 flash("New passwords do not match.", "error")
-                return render_template("/users/user_update.html", user=user)
+                return render_template("/users_management/user_update.html", user=user)
 
             # Mengupdate password baru jika valid
             if new_password:
@@ -183,7 +182,7 @@ def user_update(user_id):
             return redirect(url_for("users.index"))
 
     # Render halaman update user dengan data user yang akan diupdate
-    return render_template("/users/user_update.html", user=user)
+    return render_template("/users_management/user_update.html", user=user)
 
 
 # Delete user
@@ -214,162 +213,4 @@ def user_profile():
     user_id = current_user.id
     user = User.query.get(user_id)
 
-    return render_template("/users/user_profile.html", user=user)
-
-
-# Users Role Page
-@users_bp.route("/user_role", methods=["GET", "POST"])
-@login_required
-@role_required("Admin", "user_role")
-def roles():
-    # Mendapatkan parameter pencarian dari URL
-    search_query = request.args.get("search", "").lower()
-
-    # Mendapatkan halaman saat ini dan jumlah entri per halaman
-    page, per_page, offset = get_page_args(
-        page_parameter="page", per_page_parameter="per_page", per_page=10
-    )
-
-    if search_query:
-        # Jika ada pencarian, filter perangkat berdasarkan query
-        role_query = Role.query.filter(Role.name.ilike(f"%{search_query}%"))
-    else:
-        # Jika tidak ada pencarian, ambil semua perangkat
-        role_query = Role.query
-
-    # Menghitung total perangkat dan mengambil perangkat untuk halaman saat ini
-    total_roles = role_query.count()
-    roles = role_query.limit(per_page).offset(offset).all()
-
-    # Membuat objek pagination
-    pagination = Pagination(
-        page=page, per_page=per_page, total=total_roles, css_framework="bootstrap4"
-    )
-
-    return render_template(
-        "/users/role_users.html",
-        roles=roles,
-        page=page,
-        per_page=per_page,
-        pagination=pagination,
-        search_query=search_query,
-        total_roles=total_roles,
-    )
-
-
-# Create role
-@users_bp.route("/create_role", methods=["GET", "POST"])
-@login_required
-@role_required("Admin", "create_role")
-def create_role():
-    if request.method == "POST":
-        role_name = request.form["name"]
-        role_permissions = request.form["permissions"]
-
-        # 1. existing role name check
-        exist_role = Role.query.filter_by(name=role_name).first()
-        if exist_role:
-            flash("Role sudah ada!", "error")
-
-        # 2. name dan permissions field check. - user tidak boleh input data kosong.
-        elif not role_name or not role_permissions:
-            flash("role name dan permissions tidak boleh kosong!", "warning")
-
-        # jika error checking null, maka eksekusi create_role
-        else:
-            new_role = Role(
-                name=role_name,
-                permissions=role_permissions,
-            )
-            db.session.add(new_role)
-            db.session.commit()
-            flash("Role berhasil ditambah!", "success")
-
-            # kembali ke index
-            return redirect(url_for("users.roles"))
-
-    return redirect(url_for("users.roles"))
-
-
-# Role Update
-@users_bp.route("/role_update/<int:role_id>", methods=["GET", "POST"])
-@login_required
-@role_required("Admin", "role_update")
-def role_update(role_id):
-    # Mengambil objek Role berdasarkan role_id
-    role = Role.query.get(role_id)
-
-    # Jika metode request adalah POST, proses update role
-    if request.method == "POST":
-        role_name = request.form["name"]
-        role_permissions = request.form["permissions"]
-
-        # 1. existing role name check
-        exist_role = Role.query.filter(
-            Role.id != role.id, Role.name == role_name
-        ).first()
-        if exist_role:
-            flash("Role dengan nama tersebut sudah ada!", "error")
-        else:
-            # Mengupdate data role name
-            role.name = role_name
-            role.permissions = role_permissions
-
-            # Commit perubahan ke database
-            db.session.commit()
-            flash("Role berhasil diubah.", "success")
-            return redirect(url_for("users.roles"))
-
-    # Render halaman update user dengan data user yang akan diupdate
-    return render_template("/users/role_update.html", role=role)
-
-
-# Role Delete
-@users_bp.route("/role_delete/<int:role_id>", methods=["POST"])
-@login_required
-@role_required("Admin", "role_delete")
-def role_delete(role_id):
-    role = Role.query.get_or_404(role_id)
-
-    if role.users.count(role.users) > 0:
-        flash(
-            "Role tidak dapat dihapus karena masih terasosiasi dengan pengguna.",
-            "warning",
-        )
-        return redirect(url_for("users.roles"))
-
-    db.session.delete(role)
-    db.session.commit()
-    flash("Role berhasil dihapus.", "success")
-    return redirect(url_for("users.roles"))
-
-
-# tambah user to role
-@users_bp.route("/add_user_to_role", methods=["POST"])
-@login_required
-@role_required("Admin", "add_user_to_role")
-def add_user_to_role():
-    if request.method == "POST":
-        username = request.form["username"]
-        role_name = request.form["role_name"]
-
-        user = User.query.filter_by(username=username).first()
-        if not user:
-            return jsonify({"status": "error", "message": "User not found"})
-
-        role = Role.query.filter_by(name=role_name).first()
-        if not role:
-            return jsonify({"status": "error", "message": "Role not found"})
-
-        user_role = User_role(user_id=user.id, role_id=role.id)
-        db.session.add(user_role)
-        db.session.commit()
-
-        return jsonify(
-            {
-                "status": "success",
-                "message": f"User {username} berhasil ditambahkan ke role {role_name}.",
-            }
-        )
-
-    return jsonify({"status": "error", "message": "Invalid request"})
+    return render_template("/users_management/user_profile.html", user=user)

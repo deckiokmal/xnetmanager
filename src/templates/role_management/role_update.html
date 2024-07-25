@@ -7,7 +7,7 @@
     <div class="card-header">
         Role Update
     </div>
-    <form action="{{url_for('users.role_update', role_id=role.id)}}" method="post">
+    <form action="{{url_for('roles.role_update', role_id=role.id)}}" method="post">
         <div class=" password-container mb-3">
             <div class="mb-3 mt-3">
                 <label for="name" class="small">Nama Role</label>
@@ -18,7 +18,7 @@
                 <input type="text" class="form-control" value="{{ role.permissions }}" id="permissions" name="permissions">
             </div>
             <button type="submit" class="btn btn-primary">Submit</button>
-            <a class="btn btn-danger" href="{{ url_for('users.roles') }}">Back</a>
+            <a class="btn btn-danger" href="{{ url_for('roles.index') }}">Back</a>
         </div>
     </form>
 </div>

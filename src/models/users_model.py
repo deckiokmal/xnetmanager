@@ -1,5 +1,4 @@
 from datetime import datetime
-from sqlite3 import IntegrityError
 from flask_login import UserMixin
 import pyotp
 from src import bcrypt, db
@@ -38,14 +37,14 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return f"<user {self.username}>"
-    
+
     def has_role(self, role):
         return bool(
-            Role.query
-            .join(Role.users)
+            Role.query.join(Role.users)
             .filter(User.id == self.id)
             .filter(Role.name == role)
-            .count() > 0
+            .count()
+            > 0
         )
 
 
@@ -55,9 +54,10 @@ class Role(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
-    permissions = db.Column(db.String(255), nullable=False)
-
     users = db.relationship("User", secondary="user_roles", back_populates="roles")
+    permissions = db.relationship(
+        "Permission", secondary="role_permissions", back_populates="roles"
+    )
 
     def has_permission(self, permission):
         if self.permissions:
@@ -68,9 +68,27 @@ class Role(db.Model):
         return "<Role {}>".format(self.name)
 
 
-class User_role(db.Model):
+class Permission(db.Model):
+    __tablename__ = "permissions"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    description = db.Column(db.String(200))
+    roles = db.relationship(
+        "Role", secondary="role_permissions", back_populates="permissions"
+    )
 
+
+class UserRoles(db.Model):
     __tablename__ = "user_roles"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"))
+    role_id = db.Column(db.Integer, db.ForeignKey("roles.id", ondelete="CASCADE"))
 
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
-    role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), primary_key=True)
+
+class RolePermissions(db.Model):
+    __tablename__ = "role_permissions"
+    id = db.Column(db.Integer, primary_key=True)
+    role_id = db.Column(db.Integer, db.ForeignKey("roles.id", ondelete="CASCADE"))
+    permission_id = db.Column(
+        db.Integer, db.ForeignKey("permissions.id", ondelete="CASCADE")
+    )

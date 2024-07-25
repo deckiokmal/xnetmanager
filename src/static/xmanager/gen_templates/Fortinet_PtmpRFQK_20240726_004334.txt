@@ -1,0 +1,75 @@
+config user local
+
+    edit "andisupriyanto"
+
+        set type password
+
+	set passwd L1nt4s4rt@_SSA!
+
+    next
+
+    edit "antoniriyadi"
+
+        set type password
+
+	set passwd L1nt4s4rt@_SSA!
+
+    next
+
+    edit "dedyiskandar"
+
+        set type password
+
+	set passwd L1nt4s4rt@_SSA!
+
+    next
+
+    edit "aditiasaputra"
+
+        set type password
+
+	set passwd L1nt4s4rt@_SSA!
+
+    next
+
+end
+
+
+
+
+
+
+
+config user group
+
+
+
+
+
+
+
+    edit "Lintasarta"
+
+
+
+
+
+
+
+	append member "andisupriyanto" "antoniriyadi" "dedyiskandar" "aditiasaputra"
+
+
+
+
+
+
+
+    next
+
+
+
+
+
+
+
+end

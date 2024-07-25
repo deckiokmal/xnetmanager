@@ -82,7 +82,7 @@ def index():
     )
 
     return render_template(
-        "/network_managers/network_manager.html",
+        "/config_managers/index.html",
         devices=devices,
         templates=templates,
         page=page,

@@ -43,6 +43,11 @@ from .controllers.users_controller import users_bp
 
 app.register_blueprint(users_bp)
 
+# blueprint controllers users.py
+from .controllers.roles_controller import roles_bp
+
+app.register_blueprint(roles_bp)
+
 # blueprint controllers device_manager.py
 from .controllers.device_manager_controller import dm_bp
 

@@ -58,7 +58,7 @@ def index():
     all_templates = query.paginate(page=page, per_page=per_page)
 
     return render_template(
-        "/template_managers/template_manager.html",
+        "/template_managers/index.html",
         all_templates=all_templates,
         per_page=per_page,
         search_query=search_query,

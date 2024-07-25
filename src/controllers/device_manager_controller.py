@@ -64,7 +64,7 @@ def index():
 
     # Menampilkan template dengan data perangkat dan pagination
     return render_template(
-        "/device_managers/device_manager.html",
+        "/device_managers/index.html",
         devices=devices,
         page=page,
         per_page=per_page,
