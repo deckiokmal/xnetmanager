@@ -78,7 +78,7 @@ def dashboard():
 # Users Management Page
 @users_bp.route("/users", methods=["GET", "POST"])
 @login_required
-@role_required("Admin", "users")
+# @role_required("Admin", "users")
 def index():
     # Mendapatkan parameter pencarian dari URL
     search_query = request.args.get("search", "").lower()
@@ -188,7 +188,7 @@ def user_update(user_id):
 # Delete user
 @users_bp.route("/user_delete/<int:user_id>", methods=["POST"])
 @login_required
-@role_required("Admin", "user_delete")
+# @role_required("Admin", "user_delete")
 def user_delete(user_id):
     if current_user.id == user_id:
         flash("Anda tidak bisa delete akun anda sendiri.", "warning")

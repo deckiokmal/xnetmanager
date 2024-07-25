@@ -42,7 +42,7 @@ def inject_user():
 # roles Role Page
 @roles_bp.route("/user_role", methods=["GET", "POST"])
 @login_required
-@role_required("Admin", "UserRoles")
+# @role_required("Admin", "UserRoles")
 def index():
     # Mendapatkan parameter pencarian dari URL
     search_query = request.args.get("search", "").lower()
@@ -82,7 +82,7 @@ def index():
 # Create role
 @roles_bp.route("/create_role", methods=["GET", "POST"])
 @login_required
-@role_required("Admin", "create_role")
+# @role_required("Admin", "create_role")
 def create_role():
     if request.method == "POST":
         role_name = request.form["name"]
@@ -116,7 +116,7 @@ def create_role():
 # Role Update
 @roles_bp.route("/role_update/<int:role_id>", methods=["GET", "POST"])
 @login_required
-@role_required("Admin", "role_update")
+# @role_required("Admin", "role_update")
 def role_update(role_id):
     # Mengambil objek Role berdasarkan role_id
     role = Role.query.get(role_id)
@@ -149,7 +149,7 @@ def role_update(role_id):
 # Role Delete
 @roles_bp.route("/role_delete/<int:role_id>", methods=["POST"])
 @login_required
-@role_required("Admin", "role_delete")
+# @role_required("Admin", "role_delete")
 def role_delete(role_id):
     role = Role.query.get_or_404(role_id)
 
@@ -169,7 +169,7 @@ def role_delete(role_id):
 # tambah user to role
 @roles_bp.route("/add_user_to_role", methods=["POST"])
 @login_required
-@role_required("Admin", "add_user_to_role")
+# @role_required("Admin", "add_user_to_role")
 def add_user_to_role():
     if request.method == "POST":
         username = request.form["username"]
