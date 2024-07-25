@@ -1,10 +1,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from src import db
-from src.models.users import User
-from src.models.networkautomation import DeviceManager
+from src.models.users_model import User
+from src.models.xmanager_model import DeviceManager
 from .decorators import login_required, role_required
-from src.utils.validasi_ip import is_valid_ip
+from src.utils.ip_validation_utils import is_valid_ip
 from flask_paginate import Pagination, get_page_args
 
 # Membuat blueprint untuk device manager

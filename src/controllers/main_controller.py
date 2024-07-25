@@ -9,9 +9,9 @@ from flask import (
 )
 from flask_login import login_user, logout_user, current_user, login_required
 from src import db, bcrypt
-from src.models.users import User
-from src.utils.forms import RegisterForm, LoginForm, TwoFactorForm
-from src.utils.qrcode import get_b64encoded_qr_image
+from src.models.users_model import User
+from src.utils.forms_utils import RegisterForm, LoginForm, TwoFactorForm
+from src.utils.qrcode_utils import get_b64encoded_qr_image
 from .decorators import login_required
 
 

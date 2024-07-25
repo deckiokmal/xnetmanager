@@ -9,9 +9,9 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from src import db, bcrypt
-from src.models.users import User, Role, User_role
-from src.models.networkautomation import DeviceManager, NetworkManager, ConfigTemplate
-from src.utils.forms import RegisterForm
+from src.models.users_model import User, Role, User_role
+from src.models.xmanager_model import DeviceManager, NetworkManager, ConfigTemplate
+from src.utils.forms_utils import RegisterForm
 from .decorators import login_required, role_required
 from flask_paginate import Pagination, get_page_args
 

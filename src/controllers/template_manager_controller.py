@@ -9,9 +9,9 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from src import db
-from src.models.users import User
-from src.models.networkautomation import ConfigTemplate, NetworkManager
-from src.utils.network_manager_class import NetworkManagerUtils
+from src.models.users_model import User
+from src.models.xmanager_model import ConfigTemplate, NetworkManager
+from src.utils.config_manager_utils import NetworkManagerUtils
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
