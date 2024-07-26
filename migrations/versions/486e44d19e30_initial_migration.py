@@ -1,8 +1,8 @@
 """Initial migration
 
-Revision ID: 7c24acb06b61
+Revision ID: 486e44d19e30
 Revises: 
-Create Date: 2024-07-27 01:21:58.929443
+Create Date: 2024-07-27 01:46:28.032532
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '7c24acb06b61'
+revision = '486e44d19e30'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -22,6 +22,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('config_name', sa.String(length=100), nullable=False),
     sa.Column('description', sa.Text(), nullable=False),
+    sa.Column('created_by', sa.Text(), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('config_name')
     )
@@ -34,6 +35,7 @@ def upgrade():
     sa.Column('password', sa.String(length=100), nullable=False),
     sa.Column('ssh', sa.String(length=5), nullable=False),
     sa.Column('description', sa.Text(), nullable=False),
+    sa.Column('created_by', sa.Text(), nullable=False),
     sa.Column('status', sa.String(length=20), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
@@ -59,6 +61,7 @@ def upgrade():
     sa.Column('parameter_name', sa.String(length=100), nullable=False),
     sa.Column('vendor', sa.String(length=100), nullable=False),
     sa.Column('version', sa.String(length=10), nullable=False),
+    sa.Column('description', sa.String(length=100), nullable=False),
     sa.Column('created_by', sa.Text(), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('parameter_name'),

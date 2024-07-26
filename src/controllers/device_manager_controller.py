@@ -33,6 +33,9 @@ def inject_user():
 # Halaman utama Device Manager
 @dm_bp.route("/dm", methods=["GET"])
 @login_required
+@role_required(
+    roles=["Admin", "User", "View"], permissions=["Manage Devices", "View Devices"], page="Devices Management"
+)
 def index():
     # Mendapatkan parameter pencarian dari URL
     search_query = request.args.get("search", "").lower()
@@ -48,6 +51,8 @@ def index():
             DeviceManager.device_name.ilike(f"%{search_query}%")
             | DeviceManager.ip_address.ilike(f"%{search_query}%")
             | DeviceManager.vendor.ilike(f"%{search_query}%")
+            | DeviceManager.description.ilike(f"%{search_query}%")
+            | DeviceManager.created_by.ilike(f"%{search_query}%")
         )
     else:
         # Jika tidak ada pencarian, ambil semua perangkat
@@ -77,6 +82,9 @@ def index():
 # Menambahkan perangkat baru
 @dm_bp.route("/device_create", methods=["POST"])
 @login_required
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
+)
 def device_create():
     device_name = request.form["device_name"]
     vendor = request.form["vendor"]
@@ -84,6 +92,7 @@ def device_create():
     username = request.form["username"]
     password = request.form["password"]
     ssh = request.form["ssh"]
+    description = request.form["description"]
 
     # Mengecek apakah perangkat dengan IP atau nama sudah ada
     exist_address = DeviceManager.query.filter_by(ip_address=ip_address).first()
@@ -106,6 +115,8 @@ def device_create():
             username=username,
             password=password,
             ssh=ssh,
+            description=description,
+            created_by=current_user.id,
         )
         db.session.add(new_device)
         db.session.commit()
@@ -118,6 +129,9 @@ def device_create():
 # Mengupdate informasi perangkat
 @dm_bp.route("/device_update/<int:device_id>", methods=["GET", "POST"])
 @login_required
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
+)
 def device_update(device_id):
     device = DeviceManager.query.get(device_id)
 
@@ -128,6 +142,7 @@ def device_update(device_id):
         new_username = request.form["username"]
         new_password = request.form["password"]
         new_ssh = request.form["ssh"]
+        new_description = request.form["description"]
 
         # Mengecek apakah nama perangkat atau IP sudah ada di perangkat lain
         exist_device = DeviceManager.query.filter(
@@ -154,6 +169,7 @@ def device_update(device_id):
             device.username = new_username
             device.password = new_password
             device.ssh = new_ssh
+            device.description = new_description
 
             db.session.commit()
             flash("Device update berhasil.", "success")
@@ -165,7 +181,9 @@ def device_update(device_id):
 # Menghapus perangkat
 @dm_bp.route("/device_delete/<int:device_id>", methods=["POST"])
 @login_required
-@role_required("Admin", "device_delete")
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
+)
 def device_delete(device_id):
     device = DeviceManager.query.get(device_id)
     if not device:

@@ -143,7 +143,8 @@
                                                     }}</p>
                                                 <p><strong>Vendor:</strong> {{ template.vendor }}</p>
                                                 <p><strong>Versi:</strong> {{ template.version }}</p>
-                                                <p><strong>Info:</strong> {{ template.info }}</p>
+                                                <p><strong>Deskripsi:</strong> {{ template.description }}</p>
+                                                <p><strong>Dibuat oleh:</strong> {{ template.created_by }}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -200,8 +201,8 @@
                                 <input type="text" class="form-control" id="version" name="version" required>
                             </div>
                             <div class="mb-3">
-                                <label for="info" class="form-label">Info</label>
-                                <textarea class="form-control" id="info" name="info" rows="3" required></textarea>
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="2"></textarea>
                             </div>
                             <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i></button>
                         </form>
@@ -229,9 +230,8 @@
                                 <input type="text" class="form-control" id="create_version" name="version" required>
                             </div>
                             <div class="mb-3">
-                                <label for="create_info" class="form-label">Info</label>
-                                <textarea class="form-control" id="create_info" name="info" rows="3"
-                                    required></textarea>
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="2"></textarea>
                             </div>
                             <div class="mb-3">
                                 <label for="create_template_content" class="form-label">Konten Template (Jinja2)</label>
@@ -243,12 +243,14 @@
                                 <textarea class="form-control" id="create_parameter_content" name="parameter_content"
                                     rows="5"></textarea>
                             </div>
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i></button>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Buat
+                                Template</button>
                         </form>
                     </div>
                 </div>
             </div>
         </div>
+
 
         <!-- JavaScript untuk mengatur visibilitas password dan penundaan pencarian -->
         <script>

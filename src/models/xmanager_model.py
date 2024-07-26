@@ -11,7 +11,8 @@ class DeviceManager(db.Model):
     username = db.Column(db.String(100), nullable=False)
     password = db.Column(db.String(100), nullable=False)
     ssh = db.Column(db.String(5), nullable=False)
-    description = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    created_by = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), nullable=True, default="Unknown")
     is_active = db.Column(db.Boolean, default=True)
 
@@ -24,7 +25,8 @@ class TemplateManager(db.Model):
     parameter_name = db.Column(db.String(100), unique=True, nullable=False)
     vendor = db.Column(db.String(100), nullable=False)
     version = db.Column(db.String(10), nullable=False)
-    created_by = db.Column(db.Text, nullable=False)
+    description = db.Column(db.String(100), nullable=True)
+    created_by = db.Column(db.Text, nullable=True)
 
 
 class ConfigurationManager(db.Model):
@@ -32,4 +34,5 @@ class ConfigurationManager(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     config_name = db.Column(db.String(100), nullable=False, unique=True)
-    description = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    created_by = db.Column(db.Text, nullable=True)

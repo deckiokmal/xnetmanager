@@ -22,6 +22,22 @@ from flask_paginate import Pagination, get_page_args
 
 # Blueprint untuk template manager
 tm_bp = Blueprint("tm", __name__)
+error_bp = Blueprint("error", __name__)
+
+
+# Menangani kesalahan 404
+@error_bp.app_errorhandler(404)
+def page_not_found(error):
+    return render_template("/main/404.html"), 404
+
+
+# Menyuntikkan username ke dalam konteks
+@tm_bp.context_processor
+def inject_user():
+    if current_user.is_authenticated:
+        return dict(username=current_user.username)
+    return dict(username=None)
+
 
 # Folder untuk template
 RAW_TEMPLATE_FOLDER = "xmanager/raw_templates"
@@ -86,9 +102,9 @@ def template_upload():
     yaml = request.files["yaml"]
     vendor = request.form.get("vendor")
     version = request.form.get("version")
-    info = request.form.get("info")
+    description = request.form.get("description")
 
-    if not vendor or not version or not info:
+    if not vendor or not version:
         flash("Data tidak boleh kosong!", "info")
         return redirect(request.url)
 
@@ -118,7 +134,8 @@ def template_upload():
         parameter_name=parameter_name,
         vendor=vendor,
         version=version,
-        info=info,
+        description=description,
+        created_by=current_user.username,
     )
     db.session.add(new_template)
     db.session.commit()
@@ -220,7 +237,6 @@ def template_update(template_id):
 # Route untuk menghapus template
 @tm_bp.route("/template_delete/<int:template_id>", methods=["POST"])
 @login_required
-@role_required("Admin", "template_delete")
 def template_delete(template_id):
     template = TemplateManager.query.get_or_404(template_id)
 
@@ -242,7 +258,7 @@ def template_delete(template_id):
     db.session.delete(template)
     db.session.commit()
 
-    flash("Template berhasil dihapus.", "success")
+    flash(f"Template berhasil dihapus oleh {current_user.username}", "success")
     return redirect(url_for("tm.index"))
 
 
@@ -280,13 +296,18 @@ def template_generator(template_id):
         new_file_path = os.path.join(
             current_app.static_folder, GEN_TEMPLATE_FOLDER, newFileName
         )
+        description = f"{gen_filename} created at {date_time_string} created by {current_user.username}"
 
         # Simpan konfigurasi yang dirender ke file baru
         with open(new_file_path, "w") as new_file:
             new_file.write(rendered_config)
 
         # Simpan template yang dihasilkan ke database
-        new_template_generate = ConfigurationManager(template_name=newFileName)
+        new_template_generate = ConfigurationManager(
+            config_name=newFileName,
+            description=description,
+            created_by=current_user.username,
+        )
         db.session.add(new_template_generate)
         db.session.commit()
 
@@ -328,6 +349,7 @@ def template_manual_create():
     # Ambil data dari form
     vendor = request.form.get("vendor")
     version = request.form.get("version")
+    description = request.form.get("description")
     template_content = request.form.get("template_content")
     parameter_content = request.form.get("parameter_content")
 
@@ -336,14 +358,14 @@ def template_manual_create():
         flash("Data vendor tidak boleh kosong!", "info")
         return redirect(request.url)
 
-    # Buat nama file dengan format vendor_tanggal.txt
+    # Buat nama file dengan format vendor_tanggal
     current_date = datetime.now().strftime("%Y%m%d")
     template_filename = f"{vendor}_{current_date}.j2"
     parameter_filename = f"{vendor}_{current_date}.yml"
 
     # Tentukan path file
     template_path = os.path.join(
-        current_app.static_folder, GEN_TEMPLATE_FOLDER, template_filename
+        current_app.static_folder, RAW_TEMPLATE_FOLDER, template_filename
     )
     parameter_path = os.path.join(
         current_app.static_folder, RAW_TEMPLATE_FOLDER, parameter_filename
@@ -373,7 +395,8 @@ def template_manual_create():
         parameter_name=parameter_filename,
         vendor=vendor,
         version=version,
-        created_by=current_user.id,  # Assuming you want to track who created it
+        description=description,
+        created_by=current_user.username,
     )
     db.session.add(new_template)
     db.session.commit()
@@ -437,7 +460,7 @@ def template_results():
     query = ConfigurationManager.query
     if search_query:
         query = query.filter(
-            ConfigurationManager.template_name.ilike(f"%{search_query}%")
+            ConfigurationManager.config_name.ilike(f"%{search_query}%")
         )
 
     # Mengambil total item dan pagination
@@ -453,7 +476,7 @@ def template_results():
     template_contents = {}
     for template in all_templates.items:
         template_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, template.template_name
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, template.config_name
         )
         if os.path.exists(template_path):
             with open(template_path, "r", encoding="utf-8") as file:
@@ -546,7 +569,6 @@ def template_result_update(template_result_id):
 # Templates delete
 @tm_bp.route("/template_result_delete/<int:template_id>", methods=["POST"])
 @login_required
-@role_required("Admin", "template_result_delete")
 def template_result_delete(template_id):
 
     # Dapatkan objek dari database berdasarkan ID

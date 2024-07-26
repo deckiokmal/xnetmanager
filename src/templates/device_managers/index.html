@@ -132,6 +132,9 @@
                                                 <p><strong>Username:</strong> {{ device.username }}</p>
                                                 <p><strong>Password:</strong> {{ device.password }}</p>
                                                 <p><strong>Port SSH:</strong> {{ device.ssh }}</p>
+                                                <p><strong>Description:</strong> {{ device.description }}</p>
+                                                <p><strong>Dibuat oleh:</strong> {{ device.created_by }}</p>
+                                                <p><strong>Status Jaringan:</strong> {{ device.status }}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -161,7 +164,7 @@
             </div>
         </div>
 
-        <!-- Modal Pembuatan Perangkat -->
+        <!-- Modal Tambah Perangkat -->
         <div class="modal fade" id="createdeviceModal" tabindex="-1" aria-labelledby="createdeviceModalLabel"
             aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 600px;">
@@ -195,6 +198,10 @@
                             <div class="mb-3">
                                 <label for="ssh" class="form-label">Port SSH</label>
                                 <input type="text" class="form-control" id="ssh" name="ssh" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Deskripsi</label>
+                                <input type="text" class="form-control" id="description" name="description">
                             </div>
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-plus"></i>

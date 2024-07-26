@@ -69,7 +69,8 @@
                             <thead class="table-dark">
                                 <tr>
                                     <th scope="col">No</th>
-                                    <th scope="col">Nama Template</th>
+                                    <th scope="col">Nama File</th>
+                                    <th scope="col">Deskripsi</th>
                                     <th scope="col">Aksi</th>
                                 </tr>
                             </thead>
@@ -77,7 +78,8 @@
                                 {% for template in all_templates %}
                                 <tr>
                                     <th scope="row">{{ loop.index + (pagination.page - 1) * per_page }}</th>
-                                    <td>{{ template.template_name }}</td>
+                                    <td>{{ template.config_name }}</td>
+                                    <td>{{ template.description }}</td>
                                     <td>
                                         <!-- Tombol untuk Melihat Detail -->
                                         <button class="btn btn-info btn-sm" data-bs-toggle="modal"
@@ -113,7 +115,9 @@
                                                     aria-label="Close"></button>
                                             </div>
                                             <div class="modal-body">
-                                                <p><strong>File konfigurasi:</strong> {{ template.template_name }}</p>
+                                                <p><strong>File konfigurasi:</strong> {{ template.config_name }}</p>
+                                                <p><strong>Deskripsi:</strong> {{ template.description }}</p>
+                                                <p><strong>Dibuat oleh:</strong> {{ template.created_by }}</p>
                                                 <p><strong>Konten Template:</strong></p>
                                                 <pre>{{ template_contents[template.id] }}</pre>
                                             </div>
