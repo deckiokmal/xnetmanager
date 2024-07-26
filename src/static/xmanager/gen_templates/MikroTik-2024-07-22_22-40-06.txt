@@ -1,4 +1,0 @@
-/system/identity/set name="Adminx MikroTik"
-test
-new
-line
