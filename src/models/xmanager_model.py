@@ -24,7 +24,7 @@ class TemplateManager(db.Model):
     parameter_name = db.Column(db.String(100), unique=True, nullable=False)
     vendor = db.Column(db.String(100), nullable=False)
     version = db.Column(db.String(10), nullable=False)
-    description = db.Column(db.Text, nullable=False)
+    created_by = db.Column(db.Text, nullable=False)
 
 
 class ConfigurationManager(db.Model):

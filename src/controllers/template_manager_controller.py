@@ -325,46 +325,63 @@ def template_detail(template_id):
 @tm_bp.route("/template_manual_create", methods=["POST"])
 @login_required
 def template_manual_create():
-    filename = request.form.get("vendor")
+    # Ambil data dari form
+    vendor = request.form.get("vendor")
+    version = request.form.get("version")
     template_content = request.form.get("template_content")
     parameter_content = request.form.get("parameter_content")
 
-    # Memastikan newline konsisten dan tidak ada newline tambahan
-    if template_content or parameter_content:
-        # Gantikan semua jenis newline dengan newline Unix (\n) dan hapus newline tambahan di akhir
+    # Validasi data vendor tidak boleh kosong
+    if not vendor:
+        flash("Data vendor tidak boleh kosong!", "info")
+        return redirect(request.url)
+
+    # Buat nama file dengan format vendor_tanggal.txt
+    current_date = datetime.now().strftime("%Y%m%d")
+    template_filename = f"{vendor}_{current_date}.j2"
+    parameter_filename = f"{vendor}_{current_date}.yml"
+
+    # Tentukan path file
+    template_path = os.path.join(
+        current_app.static_folder, GEN_TEMPLATE_FOLDER, template_filename
+    )
+    parameter_path = os.path.join(
+        current_app.static_folder, RAW_TEMPLATE_FOLDER, parameter_filename
+    )
+
+    # Pastikan newline konsisten dan tidak ada newline tambahan
+    if template_content:
         template_content = (
             template_content.replace("\r\n", "\n").replace("\r", "\n").strip()
         )
+    if parameter_content:
         parameter_content = (
             parameter_content.replace("\r\n", "\n").replace("\r", "\n").strip()
         )
 
-    # Cek jika data filename kosong
-    if not filename:
-        flash("Data vendor tidak boleh kosong!", "info")
-        return redirect(request.url)
+    # Simpan konten template ke dalam file
+    with open(template_path, "w", encoding="utf-8") as template_file:
+        template_file.write(template_content)
 
-    # Generate nama file dengan ekstensi .txt
-    configuration_name = f"{filename}.txt"
-
-    # Tentukan path file
-    file_path = os.path.join(
-        current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration_name
-    )
-
-    # Simpan konten ke dalam file .txt
-    with open(file_path, "w", encoding="utf-8") as configuration_file:
-        configuration_file.write(configuration_content)
+    # Simpan konten parameter ke dalam file
+    with open(parameter_path, "w", encoding="utf-8") as parameter_file:
+        parameter_file.write(parameter_content)
 
     # Simpan data ke dalam database
-    new_configuration = TemplateManager(
-        template_name=configuration_name,
+    new_template = TemplateManager(
+        template_name=template_filename,
+        parameter_name=parameter_filename,
+        vendor=vendor,
+        version=version,
+        created_by=current_user.id,  # Assuming you want to track who created it
     )
-    db.session.add(new_configuration)
+    db.session.add(new_template)
     db.session.commit()
 
-    flash("File konfigurasi berhasil dibuat.", "success")
-    return redirect(url_for("tm.template_results"))
+    flash("Template berhasil dibuat.", "success")
+    return redirect(url_for("tm.index"))
+
+
 # Route untuk membuat file konfigurasi manual
 @tm_bp.route("/configuration_manual_create", methods=["POST"])
 @login_required
@@ -419,7 +436,9 @@ def template_results():
     # Mencari template berdasarkan query pencarian
     query = ConfigurationManager.query
     if search_query:
-        query = query.filter(ConfigurationManager.template_name.ilike(f"%{search_query}%"))
+        query = query.filter(
+            ConfigurationManager.template_name.ilike(f"%{search_query}%")
+        )
 
     # Mengambil total item dan pagination
     total_templates = query.count()
