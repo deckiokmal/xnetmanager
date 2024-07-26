@@ -3,17 +3,25 @@
 {% block content %}
 <!-- Begin Page Content -->
 
-<div class="d-flex justify-content-between mb-3">
-    <h1 class="h3 mb-4 text-gray-800">Manajemen Permissions</h1>
-    <!-- Tombol untuk menampilkan modal Create Permission -->
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPermissionModal">
-        <i class="fas fa-plus"></i> Tambah Permission
-    </button>
+<!-- Grup Tombol -->
+<div class="row g-2 mb-3">
+    <div class="col-md-4 d-flex justify-content-md-start">
+        <!-- Tombol untuk menampilkan modal Create Permission -->
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPermissionModal">
+            <i class="fas fa-plus"></i>
+        </button>
+    </div>
+    <div class="col-md-8 d-flex justify-content-md-end">
+        <!-- Tombol untuk Kembali ke Index Page -->
+        <a class="btn btn-warning" href="{{ url_for('roles.index') }}">
+            <i class="fa-solid fa-arrow-left"></i>
+        </a>
+    </div>
 </div>
 
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Permissions</h6>
+        <h6 class="m-0 font-weight-bold text-primary">Permissions Managment</h6>
     </div>
     <div class="card-body">
         <div class="table-responsive">

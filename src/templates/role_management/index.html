@@ -10,15 +10,15 @@
             <div class="col">
                 <!-- Tombol tambah role -->
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#rolecreateModal">
-                    <i class="fa-solid fa-plus"></i> Tambah Role
+                    <i class="fa-solid fa-plus"></i>
                 </button>
                 <!-- Tombol tambah permission -->
                 <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#addUserToRoleModal">
-                    <i class="fa-solid fa-user-plus"></i> Tambah User ke Role
+                    <i class="fa-solid fa-user-plus"></i>
                 </button>
                 <!-- Tombol navigasi ke halaman Permissions -->
                 <a href="{{ url_for('roles.list_permissions') }}" class="btn btn-info">
-                    <i class="fa-solid fa-shield"></i> Kelola Permissions
+                    <i class="fa-solid fa-shield"></i>
                 </a>
             </div>
         </div>
@@ -66,7 +66,6 @@
                         </form>
                     </div>
                 </div>
-
                 <div class="row">
                     <!-- Tabel Roles -->
                     <div class="table-responsive">
@@ -90,25 +89,67 @@
                                         {% endfor %}
                                     </td>
                                     <td>
+                                        <!-- Tombol untuk Melihat Detail -->
+                                        <button class="btn btn-info btn-sm mb-1" data-bs-toggle="modal"
+                                            data-bs-target="#detailModal{{ role.id }}">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+
+                                        <!-- Tombol untuk Update -->
                                         <a href="{{ url_for('roles.role_update', role_id=role.id) }}"
-                                            class="btn btn-warning btn-sm">
-                                            <i class="fa-solid fa-edit"></i> Edit
+                                            class="btn btn-success btn-sm mb-1">
+                                            <i class="fa-solid fa-edit"></i>
                                         </a>
+
+                                        <!-- Tombol untuk Delete -->
                                         <form method="post" action="{{ url_for('roles.role_delete', role_id=role.id) }}"
                                             class="d-inline"
                                             onsubmit="return confirm('Anda yakin ingin menghapus role ini?');">
-                                            <button type="submit" class="btn btn-danger btn-sm">
-                                                <i class="fa-solid fa-trash"></i> Delete
+                                            <button type="submit" class="btn btn-danger btn-sm mb-1">
+                                                <i class="fa-solid fa-trash"></i>
                                             </button>
                                         </form>
                                     </td>
                                 </tr>
+
+                                <!-- Modal Detail Role -->
+                                <div class="modal fade" id="detailModal{{ role.id }}" tabindex="-1"
+                                    aria-labelledby="detailModalLabel{{ role.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="detailModalLabel{{ role.id }}">
+                                                    Detail Template</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p><strong>Nama role:</strong> {{ role.name }}</p>
+                                                <p>
+                                                    <strong>
+                                                        User terasosiasi:
+                                                    </strong>
+                                                    {% for user in role.users %}
+                                                    <span class="badge bg-success">{{ user.username }}</span>
+                                                    {% endfor %}
+                                                </p>
+                                                <p>
+                                                    <strong>
+                                                        Permissions:
+                                                    </strong>
+                                                    {% for permission in role.permissions %}
+                                                    <span class="badge bg-primary">{{ permission.name }}</span>
+                                                    {% endfor %}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                 </div>
-
                 <div class="row mb-3">
                     <div class="col-12 col-md-5 d-flex align-items-center mb-2 mb-md-0">
                         <!-- Informasi jumlah data yang ditampilkan -->
@@ -190,6 +231,18 @@
     </div>
 
     <script>
+        let timeout = null;
+
+        // Menangani input pada form pencarian dengan penundaan 1 detik
+        document.getElementById("searchInput").addEventListener("input", function () {
+            // Batalkan timer yang ada sebelumnya jika ada
+            clearTimeout(timeout);
+
+            // Setel timer baru untuk submit form setelah 1 detik
+            timeout = setTimeout(function () {
+                document.getElementById('searchForm').submit();
+            }, 1000); // 1000 ms = 1 detik
+        });
 
         // fungsi untuk load data permissions di dalam modal tambah role
         document.addEventListener('DOMContentLoaded', function () {
@@ -219,37 +272,6 @@
                     .catch(error => console.error('Error loading permissions:', error));
             });
         });
-
-
-        // fungsi untuk load data users di dalam modal tambah user to role
-        document.addEventListener('DOMContentLoaded', function () {
-            var addUserToRoleModal = document.getElementById('addUserToRoleModal');
-
-            addUserToRoleModal.addEventListener('show.bs.modal', function () {
-                fetch('/api/users')
-                    .then(response => response.json())
-                    .then(data => {
-                        var usersContainer = document.getElementById('usersContainer');
-                        usersContainer.innerHTML = '';
-
-                        data.forEach(permission => {
-                            var userElement = document.createElement('div');
-                            userElement.classList.add('col-12', 'mb-2');
-                            userElement.innerHTML = `
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="${user.id}" id="user_${user.id}" name="users">
-                                    <label class="form-check-label" for="user_${user.id}">
-                                        <span class="badge bg-primary">${user.username}</span>
-                                    </label>
-                                </div>
-                            `;
-                            usersContainer.appendChild(userElement);
-                        });
-                    })
-                    .catch(error => console.error('Error loading users:', error));
-            });
-        });
-
 
     </script>
 

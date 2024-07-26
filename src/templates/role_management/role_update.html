@@ -1,5 +1,5 @@
 {% extends "/layouts/layout.html" %}
-{% block title %}role_update{% endblock %}
+{% block title %}Role Update{% endblock %}
 {% block content %}
 <!-- Begin Page Content -->
 
@@ -7,22 +7,59 @@
     <div class="card-header">
         Role Update
     </div>
-    <form action="{{url_for('roles.role_update', role_id=role.id)}}" method="post">
-        <div class=" password-container mb-3">
-            <div class="mb-3 mt-3">
-                <label for="name" class="small">Nama Role</label>
-                <input type="text" class="form-control" value="{{ role.name }}" id="name" name="name">
-            </div>
-            <div class="mb-3 mt-3">
-                <label for="permissions" class="small">Permissions</label>
-                <input type="text" class="form-control" value="{{ role.permissions }}" id="permissions" name="permissions">
-            </div>
-            <button type="submit" class="btn btn-primary">Submit</button>
-            <a class="btn btn-danger" href="{{ url_for('roles.index') }}">Back</a>
+    <div class="card-body">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
         </div>
-    </form>
-</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
 
+        <form method="POST" action="{{ url_for('roles.role_update', role_id=role.id) }}">
+            <div class="form-group">
+                <label for="name">Role Name</label>
+                <input type="text" class="form-control" id="name" name="name" value="{{ role.name }}" required>
+            </div>
+            <div class="form-group">
+                <label>Users</label>
+                <div>
+                    {% for user in associated_users %}
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="users" id="user{{ user.id }}"
+                            value="{{ user.id }}" checked>
+                        <label class="form-check-label badge badge-primary" for="user{{ user.id }}">
+                            {{ user.username }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Permissions</label>
+                <div>
+                    {% for permission in all_permissions %}
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="permissions"
+                            id="permission{{ permission.id }}" value="{{ permission.id }}" {% if permission.id in
+                            associated_permissions %} checked {% endif %}>
+                        <label class="form-check-label badge badge-secondary" for="permission{{ permission.id }}">
+                            {{ permission.name }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Update Role</button>
+        </form>
+    </div>
+</div>
 
 <!-- End of Page Content -->
 {% endblock %}
