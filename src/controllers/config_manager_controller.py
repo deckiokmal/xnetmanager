@@ -10,8 +10,8 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from src.models.users_model import User
-from src.models.xmanager_model import DeviceManager, NetworkManager
-from src.utils.config_manager_utils import NetworkManagerUtils
+from src.models.xmanager_model import DeviceManager, ConfigurationManager
+from src.utils.config_manager_utils import ConfigurationManagerUtils
 from datetime import datetime
 from src import db
 import os
@@ -75,7 +75,7 @@ def index():
     total_devices = devices_query.count()
     devices = devices_query.limit(per_page).offset(offset).all()
 
-    templates = NetworkManager.query.all()
+    templates = ConfigurationManager.query.all()
 
     pagination = Pagination(
         page=page, per_page=per_page, total=total_devices, css_framework="bootstrap4"
@@ -105,7 +105,7 @@ def check_status():
 
     def check_device(device):
         nonlocal device_status  # Membuat device_status bisa diakses di dalam thread
-        check_device_status = NetworkManagerUtils(ip_address=device.ip_address)
+        check_device_status = ConfigurationManagerUtils(ip_address=device.ip_address)
         check_device_status.check_device_status_threaded()
 
         device_status[device.id] = check_device_status.device_status
@@ -133,7 +133,7 @@ def open_console(device_id):
     device = DeviceManager.query.get_or_404(device_id)
 
     if request.method == "POST":
-        console = NetworkManagerUtils(ip_address=device.ip_address)
+        console = ConfigurationManagerUtils(ip_address=device.ip_address)
         console.open_webconsole()
 
         return redirect(url_for("nm.index"))
@@ -160,7 +160,7 @@ def push_configs():
 
     # Ambil perangkat dari database berdasarkan IP yang dipilih
     devices = DeviceManager.query.filter(DeviceManager.ip_address.in_(device_ips)).all()
-    template = NetworkManager.query.get(template_id)
+    template = ConfigurationManager.query.get(template_id)
 
     # Jika template tidak ditemukan, kembalikan respons dengan pesan error
     if not template:
@@ -195,7 +195,7 @@ def push_configs():
 
     # Proses konfigurasi untuk setiap perangkat
     for device in devices:
-        config = NetworkManagerUtils(
+        config = ConfigurationManagerUtils(
             ip_address=device.ip_address,
             username=device.username,
             password=device.password,
@@ -247,7 +247,7 @@ def backup_config(device_id):
             return redirect(url_for("nm.index"))
 
         # kirim perintah backup
-        backup = NetworkManagerUtils(
+        backup = ConfigurationManagerUtils(
             ip_address=device.ip_address,
             username=device.username,
             password=device.password,

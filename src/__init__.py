@@ -1,4 +1,4 @@
-from decouple import config
+from decouple import config as decouple_config
 from flask import Flask
 from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate
@@ -7,81 +7,71 @@ from flask_login import LoginManager
 from dotenv import load_dotenv
 from src.utils.is_active_utils import is_active
 from src.utils.mask_password_utils import mask_password
-
+from src.config import DevelopmentConfig, TestingConfig, ProductionConfig
 
 # Load .env file variable
 load_dotenv()
 
-
-app = Flask(__name__)
-app.config.from_object(config("APP_SETTINGS"))
-app.jinja_env.filters['mask_password'] = mask_password
-
-
-@app.context_processor
-def utility_processor():
-    return dict(is_active=is_active)
-
-
-# Flask_Login LoginManager handler
+# Initialize extensions
+bcrypt = Bcrypt()
+db = SQLAlchemy()
+migrate = Migrate()
 login_manager = LoginManager()
-login_manager.init_app(app)
-bcrypt = Bcrypt(app)
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
 
 
-# Registrasi blueprint controller dibawah ini
+def create_app(config_class=None):
+    app = Flask(__name__)
 
-# blueprint controllers main.py
-from .controllers.main_controller import main_bp
+    # Membaca konfigurasi dari file .env
+    config_name = decouple_config("CONFIG_NAME", default="Development")
 
-app.register_blueprint(main_bp)
+    # Memilih konfigurasi berdasarkan nama
+    if config_name == "Development":
+        app.config.from_object(DevelopmentConfig)
+    elif config_name == "Testing":
+        app.config.from_object(TestingConfig)
+    elif config_name == "Production":
+        app.config.from_object(ProductionConfig)
+    else:
+        raise ValueError("Invalid CONFIG_NAME")
 
-# blueprint controllers users.py
-from .controllers.users_controller import users_bp
+    # Initialize extensions
+    bcrypt.init_app(app)
+    db.init_app(app)
+    migrate.init_app(app, db)
+    login_manager.init_app(app)
 
-app.register_blueprint(users_bp)
+    # Register context processor
+    app.jinja_env.filters["mask_password"] = mask_password
 
-# blueprint controllers users.py
-from .controllers.roles_controller import roles_bp
+    @app.context_processor
+    def utility_processor():
+        return dict(is_active=is_active)
 
-app.register_blueprint(roles_bp)
+    # Register blueprints
+    from .controllers.main_controller import main_bp
+    from .controllers.users_controller import users_bp
+    from .controllers.roles_controller import roles_bp
+    from .controllers.device_manager_controller import dm_bp
+    from .controllers.template_manager_controller import tm_bp
+    from .controllers.config_manager_controller import nm_bp
+    from .utils.error_helper_utils import error_bp
 
-# blueprint controllers device_manager.py
-from .controllers.device_manager_controller import dm_bp
+    app.register_blueprint(main_bp)
+    app.register_blueprint(users_bp)
+    app.register_blueprint(roles_bp)
+    app.register_blueprint(dm_bp)
+    app.register_blueprint(tm_bp)
+    app.register_blueprint(nm_bp)
+    app.register_blueprint(error_bp)
 
-app.register_blueprint(dm_bp)
+    # Set up user loader
+    from .models.users_model import User
 
-# blueprint controllers template_manager.py
-from .controllers.template_manager_controller import tm_bp
+    login_manager.login_view = "main.login"
 
-app.register_blueprint(tm_bp)
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.filter(User.id == int(user_id)).first()
 
-# blueprint controllers network_manager.py
-from .controllers.config_manager_controller import nm_bp
-
-app.register_blueprint(nm_bp)
-
-# Registrasi blueprint error handler
-from .utils.error_helper_utils import error_bp
-
-app.register_blueprint(error_bp)
-
-
-# Registrasi blueprint End
-
-
-# User Loader
-
-# import User class dari model users.py
-from .models.users_model import User
-
-login_manager.login_view = "main.login"
-
-
-# definisikan fungsi load_user yang digunakan oleh login_manager untuk memuat pengguna
-@login_manager.user_loader
-def load_user(user_id):
-    # Load user by user_id
-    return User.query.filter(User.id == int(user_id)).first()
+    return app

@@ -7,7 +7,7 @@ from jinja2 import Template
 import yaml
 
 
-class NetworkManagerUtils:
+class ConfigurationManagerUtils:
     def __init__(
         self, ip_address="0.0.0.0", username="admin", password="admin", ssh=22
     ):

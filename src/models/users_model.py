@@ -2,7 +2,7 @@ from datetime import datetime
 from flask_login import UserMixin
 import pyotp
 from src import bcrypt, db
-from config import Config
+from src.config import Config
 
 
 class User(UserMixin, db.Model):

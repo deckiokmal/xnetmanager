@@ -9,7 +9,7 @@ from flask import (
 from flask_login import login_required, current_user
 from src import db, bcrypt
 from src.models.users_model import User
-from src.models.xmanager_model import DeviceManager, ConfigTemplate
+from src.models.xmanager_model import DeviceManager, TemplateManager
 from src.utils.forms_utils import RegisterForm
 from .decorators import login_required, role_required
 from flask_paginate import Pagination, get_page_args
@@ -46,7 +46,7 @@ def inject_user():
 def dashboard():
     # Mengambil semua perangkat dan template konfigurasi dari database
     devices = DeviceManager.query.all()
-    templates = ConfigTemplate.query.all()
+    templates = TemplateManager.query.all()
 
     # Menghitung jumlah perangkat berdasarkan vendor
     device_vendor_count = {}

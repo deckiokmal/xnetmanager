@@ -10,8 +10,8 @@ from flask import (
 from flask_login import login_required, current_user
 from src import db
 from src.models.users_model import User
-from src.models.xmanager_model import ConfigTemplate, NetworkManager
-from src.utils.config_manager_utils import NetworkManagerUtils
+from src.models.xmanager_model import TemplateManager, ConfigurationManager
+from src.utils.config_manager_utils import ConfigurationManagerUtils
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
@@ -46,13 +46,13 @@ def index():
     search_query = request.args.get("search", "")
 
     # Mencari template berdasarkan query pencarian
-    query = ConfigTemplate.query
+    query = TemplateManager.query
     if search_query:
         query = query.filter(
-            ConfigTemplate.template_name.ilike(f"%{search_query}%")
-            | ConfigTemplate.parameter_name.ilike(f"%{search_query}%")
-            | ConfigTemplate.vendor.ilike(f"%{search_query}%")
-            | ConfigTemplate.version.ilike(f"%{search_query}%")
+            TemplateManager.template_name.ilike(f"%{search_query}%")
+            | TemplateManager.parameter_name.ilike(f"%{search_query}%")
+            | TemplateManager.vendor.ilike(f"%{search_query}%")
+            | TemplateManager.version.ilike(f"%{search_query}%")
         )
 
     all_templates = query.paginate(page=page, per_page=per_page)
@@ -113,7 +113,7 @@ def template_upload():
         return redirect(request.url)
 
     # Simpan data template ke database
-    new_template = ConfigTemplate(
+    new_template = TemplateManager(
         template_name=template_name,
         parameter_name=parameter_name,
         vendor=vendor,
@@ -131,7 +131,7 @@ def template_upload():
 @tm_bp.route("/template_update/<int:template_id>", methods=["GET", "POST"])
 @login_required
 def template_update(template_id):
-    template = ConfigTemplate.query.get_or_404(template_id)
+    template = TemplateManager.query.get_or_404(template_id)
 
     def read_file(filename):
         file_path = os.path.join(
@@ -222,7 +222,7 @@ def template_update(template_id):
 @login_required
 @role_required("Admin", "template_delete")
 def template_delete(template_id):
-    template = ConfigTemplate.query.get_or_404(template_id)
+    template = TemplateManager.query.get_or_404(template_id)
 
     # Hapus file template
     file_path = os.path.join(
@@ -250,7 +250,7 @@ def template_delete(template_id):
 @tm_bp.route("/template_generator/<int:template_id>", methods=["POST"])
 @login_required
 def template_generator(template_id):
-    template = ConfigTemplate.query.get_or_404(template_id)
+    template = TemplateManager.query.get_or_404(template_id)
 
     jinja_template_path = os.path.join(
         current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
@@ -267,7 +267,7 @@ def template_generator(template_id):
         yaml_params = yaml_params_file.read()
 
     # Render template Jinja dengan parameter YAML
-    net_auto = NetworkManagerUtils(
+    net_auto = ConfigurationManagerUtils(
         ip_address="0.0.0.0", username="none", password="none", ssh=22
     )
     rendered_config = net_auto.render_template_config(jinja_template, yaml_params)
@@ -286,7 +286,7 @@ def template_generator(template_id):
             new_file.write(rendered_config)
 
         # Simpan template yang dihasilkan ke database
-        new_template_generate = NetworkManager(template_name=newFileName)
+        new_template_generate = ConfigurationManager(template_name=newFileName)
         db.session.add(new_template_generate)
         db.session.commit()
 
@@ -301,7 +301,7 @@ def template_generator(template_id):
 @tm_bp.route("/template_detail/<int:template_id>", methods=["GET"])
 @login_required
 def template_detail(template_id):
-    template = ConfigTemplate.query.get_or_404(template_id)
+    template = TemplateManager.query.get_or_404(template_id)
 
     def read_file(filename):
         file_path = os.path.join(
@@ -325,6 +325,50 @@ def template_detail(template_id):
 @tm_bp.route("/template_manual_create", methods=["POST"])
 @login_required
 def template_manual_create():
+    filename = request.form.get("vendor")
+    template_content = request.form.get("template_content")
+    parameter_content = request.form.get("parameter_content")
+
+    # Memastikan newline konsisten dan tidak ada newline tambahan
+    if template_content or parameter_content:
+        # Gantikan semua jenis newline dengan newline Unix (\n) dan hapus newline tambahan di akhir
+        template_content = (
+            template_content.replace("\r\n", "\n").replace("\r", "\n").strip()
+        )
+        parameter_content = (
+            parameter_content.replace("\r\n", "\n").replace("\r", "\n").strip()
+        )
+
+    # Cek jika data filename kosong
+    if not filename:
+        flash("Data vendor tidak boleh kosong!", "info")
+        return redirect(request.url)
+
+    # Generate nama file dengan ekstensi .txt
+    configuration_name = f"{filename}.txt"
+
+    # Tentukan path file
+    file_path = os.path.join(
+        current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration_name
+    )
+
+    # Simpan konten ke dalam file .txt
+    with open(file_path, "w", encoding="utf-8") as configuration_file:
+        configuration_file.write(configuration_content)
+
+    # Simpan data ke dalam database
+    new_configuration = TemplateManager(
+        template_name=configuration_name,
+    )
+    db.session.add(new_configuration)
+    db.session.commit()
+
+    flash("File konfigurasi berhasil dibuat.", "success")
+    return redirect(url_for("tm.template_results"))
+# Route untuk membuat file konfigurasi manual
+@tm_bp.route("/configuration_manual_create", methods=["POST"])
+@login_required
+def configuration_manual_create():
     filename = request.form.get("filename")
     configuration_content = request.form.get("configuration_content")
 
@@ -353,13 +397,13 @@ def template_manual_create():
         configuration_file.write(configuration_content)
 
     # Simpan data ke dalam database
-    new_configuration = NetworkManager(
+    new_configuration = ConfigurationManager(
         template_name=configuration_name,
     )
     db.session.add(new_configuration)
     db.session.commit()
 
-    flash("Template berhasil dibuat.", "success")
+    flash("File konfigurasi berhasil dibuat.", "success")
     return redirect(url_for("tm.template_results"))
 
 
@@ -373,9 +417,9 @@ def template_results():
     search_query = request.args.get("search", "")
 
     # Mencari template berdasarkan query pencarian
-    query = NetworkManager.query
+    query = ConfigurationManager.query
     if search_query:
-        query = query.filter(NetworkManager.template_name.ilike(f"%{search_query}%"))
+        query = query.filter(ConfigurationManager.template_name.ilike(f"%{search_query}%"))
 
     # Mengambil total item dan pagination
     total_templates = query.count()
@@ -415,7 +459,7 @@ def template_results():
 @login_required
 def template_result_update(template_result_id):
     # 1. Dapatkan objek dari database berdasarkan ID
-    template = NetworkManager.query.get_or_404(template_result_id)
+    template = ConfigurationManager.query.get_or_404(template_result_id)
 
     # Fungsi untuk membaca isi file template
     def read_template(filename):
@@ -487,7 +531,7 @@ def template_result_update(template_result_id):
 def template_result_delete(template_id):
 
     # Dapatkan objek dari database berdasarkan ID
-    template = NetworkManager.query.get_or_404(template_id)
+    template = ConfigurationManager.query.get_or_404(template_id)
 
     # Hapus file template
     file_path = os.path.join(
