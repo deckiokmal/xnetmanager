@@ -4,6 +4,9 @@ from flask import (
     jsonify,
     request,
     current_app,
+    flash,
+    redirect,
+    url_for,
 )
 from flask_login import login_required, current_user
 from src.models.users_model import User
@@ -212,88 +215,3 @@ def push_configs():
                 success = False
 
     return jsonify({"success": success, "results": results})
-
-
-# Endpoint Push Config for single device
-@nm_bp.route("/push_config/<int:device_id>", methods=["POST"])
-@login_required
-@role_required(
-    roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
-)
-def push_config(device_id):
-    # Mengambil perangkat dari database berdasarkan ID
-    device = DeviceManager.query.get_or_404(device_id)
-    templates = ConfigurationManager.query.all()
-
-    # Fungsi untuk membaca konten template dengan penanganan error
-    def read_template(filename):
-        template_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
-        )
-        try:
-            # Membaca konten file template
-            with open(template_path, "r") as file:
-                return file.read()
-        except FileNotFoundError:
-            # Log kesalahan dan kembalikan response error
-            current_app.logger.error(f"File konfigurasi tidak ditemukan: {filename}")
-            return None
-        except Exception as e:
-            # Log kesalahan dan kembalikan response error
-            current_app.logger.error(f"Gagal membaca file konfigurasi: {e}")
-            return None
-
-    if request.method == "POST":
-        # Menginisialisasi ConfigurationManagerUtils dengan detail perangkat
-        config = ConfigurationManagerUtils(
-            ip_address=device.ip_address,
-            username=device.username,
-            password=device.password,
-            ssh=device.ssh,
-        )
-
-        # Mendapatkan konten template dengan fungsi read_template()
-        commands = []
-        for template in templates:
-            command = read_template(template.config_name)
-            if command:  # Pastikan command tidak None
-                commands.append(command)
-
-        # Memeriksa jika ada command yang berhasil dibaca
-        if commands:
-            try:
-                # Mengonfigurasi perangkat dengan command yang didapat
-                for command in commands:
-                    config.configure_device(command)
-                # Kembalikan respon sukses jika konfigurasi berhasil dikirim
-                current_app.logger.info(
-                    f"Konfigurasi berhasil dikirim ke perangkat ID: {device_id}"
-                )
-                return jsonify(
-                    {"success": True, "message": "Konfigurasi berhasil dikirim."}
-                )
-            except Exception as e:
-                # Log kesalahan dan kembalikan response error
-                current_app.logger.error(
-                    f"Error pushing config ke perangkat ID {device_id}: {e}"
-                )
-                return (
-                    jsonify(
-                        {"success": False, "message": f"Error pushing config: {str(e)}"}
-                    ),
-                    400,
-                )
-        else:
-            # Kembalikan response jika tidak ada command yang berhasil dibaca
-            current_app.logger.error(
-                f"Tidak ada konfigurasi yang berhasil dibaca untuk perangkat ID: {device_id}"
-            )
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "message": "Tidak ada konfigurasi yang berhasil dibaca.",
-                    }
-                ),
-                400,
-            )

@@ -1,4 +1,13 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    jsonify,
+    current_app,
+)
 from flask_login import login_required, current_user
 from src import db
 from src.models.users_model import User
@@ -31,7 +40,11 @@ def inject_user():
 # Halaman utama Device Manager
 @dm_bp.route("/dm", methods=["GET"])
 @login_required
-@role_required(roles=["Admin", "User", "View"], permissions=["Manage Devices", "View Devices"], page="Devices Management")
+@role_required(
+    roles=["Admin", "User", "View"],
+    permissions=["Manage Devices", "View Devices"],
+    page="Devices Management",
+)
 def index():
     # Mendapatkan parameter pencarian dari URL
     search_query = request.args.get("search", "").lower()
@@ -192,6 +205,7 @@ def device_delete(device_id):
     return redirect(url_for("dm.index"))
 
 
+# Endpoint API get data all devices
 @dm_bp.route("/api/get_devices", methods=["GET"])
 @login_required
 @role_required(
@@ -199,5 +213,45 @@ def device_delete(device_id):
 )
 def get_devices():
     devices = DeviceManager.query.all()
-    device_list = [{"id": device.id, "device_name": device.device_name, "vendor": device.vendor, "ip_address": device.ip_address, "username": device.username, "password": device.password, "ssh": device.ssh, "description": device.description} for device in devices]
+    device_list = [
+        {
+            "id": device.id,
+            "device_name": device.device_name,
+            "vendor": device.vendor,
+            "ip_address": device.ip_address,
+            "username": device.username,
+            "password": device.password,
+            "ssh": device.ssh,
+            "description": device.description,
+        }
+        for device in devices
+    ]
     return jsonify({"devices": device_list})
+
+
+# Endpoint untuk mendapatkan data perangkat berdasarkan ID
+@dm_bp.route("/api/get_device_data/<int:device_id>")
+@login_required
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
+)
+def get_device_data(device_id):
+    try:
+        # Mengambil perangkat dari database berdasarkan ID
+        device = DeviceManager.query.get_or_404(device_id)
+
+        # Mengembalikan data perangkat dalam format JSON
+        return jsonify(
+            {
+                "ip_address": device.ip_address,
+                "username": device.username,
+                "password": device.password,
+                "ssh": device.ssh,
+            }
+        )
+    except Exception as e:
+        # Log kesalahan dan kembalikan respon error
+        current_app.logger.error(
+            f"Error mendapatkan data perangkat ID {device_id}: {e}"
+        )
+        return jsonify({"error": str(e)}), 400
