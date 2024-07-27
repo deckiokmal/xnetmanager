@@ -296,7 +296,7 @@ def template_generator(template_id):
         new_file_path = os.path.join(
             current_app.static_folder, GEN_TEMPLATE_FOLDER, newFileName
         )
-        description = f"{gen_filename} created at {date_time_string} created by {current_user.username}"
+        description = f"{gen_filename} dibuat oleh {current_user.username}"
 
         # Simpan konfigurasi yang dirender ke file baru
         with open(new_file_path, "w") as new_file:
@@ -405,49 +405,7 @@ def template_manual_create():
     return redirect(url_for("tm.index"))
 
 
-# Route untuk membuat file konfigurasi manual
-@tm_bp.route("/configuration_manual_create", methods=["POST"])
-@login_required
-def configuration_manual_create():
-    filename = request.form.get("filename")
-    configuration_content = request.form.get("configuration_content")
-
-    # Memastikan newline konsisten dan tidak ada newline tambahan
-    if configuration_content:
-        # Gantikan semua jenis newline dengan newline Unix (\n) dan hapus newline tambahan di akhir
-        configuration_content = (
-            configuration_content.replace("\r\n", "\n").replace("\r", "\n").strip()
-        )
-
-    # Cek jika data filename kosong
-    if not filename:
-        flash("Data tidak boleh kosong!", "info")
-        return redirect(request.url)
-
-    # Generate nama file dengan ekstensi .txt
-    configuration_name = f"{filename}.txt"
-
-    # Tentukan path file
-    file_path = os.path.join(
-        current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration_name
-    )
-
-    # Simpan konten ke dalam file .txt
-    with open(file_path, "w", encoding="utf-8") as configuration_file:
-        configuration_file.write(configuration_content)
-
-    # Simpan data ke dalam database
-    new_configuration = ConfigurationManager(
-        template_name=configuration_name,
-    )
-    db.session.add(new_configuration)
-    db.session.commit()
-
-    flash("File konfigurasi berhasil dibuat.", "success")
-    return redirect(url_for("tm.template_results"))
-
-
-# Template view page
+# File konfigurasi view page
 @tm_bp.route("/template_results")
 @login_required
 def template_results():
@@ -461,6 +419,7 @@ def template_results():
     if search_query:
         query = query.filter(
             ConfigurationManager.config_name.ilike(f"%{search_query}%")
+            | ConfigurationManager.description.ilike(f"%{search_query}%")
         )
 
     # Mengambil total item dan pagination
@@ -494,7 +453,7 @@ def template_results():
     )
 
 
-# Templates update
+# File konfigurasi update
 @tm_bp.route(
     "/template_result_update/<int:template_result_id>", methods=["GET", "POST"]
 )
@@ -566,7 +525,7 @@ def template_result_update(template_result_id):
     )
 
 
-# Templates delete
+# File konfigurasi delete
 @tm_bp.route("/template_result_delete/<int:template_id>", methods=["POST"])
 @login_required
 def template_result_delete(template_id):
@@ -586,4 +545,49 @@ def template_result_delete(template_id):
     db.session.commit()
 
     # Redirect ke halaman templates
+    return redirect(url_for("tm.template_results"))
+
+
+# Route untuk membuat file konfigurasi manual
+@tm_bp.route("/configuration_manual_create", methods=["POST"])
+@login_required
+def configuration_manual_create():
+    filename = request.form.get("filename")
+    configuration_description = request.form.get("configuration_description")
+    configuration_content = request.form.get("configuration_content")
+
+    # Memastikan newline konsisten dan tidak ada newline tambahan
+    if configuration_content:
+        # Gantikan semua jenis newline dengan newline Unix (\n) dan hapus newline tambahan di akhir
+        configuration_content = (
+            configuration_content.replace("\r\n", "\n").replace("\r", "\n").strip()
+        )
+
+    # Cek jika data filename kosong
+    if not filename:
+        flash("Data tidak boleh kosong!", "info")
+        return redirect(request.url)
+
+    # Generate nama file dengan ekstensi .txt
+    configuration_name = f"{filename}.txt"
+
+    # Tentukan path file
+    file_path = os.path.join(
+        current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration_name
+    )
+
+    # Simpan konten ke dalam file .txt
+    with open(file_path, "w", encoding="utf-8") as configuration_file:
+        configuration_file.write(configuration_content)
+
+    # Simpan data ke dalam database
+    new_configuration = ConfigurationManager(
+        config_name=configuration_name,
+        description=configuration_description,
+        created_by=current_user.username,
+    )
+    db.session.add(new_configuration)
+    db.session.commit()
+
+    flash("File konfigurasi berhasil dibuat.", "success")
     return redirect(url_for("tm.template_results"))
