@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from src import db
 from src.models.users_model import User
@@ -196,3 +196,11 @@ def device_delete(device_id):
     db.session.commit()
     flash("Device telah dihapus.", "success")
     return redirect(url_for("dm.index"))
+
+
+@dm_bp.route("/api/get_devices", methods=["GET"])
+@login_required
+def get_devices():
+    devices = DeviceManager.query.all()
+    device_list = [{"id": device.id, "device_name": device.device_name, "vendor": device.vendor, "ip_address": device.ip_address, "username": device.username, "password": device.password, "ssh": device.ssh, "description": device.description} for device in devices]
+    return jsonify({"devices": device_list})

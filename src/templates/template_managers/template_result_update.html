@@ -11,8 +11,13 @@
     <form action="{{ url_for('tm.template_result_update', template_result_id=template.id) }}" method="post">
         <div class="mb-3">
             <label for="template_name" class="form-label">Nama Template</label>
-            <input type="text" class="form-control" value="{{ template.template_name }}" id="template_name"
+            <input type="text" class="form-control" value="{{ template.config_name }}" id="template_name"
                 name="template_name">
+        </div>
+        <div class="mb-3">
+            <label for="description" class="form-label">Deskripsi</label>
+            <input type="text" class="form-control" value="{{ template.description }}" id="description"
+                name="description">
         </div>
         <div class="mb-3">
             <label for="template_content" class="form-label">Konten Template</label>

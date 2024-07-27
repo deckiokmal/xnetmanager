@@ -13,6 +13,7 @@ from src import db
 from src.models.users_model import User, Role, Permission, UserRoles, RolePermissions
 from .decorators import role_required
 
+# Membuat blueprint roles_bp dan error_bp
 roles_bp = Blueprint("roles", __name__)
 error_bp = Blueprint("error", __name__)
 

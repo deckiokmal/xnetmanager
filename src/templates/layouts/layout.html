@@ -271,6 +271,21 @@
                                 {% endfor -%}
                                 {% endif %}
                                 {% endwith %}
+
+                                {% with danger = get_flashed_messages(category_filter=["danger"]) %}
+                                {% if danger %}
+                                {%- for msg in danger %}
+
+                                <div class="alert alert-danger alert-dismissible fade show small" role="alert">
+                                    <strong><i class="fas fa-fw fa-exclamation-circle"></i></strong> {{ msg }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"
+                                        aria-label="Close"></button>
+                                </div>
+
+                                {% endfor -%}
+                                {% endif %}
+                                {% endwith %}
+
                             </div>
                             <!-- End Flash Messages -->
                         </li>

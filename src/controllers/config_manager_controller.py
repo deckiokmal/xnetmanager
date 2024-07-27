@@ -3,36 +3,49 @@ from flask import (
     render_template,
     jsonify,
     request,
-    redirect,
-    url_for,
-    flash,
     current_app,
 )
 from flask_login import login_required, current_user
 from src.models.users_model import User
 from src.models.xmanager_model import DeviceManager, ConfigurationManager
 from src.utils.config_manager_utils import ConfigurationManagerUtils
-from datetime import datetime
 from src import db
 import os
 from .decorators import login_required, role_required
 from flask_paginate import Pagination, get_page_args
 from threading import Thread
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import logging
 
-
-# Membuat blueprint main_bp dan error_bp
+# Membuat blueprint nm_bp dan error_bp
 nm_bp = Blueprint("nm", __name__)
 error_bp = Blueprint("error", __name__)
-error_bp = Blueprint("error_handlers", __name__)
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
 
 
-# Manangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
+@nm_bp.before_app_request
+def setup_logging():
+    current_app.logger.setLevel(logging.INFO)
+    handler = current_app.logger.handlers[0]
+    current_app.logger.addHandler(handler)
+
+
+# middleware untuk autentikasi dan otorisasi
+@nm_bp.before_request
+def before_request_func():
+    if not current_user.is_authenticated:
+        return jsonify({"message": "Unauthorized access"}), 401
+
+
+# Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
-    return render_template("/main/404.html"), 404
+    return render_template("main/404.html"), 404
 
 
-# Context processor untuk menambahkan username ke dalam konteks disemua halaman.
+# Context processor untuk menambahkan username ke dalam konteks di semua halaman.
 @nm_bp.context_processor
 def inject_user():
     if current_user.is_authenticated:
@@ -42,15 +55,11 @@ def inject_user():
     return dict(username=None)
 
 
-# Network Manager App Starting ###################################################
+# Network Manager App Starting
 GEN_TEMPLATE_FOLDER = "xmanager/gen_templates"
-BACKUP_FOLDER = "xmanager/device_backup"
-SFTP_USERNAME = "admin"
-SFTP_PASSWORD = "admin"
-SFTP_ADDRESS = "192.168.1.1"
 
 
-# Network Manager route
+# Endpoint Network Manager index
 @nm_bp.route("/nm", methods=["GET"])
 @login_required
 def index():
@@ -62,29 +71,26 @@ def index():
     )
 
     if search_query:
-        # Jika ada pencarian, filter perangkat berdasarkan query
         devices_query = DeviceManager.query.filter(
             DeviceManager.device_name.ilike(f"%{search_query}%")
             | DeviceManager.ip_address.ilike(f"%{search_query}%")
             | DeviceManager.vendor.ilike(f"%{search_query}%")
         )
     else:
-        # Jika tidak ada pencarian, ambil semua perangkat
         devices_query = DeviceManager.query
 
     total_devices = devices_query.count()
     devices = devices_query.limit(per_page).offset(offset).all()
-
-    templates = ConfigurationManager.query.all()
+    config_file = ConfigurationManager.query.all()
 
     pagination = Pagination(
         page=page, per_page=per_page, total=total_devices, css_framework="bootstrap4"
     )
 
     return render_template(
-        "/config_managers/index.html",
+        "config_managers/index.html",
         devices=devices,
-        templates=templates,
+        config_file=config_file,
         page=page,
         per_page=per_page,
         pagination=pagination,
@@ -97,20 +103,27 @@ def index():
 @nm_bp.route("/check_status", methods=["POST"])
 @login_required
 def check_status():
-    devices = DeviceManager.query.all()
+    devices = DeviceManager.query.filter_by(is_active=True).all()
     device_status = {}
 
     # Daftar untuk menyimpan thread
     threads = []
 
     def check_device(device):
-        nonlocal device_status  # Membuat device_status bisa diakses di dalam thread
-        check_device_status = ConfigurationManagerUtils(ip_address=device.ip_address)
-        check_device_status.check_device_status_threaded()
+        nonlocal device_status
+        check_device_status = ConfigurationManagerUtils(
+            ip_address=device.ip_address,
+            username=device.username,
+            password=device.password,
+            ssh=int(device.ssh),  # Menggunakan port SSH sebagai integer
+        )
+        check_device_status.check_device_status_threaded()  # Menggunakan threading
 
-        device_status[device.id] = check_device_status.device_status
-        # Update status perangkat di database
-        device.status = check_device_status.device_status
+        status = (
+            check_device_status.device_status
+        )  # Memperoleh status dari objek ConfigurationManagerUtils
+        device_status[device.id] = status
+        device.status = status
         db.session.commit()
 
     # Membuat dan memulai thread untuk setiap perangkat
@@ -126,75 +139,124 @@ def check_status():
     return jsonify(device_status)
 
 
-# Open Console
-@nm_bp.route("/open_console/<int:device_id>", methods=["POST"])
-@login_required
-def open_console(device_id):
-    device = DeviceManager.query.get_or_404(device_id)
-
-    if request.method == "POST":
-        console = ConfigurationManagerUtils(ip_address=device.ip_address)
-        console.open_webconsole()
-
-        return redirect(url_for("nm.index"))
-
-
-# Push Config for multiple devices
+# Endpoint Push Config for multiple devices
 @nm_bp.route("/push_configs", methods=["POST"])
 @login_required
 def push_configs():
-    # Ambil data JSON dari request
     data = request.get_json()
     device_ips = data.get("devices", [])
-    template_id = data.get("template_id")
+    config_id = data.get("config_id")
 
-    # Jika tidak ada perangkat yang dipilih, kembalikan respons dengan pesan error
     if not device_ips:
-        flash("No devices selected.", "warning")
         return jsonify({"success": False, "message": "No devices selected."}), 400
 
-    # Jika template tidak dipilih, kembalikan respons dengan pesan error
-    if not template_id:
-        flash("No template selected.", "warning")
-        return jsonify({"success": False, "message": "No template selected."}), 400
+    if not config_id:
+        return jsonify({"success": False, "message": "No config selected."}), 400
 
-    # Ambil perangkat dari database berdasarkan IP yang dipilih
     devices = DeviceManager.query.filter(DeviceManager.ip_address.in_(device_ips)).all()
-    template = ConfigurationManager.query.get(template_id)
-
-    # Jika template tidak ditemukan, kembalikan respons dengan pesan error
-    if not template:
-        flash("Selected template not found.", "danger")
+    if not devices:
         return (
-            jsonify({"success": False, "message": "Selected template not found."}),
+            jsonify(
+                {"success": False, "message": "No devices found for the provided IPs."}
+            ),
             404,
         )
 
-    # Baca isi template dari file
+    config = ConfigurationManager.query.get(config_id)
+    if not config:
+        return jsonify({"success": False, "message": "Selected config not found."}), 404
+
+    def read_config(filename):
+        config_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
+        )
+        try:
+            with open(config_path, "r") as file:
+                return file.read()
+        except FileNotFoundError:
+            logging.error("Config file not found: %s", config_path)
+            return None
+        except Exception as e:
+            logging.error("Error reading config file: %s", e)
+            return None
+
+    config_content = read_config(config.config_name)
+    if not config_content:
+        return jsonify({"success": False, "message": "Error reading config."}), 500
+
+    results = []
+    success = True
+
+    # Use ThreadPoolExecutor to manage threads
+    def configure_device(device):
+        nonlocal success
+        try:
+            config_utils = ConfigurationManagerUtils(
+                ip_address=device.ip_address,
+                username=device.username,
+                password=device.password,
+                ssh=device.ssh,
+            )
+            message, status = config_utils.configure_device(config_content)
+            return {
+                "device_name": device.device_name,
+                "ip": device.ip_address,
+                "status": status,
+                "message": message,
+            }
+        except Exception as e:
+            logging.error("Error configuring device %s: %s", device.ip_address, e)
+            return {
+                "device_name": device.device_name,
+                "ip": device.ip_address,
+                "status": "error",
+                "message": str(e),
+            }
+
+    # Create a ThreadPoolExecutor with a maximum number of threads
+    max_threads = 10  # Adjust as necessary
+    with ThreadPoolExecutor(max_threads) as executor:
+        futures = {
+            executor.submit(configure_device, device): device for device in devices
+        }
+
+        for future in as_completed(futures):
+            result = future.result()
+            results.append(result)
+            if result["status"] != "success":
+                success = False
+
+    return jsonify({"success": success, "results": results})
+
+
+# Endpoint Push Config for single device
+@nm_bp.route("/push_config/<int:device_id>", methods=["POST"])
+@login_required
+def push_config(device_id):
+    # Mengambil perangkat dari database berdasarkan ID
+    device = DeviceManager.query.get_or_404(device_id)
+    templates = ConfigurationManager.query.all()
+
+    # Fungsi untuk membaca konten template dengan penanganan error
     def read_template(filename):
         template_path = os.path.join(
             current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
         )
         try:
+            # Membaca konten file template
             with open(template_path, "r") as file:
                 return file.read()
         except FileNotFoundError:
-            flash("Template file not found.", "danger")
+            # Log kesalahan dan kembalikan response error
+            current_app.logger.error(f"File konfigurasi tidak ditemukan: {filename}")
             return None
         except Exception as e:
-            flash(f"Error reading template: {e}", "danger")
+            # Log kesalahan dan kembalikan response error
+            current_app.logger.error(f"Gagal membaca file konfigurasi: {e}")
             return None
 
-    # Baca template content
-    template_content = read_template(template.template_name)
-    if not template_content:
-        return jsonify({"success": False, "message": "Error reading template."}), 500
-
-    results = []
-    success = True
-
-    # Proses konfigurasi untuk setiap perangkat
-    for device in devices:
+    if request.method == "POST":
+        # Menginisialisasi ConfigurationManagerUtils dengan detail perangkat
         config = ConfigurationManagerUtils(
             ip_address=device.ip_address,
             username=device.username,
@@ -202,73 +264,48 @@ def push_configs():
             ssh=device.ssh,
         )
 
-        # Terapkan konfigurasi ke perangkat dan ambil hasil
-        message, status = config.configure_device(template_content)
-        results.append(
-            {
-                "device_name": device.device_name,
-                "ip": device.ip_address,
-                "status": status,
-                "message": message,
-            }
-        )
+        # Mendapatkan konten template dengan fungsi read_template()
+        commands = []
+        for template in templates:
+            command = read_template(template.config_name)
+            if command:  # Pastikan command tidak None
+                commands.append(command)
 
-        if status != "success":
-            success = False
-
-    # Kembalikan hasil dalam format JSON
-    return jsonify({"success": success, "results": results})
-
-
-# Backup Config
-@nm_bp.route("/backup_config/<int:device_id>", methods=["POST"])
-@login_required
-def backup_config(device_id):
-    # get device_id
-    device = DeviceManager.query.get_or_404(device_id)
-
-    if request.method == "POST":
-        # get data device vendor
-        vendor = device.vendor
-
-        # Mikrotik
-        if vendor.lower() == "mikrotik":
-            command = "export compact"
-
-        # Fortinet
-        elif vendor.lower() == "fortinet":
-            command = f"execute backup config sftp backup/backup.conf {SFTP_ADDRESS} {SFTP_USERNAME} {SFTP_PASSWORD}"
-
-        # Cisco
-        elif vendor.lower() == "cisco":
-            command = "show running-config"
+        # Memeriksa jika ada command yang berhasil dibaca
+        if commands:
+            try:
+                # Mengonfigurasi perangkat dengan command yang didapat
+                for command in commands:
+                    config.configure_device(command)
+                # Kembalikan respon sukses jika konfigurasi berhasil dikirim
+                current_app.logger.info(
+                    f"Konfigurasi berhasil dikirim ke perangkat ID: {device_id}"
+                )
+                return jsonify(
+                    {"success": True, "message": "Konfigurasi berhasil dikirim."}
+                )
+            except Exception as e:
+                # Log kesalahan dan kembalikan response error
+                current_app.logger.error(
+                    f"Error pushing config ke perangkat ID {device_id}: {e}"
+                )
+                return (
+                    jsonify(
+                        {"success": False, "message": f"Error pushing config: {str(e)}"}
+                    ),
+                    400,
+                )
         else:
-            flash("device vendor belum disupport.", "error")
-            return redirect(url_for("nm.index"))
-
-        # kirim perintah backup
-        backup = ConfigurationManagerUtils(
-            ip_address=device.ip_address,
-            username=device.username,
-            password=device.password,
-            ssh=device.ssh,
-        )
-        # tangkap hasil backup
-        backup_data = backup.backup_config(command)
-
-        # Simpan dan buat file tangkapan hasil backup ke directory backup
-        now = datetime.now()
-        date_time_string = now.strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"{device.vendor}_{date_time_string}backup.txt"
-        filepath = os.path.join(
-            current_app.static_folder,
-            BACKUP_FOLDER,
-            filename,
-        )
-        with open(filepath, "w") as f:
-            f.write(backup_data)
-
-        flash("Backup berhasil.", "success")
-        return redirect(url_for("nm.index"))
-
-
+            # Kembalikan response jika tidak ada command yang berhasil dibaca
+            current_app.logger.error(
+                f"Tidak ada konfigurasi yang berhasil dibaca untuk perangkat ID: {device_id}"
+            )
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Tidak ada konfigurasi yang berhasil dibaca.",
+                    }
+                ),
+                400,
+            )

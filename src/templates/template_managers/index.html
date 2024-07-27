@@ -97,19 +97,19 @@
                                     <td>{{ template.info }}</td>
                                     <td>
                                         <!-- Tombol untuk Melihat Detail -->
-                                        <button class="btn btn-info btn-sm" data-bs-toggle="modal"
+                                        <button class="btn btn-info btn-sm mb-2" data-bs-toggle="modal"
                                             data-bs-target="#detailModal{{ template.id }}">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                         <!-- Tombol untuk Update -->
                                         <a href="{{ url_for('tm.template_update', template_id=template.id) }}"
-                                            class="btn btn-success btn-sm">
+                                            class="btn btn-success btn-sm mb-2">
                                             <i class="fas fa-edit"></i>
                                         </a>
                                         <!-- Tombol untuk Delete -->
                                         <form action="{{ url_for('tm.template_delete', template_id=template.id) }}"
                                             method="post" style="display:inline;">
-                                            <button type="submit" class="btn btn-danger btn-sm"
+                                            <button type="submit" class="btn btn-danger btn-sm mb-2"
                                                 onclick="return confirm('Apakah Anda yakin ingin menghapus template ini?');">
                                                 <i class="fas fa-trash"></i>
                                             </button>
@@ -117,7 +117,7 @@
                                         <!-- Tombol untuk Generate -->
                                         <form action="{{ url_for('tm.template_generator', template_id=template.id) }}"
                                             method="post" style="display:inline;">
-                                            <button type="submit" class="btn btn-primary btn-sm"
+                                            <button type="submit" class="btn btn-primary btn-sm mb-2"
                                                 onclick="return confirm('Apakah Anda yakin ingin menghasilkan template ini?');">
                                                 <i class="fas fa-cogs"></i>
                                             </button>

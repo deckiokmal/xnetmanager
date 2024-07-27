@@ -1,5 +1,8 @@
 from decouple import config as decouple_config
 from flask import Flask
+import logging
+from logging import StreamHandler
+from flask_wtf.csrf import CSRFProtect
 from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
@@ -17,6 +20,7 @@ bcrypt = Bcrypt()
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
+csrf = CSRFProtect()
 
 
 def create_app(config_class=None):
@@ -40,6 +44,18 @@ def create_app(config_class=None):
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+    csrf.init_app(app)
+
+    # Konfigurasi logger
+    handler = StreamHandler()
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    handler.setFormatter(formatter)
+
+    app.logger.addHandler(handler)
+    app.logger.setLevel(logging.INFO)
 
     # Register context processor
     app.jinja_env.filters["mask_password"] = mask_password

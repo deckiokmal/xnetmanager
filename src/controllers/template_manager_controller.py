@@ -169,19 +169,48 @@ def template_update(template_id):
         new_template_content = request.form["template_content"]
         new_parameter_content = request.form["parameter_content"]
 
+        # Check if the new template or parameter name already exists in the database
+        existing_template = TemplateManager.query.filter(
+            TemplateManager.template_name == new_template_name,
+            TemplateManager.id != template.id,
+        ).first()
+        existing_parameter = TemplateManager.query.filter(
+            TemplateManager.parameter_name == new_parameter_name,
+            TemplateManager.id != template.id,
+        ).first()
+
+        if existing_template:
+            flash(f"Template name '{new_template_name}' already exists.", "danger")
+            return redirect(url_for("tm.template_update", template_id=template_id))
+
+        if existing_parameter:
+            flash(f"Parameter name '{new_parameter_name}' already exists.", "danger")
+            return redirect(url_for("tm.template_update", template_id=template_id))
+
+        if new_template_content:
+            # Gantikan semua jenis newline dengan newline Unix (\n) dan hapus newline tambahan di akhir
+            new_template_content = (
+                new_template_content.replace("\r\n", "\n").replace("\r", "\n").strip()
+            )
+        if new_parameter_content:
+            # Gantikan semua jenis newline dengan newline Unix (\n) dan hapus newline tambahan di akhir
+            new_parameter_content = (
+                new_parameter_content.replace("\r\n", "\n").replace("\r", "\n").strip()
+            )
+
         # Update konten file jika ada perubahan
         if new_template_content != read_file(template.template_name):
             template_path = os.path.join(
                 current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
             )
-            with open(template_path, "w") as file:
+            with open(template_path, "w", encoding="utf-8") as file:
                 file.write(new_template_content)
 
         if new_parameter_content != read_file(template.parameter_name):
             parameter_path = os.path.join(
                 current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
             )
-            with open(parameter_path, "w") as file:
+            with open(parameter_path, "w", encoding="utf-8") as file:
                 file.write(new_parameter_content)
 
         # Update nama file jika ada perubahan
@@ -189,31 +218,25 @@ def template_update(template_id):
             new_path_template = os.path.join(
                 current_app.static_folder, RAW_TEMPLATE_FOLDER, new_template_name
             )
-            if os.path.exists(new_path_template):
-                flash("File with the new name already exists.", "info")
-            else:
-                old_path_template = os.path.join(
-                    current_app.static_folder,
-                    RAW_TEMPLATE_FOLDER,
-                    template.template_name,
-                )
-                os.rename(old_path_template, new_path_template)
-                template.template_name = new_template_name
+            old_path_template = os.path.join(
+                current_app.static_folder,
+                RAW_TEMPLATE_FOLDER,
+                template.template_name,
+            )
+            os.rename(old_path_template, new_path_template)
+            template.template_name = new_template_name
 
         if new_parameter_name != template.parameter_name:
             new_path_parameter = os.path.join(
                 current_app.static_folder, RAW_TEMPLATE_FOLDER, new_parameter_name
             )
-            if os.path.exists(new_path_parameter):
-                flash("File with the new name already exists.", "info")
-            else:
-                old_path_parameter = os.path.join(
-                    current_app.static_folder,
-                    RAW_TEMPLATE_FOLDER,
-                    template.parameter_name,
-                )
-                os.rename(old_path_parameter, new_path_parameter)
-                template.parameter_name = new_parameter_name
+            old_path_parameter = os.path.join(
+                current_app.static_folder,
+                RAW_TEMPLATE_FOLDER,
+                template.parameter_name,
+            )
+            os.rename(old_path_parameter, new_path_parameter)
+            template.parameter_name = new_parameter_name
 
         # Update data template di database
         template.template_name = new_template_name
@@ -359,9 +382,9 @@ def template_manual_create():
         return redirect(request.url)
 
     # Buat nama file dengan format vendor_tanggal
-    current_date = datetime.now().strftime("%Y%m%d")
-    template_filename = f"{vendor}_{current_date}.j2"
-    parameter_filename = f"{vendor}_{current_date}.yml"
+    gen_filename = generate_random_filename(vendor)
+    template_filename = f"{gen_filename}.j2"
+    parameter_filename = f"{gen_filename}.yml"
 
     # Tentukan path file
     template_path = os.path.join(
@@ -471,11 +494,12 @@ def template_result_update(template_result_id):
             return file.read()
 
     # Membaca konten template
-    template_content = read_template(template.template_name)
+    template_content = read_template(template.config_name)
 
     # Ketika user mengirimkan form dengan method 'POST'
     if request.method == "POST":
         new_template_name = request.form["template_name"]
+        new_description = request.form["description"]
         new_template_content = request.form["template_content"].strip()
 
         # Memastikan newline konsisten
@@ -486,13 +510,13 @@ def template_result_update(template_result_id):
         # 5.1 Update file template_content jika ada perubahan
         if new_template_content != template_content:
             template_path = os.path.join(
-                current_app.static_folder, GEN_TEMPLATE_FOLDER, template.template_name
+                current_app.static_folder, GEN_TEMPLATE_FOLDER, template.config_name
             )
             with open(template_path, "w", encoding="utf-8") as file:
                 file.write(new_template_content)
 
         # 5.2 Update file name jika ada perubahan
-        if new_template_name != template.template_name:
+        if new_template_name != template.config_name:
             new_path_template = os.path.join(
                 current_app.static_folder, GEN_TEMPLATE_FOLDER, new_template_name
             )
@@ -505,13 +529,14 @@ def template_result_update(template_result_id):
                 old_path_template = os.path.join(
                     current_app.static_folder,
                     GEN_TEMPLATE_FOLDER,
-                    template.template_name,
+                    template.config_name,
                 )
                 os.rename(old_path_template, new_path_template)
-                template.template_name = new_template_name
+                template.config_name = new_template_name
 
         # 5.3 Update data ke dalam database
-        template.template_name = new_template_name
+        template.description = new_description
+        template.config_name = new_template_name
 
         db.session.commit()
         flash("Template update berhasil.", "success")
@@ -535,7 +560,7 @@ def template_result_delete(template_id):
 
     # Hapus file template
     file_path = os.path.join(
-        current_app.static_folder, GEN_TEMPLATE_FOLDER, str(template.template_name)
+        current_app.static_folder, GEN_TEMPLATE_FOLDER, str(template.config_name)
     )
     if os.path.exists(file_path):
         os.remove(file_path)

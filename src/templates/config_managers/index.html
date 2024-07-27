@@ -9,10 +9,12 @@
     <button id="checkStatusButton" type="button" class="btn btn-info">
         <i class="fas fa-check-circle"></i> Cek Status
     </button>
+
     <!-- Tombol Bulk Config -->
     <button id="bulkConfigBtn" type="button" class="btn btn-primary">
         <i class="fas fa-cogs"></i> Pilih Perangkat
     </button>
+
     <!-- Tombol Push Config -->
     <button id="pushConfigBtn" type="button" class="btn btn-success">
         <i class="fas fa-upload"></i> Kirim Konfigurasi
@@ -72,6 +74,7 @@
                                 <th scope="col">Alamat IP</th>
                                 <th scope="col">Vendor</th>
                                 <th scope="col">Status</th>
+                                <th scope="col">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -99,6 +102,12 @@
                                 <td>
                                     <div id="statusIndicator{{ device.id }}" class="status-indicator"></div>
                                 </td>
+                                <td>
+                                    <!-- Tombol Push Config -->
+                                    <button id="pushConfigSingleBtn" type="button" class="btn btn-success btn-sm">
+                                        <i class="fas fa-upload"></i>
+                                    </button>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -108,7 +117,8 @@
                     <div class="col-12 col-md-5 d-flex align-items-center mb-2 mb-md-0">
                         <!-- Informasi jumlah data yang ditampilkan -->
                         <div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
-                            Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if (page - 1)
+                            Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if
+                            (page - 1)
                             * per_page + per_page < total_devices else total_devices }} dari {{ total_devices }} entri
                                 </div>
                         </div>
@@ -117,6 +127,33 @@
                             {{ pagination.links }}
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal untuk memilih File Konfigurasi -->
+    <div class="modal fade" id="selectConfigModal" tabindex="-1" aria-labelledby="selectConfigModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="selectConfigModalLabel">Select File for Push Config</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="configSelectionForm">
+                        <div class="mb-3">
+                            <label for="configSelect" class="form-label">Pilih file konfigurasi</label>
+                            <select id="configSelect" class="form-select" required>
+                                <option value="" selected disabled>Select a config</option>
+                                {% for config in config_file %}
+                                <option value="{{ config.id }}">{{ config.config_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-primary" id="confirmPushConfigBtn">Push Config</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -135,33 +172,6 @@
                     <div id="pushConfigResultTable">
                         <!-- Tabel hasil push config akan dimuat di sini -->
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal untuk memilih template -->
-    <div class="modal fade" id="selectTemplateModal" tabindex="-1" aria-labelledby="selectTemplateModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="selectTemplateModalLabel">Select Template for Push Config</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="templateSelectionForm">
-                        <div class="mb-3">
-                            <label for="templateSelect" class="form-label">Select Template</label>
-                            <select id="templateSelect" class="form-select" required>
-                                <option value="" selected disabled>Select a template</option>
-                                {% for template in templates %}
-                                <option value="{{ template.id }}">{{ template.template_name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <button type="button" class="btn btn-primary" id="confirmPushConfigBtn">Push Config</button>
-                    </form>
                 </div>
             </div>
         </div>
@@ -215,7 +225,7 @@
             }
         });
 
-        // Event klik tombol Push Config
+        // Event klik tombol Push Config Multiple
         document.getElementById("pushConfigBtn").addEventListener("click", function () {
             const selectedDevices = [];
             document.querySelectorAll(".btn-check:checked").forEach(function (checkbox) {
@@ -223,8 +233,23 @@
             });
 
             if (selectedDevices.length > 0) {
-                const selectTemplateModal = new bootstrap.Modal(document.getElementById("selectTemplateModal"));
-                selectTemplateModal.show();
+                const selectConfigModal = new bootstrap.Modal(document.getElementById("selectConfigModal"));
+                selectConfigModal.show();
+            } else {
+                alert("Please select at least one device.");
+            }
+        });
+
+        // Event klik tombol Push Config Single
+        document.getElementById("pushConfigSingleBtn").addEventListener("click", function () {
+            const selectedDevices = [];
+            document.querySelectorAll(".btn-check:checked").forEach(function (checkbox) {
+                selectedDevices.push(checkbox.getAttribute("data-ip"));
+            });
+
+            if (selectedDevices.length > 0) {
+                const selectConfigModal = new bootstrap.Modal(document.getElementById("selectConfigModal"));
+                selectConfigModal.show();
             } else {
                 alert("Please select at least one device.");
             }
@@ -232,19 +257,19 @@
 
         // Event klik tombol Confirm Push Config
         document.getElementById("confirmPushConfigBtn").addEventListener("click", function () {
-            const selectedTemplate = document.getElementById("templateSelect").value;
+            const selectedconfig = document.getElementById("configSelect").value;
             const selectedDevices = [];
             document.querySelectorAll(".btn-check:checked").forEach(function (checkbox) {
                 selectedDevices.push(checkbox.getAttribute("data-ip"));
             });
 
-            if (selectedTemplate && selectedDevices.length > 0) {
+            if (selectedconfig && selectedDevices.length > 0) {
                 fetch("/push_configs", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify({ devices: selectedDevices, template_id: selectedTemplate })
+                    body: JSON.stringify({ devices: selectedDevices, config_id: selectedconfig })
                 })
                     .then(response => response.json())
                     .then(data => {
@@ -260,9 +285,9 @@
                         // Tampilkan hasil dalam modal
                         document.getElementById("pushConfigResultTable").innerHTML = tableHTML;
 
-                        // Sembunyikan modal pemilihan template dan tampilkan modal hasil push config
-                        const selectTemplateModal = bootstrap.Modal.getInstance(document.getElementById("selectTemplateModal"));
-                        selectTemplateModal.hide();
+                        // Sembunyikan modal pemilihan config dan tampilkan modal hasil push config
+                        const selectConfigModal = bootstrap.Modal.getInstance(document.getElementById("selectConfigModal"));
+                        selectConfigModal.hide();
 
                         const pushConfigResultModal = new bootstrap.Modal(document.getElementById("pushConfigResultModal"));
                         pushConfigResultModal.show();
@@ -272,7 +297,7 @@
                         alert("Error pushing configurations: " + error.message);
                     });
             } else {
-                alert("Please select a template.");
+                alert("Please select a config.");
             }
         });
 
@@ -313,6 +338,7 @@
             location.reload();
             searchInput.value = searchQuery;
         });
+
     </script>
 
     <!-- End of Page Content -->
