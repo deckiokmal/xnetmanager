@@ -6,6 +6,19 @@
     /* Warna teks */
 }
 
+/* CSS untuk warna background */
+.bg-custom-secondary {
+    background-color: #631678;
+    /* Warna background */
+    color: #ffffff;
+    /* Warna teks */
+}
+
+/* Warna teks */
+.white-text-color {
+    color: #ffffff;
+}
+
 .password-container {
     position: relative;
     width: 100%;
