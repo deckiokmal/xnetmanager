@@ -34,7 +34,9 @@ def inject_user():
 @dm_bp.route("/dm", methods=["GET"])
 @login_required
 @role_required(
-    roles=["Admin", "User", "View"], permissions=["Manage Devices", "View Devices"], page="Devices Management"
+    roles=["Admin", "User", "View"],
+    permissions=["Manage Devices", "View Devices"],
+    page="Devices Management",
 )
 def index():
     # Mendapatkan parameter pencarian dari URL
@@ -116,7 +118,7 @@ def device_create():
             password=password,
             ssh=ssh,
             description=description,
-            created_by=current_user.id,
+            created_by=current_user.username,
         )
         db.session.add(new_device)
         db.session.commit()
