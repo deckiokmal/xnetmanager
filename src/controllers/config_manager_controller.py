@@ -109,38 +109,14 @@ def index():
     roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
 )
 def check_status():
-    devices = DeviceManager.query.filter_by(is_active=True).all()
+    devices = DeviceManager.query.all()
+
     device_status = {}
-
-    # Daftar untuk menyimpan thread
-    threads = []
-
-    def check_device(device):
-        nonlocal device_status
-        check_device_status = ConfigurationManagerUtils(
-            ip_address=device.ip_address,
-            username=device.username,
-            password=device.password,
-            ssh=int(device.ssh),  # Menggunakan port SSH sebagai integer
-        )
-        check_device_status.check_device_status_threaded()  # Menggunakan threading
-
-        status = (
-            check_device_status.device_status
-        )  # Memperoleh status dari objek ConfigurationManagerUtils
-        device_status[device.id] = status
-        device.status = status
-        db.session.commit()
-
-    # Membuat dan memulai thread untuk setiap perangkat
     for device in devices:
-        thread = Thread(target=check_device, args=(device,))
-        threads.append(thread)
-        thread.start()
+        check_device_status = ConfigurationManagerUtils(ip_address=device.ip_address)
+        check_device_status.check_device_status_threaded()
 
-    # Menunggu semua thread selesai
-    for thread in threads:
-        thread.join()
+        device_status[device.id] = check_device_status.device_status
 
     return jsonify(device_status)
 

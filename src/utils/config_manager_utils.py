@@ -3,12 +3,16 @@ import paramiko
 import subprocess
 from jinja2 import Template
 import yaml
+import platform
 
 
 class ConfigurationManagerUtils:
     def __init__(
         self, ip_address="0.0.0.0", username="admin", password="admin", ssh=22
     ):
+        """
+        Inisialisasi objek ConfigurationManagerUtils dengan detail koneksi perangkat.
+        """
         self.ip_address = ip_address
         self.username = username
         self.password = password
@@ -21,6 +25,7 @@ class ConfigurationManagerUtils:
         Mengembalikan pesan sukses atau kesalahan.
         """
         try:
+            # Membuat koneksi SSH ke perangkat
             ssh_client = paramiko.SSHClient()
             ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh_client.connect(
@@ -52,43 +57,44 @@ class ConfigurationManagerUtils:
             print(error_message)
             return error_message, "danger"
 
-    def ping_device(self, ip_address):
-        """
-        Mengecek apakah perangkat dapat dijangkau menggunakan ping.
-        """
-        try:
-            output = subprocess.check_output(
-                ["ping", "-c", "1", ip_address], stderr=subprocess.STDOUT
-            )
-            return True
-        except subprocess.CalledProcessError:
-            return False
-
     def check_device_status(self):
         """
-        Memeriksa status perangkat.
+        Mengecek status perangkat dengan melakukan ping ke alamat IP.
+        Jika ada balasan (reply), maka status perangkat online; jika tidak, offline.
         """
-        status = self.ping_device(self.ip_address)
-        self.device_status = {"ip_address": self.ip_address, "reachable": status}
-        print(
-            f"Device {self.ip_address} is {'reachable' if status else 'not reachable'}."
-        )
+        try:
+            # Tentukan perintah ping berdasarkan sistem operasi
+            if platform.system() == "Windows":
+                command = ["ping", "-n", "1", self.ip_address]
+            elif platform.system() == "Linux":
+                command = ["ping", "-c", "1", self.ip_address]
+            else:
+                print("Unsupported operating system.")
+                return False
+
+            # Jalankan ping
+            response = subprocess.run(command, capture_output=True, text=True)
+            if "Reply from" in response.stdout or "reply from" in response.stdout:
+                self.device_status = True
+            else:
+                self.device_status = False
+        except Exception as e:
+            print("Error:", e)
+            self.device_status = False
 
     def check_device_status_threaded(self):
         """
-        Memeriksa status perangkat dalam thread terpisah.
+        Mengecek status perangkat dengan menggunakan threading.
+        Memulai thread untuk memanggil fungsi check_device_status.
         """
-
-        def target():
-            self.check_device_status()
-
-        thread = threading.Thread(target=target)
+        thread = threading.Thread(target=self.check_device_status)
         thread.start()
         thread.join()
 
     def render_template_config(self, jinja_template, yaml_params):
         """
         Merender template Jinja2 dengan parameter YAML.
+        Mengembalikan konfigurasi yang telah dirender atau None jika terjadi kesalahan.
         """
         try:
             # Parsing parameter YAML

@@ -176,7 +176,7 @@ def template_update(template_id):
         new_parameter_name = request.form["parameter_name"]
         new_vendor = request.form["vendor"]
         new_version = request.form["version"]
-        new_info = request.form["info"]
+        new_description = request.form["description"]
         new_template_content = request.form["template_content"]
         new_parameter_content = request.form["parameter_content"]
 
@@ -254,7 +254,7 @@ def template_update(template_id):
         template.parameter_name = new_parameter_name
         template.vendor = new_vendor
         template.version = new_version
-        template.info = new_info
+        template.description = new_description
 
         db.session.commit()
         flash("Template update berhasil.", "success")
