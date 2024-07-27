@@ -1,0 +1,68 @@
+/* CSS untuk warna background */
+.bg-custom-primary {
+    background-color: #632a92;
+    /* Warna background */
+    color: #ffffff;
+    /* Warna teks */
+}
+
+.password-container {
+    position: relative;
+    width: 100%;
+    max-width: 30rem;
+    /* Maximum width of 50rem */
+}
+
+.password-input {
+    width: 100%;
+    padding-right: 30px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 5px;
+    top: 75%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #ccc;
+}
+
+.password-toggle.active {
+    color: #333;
+}
+
+.sidebar-dark {
+    background-color: #343a40 !important;
+}
+
+.sidebar .nav-link .fas {
+    margin-right: 10px;
+}
+
+.sidebar .nav-link span {
+    font-weight: bold;
+}
+
+.sidebar .nav-link:hover {
+    background-color: #1d2124;
+}
+
+.sidebar .nav-link.active {
+    background-color: #007bff;
+}
+
+.sidebar .nav-item.active {
+    background: rgba(255, 255, 255, 0.2);
+    /* Warna latar belakang dengan transparansi */
+    backdrop-filter: blur(10px);
+    /* Efek blur */
+    -webkit-backdrop-filter: blur(10px);
+    /* Efek blur untuk Safari */
+    border-radius: 5px;
+    /* Sudut yang melengkung */
+}
+
+.sidebar .nav-item.active .nav-link {
+    color: #fff;
+    /* Warna teks yang kontras */
+}
