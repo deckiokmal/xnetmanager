@@ -24,11 +24,13 @@ def page_not_found(error):
     return render_template("/main/404.html"), 404
 
 
-# Menyuntikkan username ke dalam konteks
+# Context processor untuk menambahkan username ke dalam konteks disemua halaman.
 @roles_bp.context_processor
 def inject_user():
     if current_user.is_authenticated:
-        return dict(username=current_user.username)
+        user_id = current_user.id
+        user = User.query.get(user_id)
+        return dict(username=user.username)
     return dict(username=None)
 
 

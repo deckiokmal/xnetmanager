@@ -9,9 +9,7 @@ from flask_paginate import Pagination, get_page_args
 
 # Membuat blueprint untuk device manager
 dm_bp = Blueprint("dm", __name__)
-
-# Blueprint untuk menangani error
-error_bp = Blueprint("error_handlers", __name__)
+error_bp = Blueprint("error", __name__)
 
 
 # Menangani error 404 dengan menampilkan halaman 404.html
@@ -33,11 +31,7 @@ def inject_user():
 # Halaman utama Device Manager
 @dm_bp.route("/dm", methods=["GET"])
 @login_required
-@role_required(
-    roles=["Admin", "User", "View"],
-    permissions=["Manage Devices", "View Devices"],
-    page="Devices Management",
-)
+@role_required(roles=["Admin", "User", "View"], permissions=["Manage Devices", "View Devices"], page="Devices Management")
 def index():
     # Mendapatkan parameter pencarian dari URL
     search_query = request.args.get("search", "").lower()
@@ -200,6 +194,9 @@ def device_delete(device_id):
 
 @dm_bp.route("/api/get_devices", methods=["GET"])
 @login_required
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
+)
 def get_devices():
     devices = DeviceManager.query.all()
     device_list = [{"id": device.id, "device_name": device.device_name, "vendor": device.vendor, "ip_address": device.ip_address, "username": device.username, "password": device.password, "ssh": device.ssh, "description": device.description} for device in devices]

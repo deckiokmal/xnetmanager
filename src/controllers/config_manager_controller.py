@@ -62,6 +62,9 @@ GEN_TEMPLATE_FOLDER = "xmanager/gen_templates"
 # Endpoint Network Manager index
 @nm_bp.route("/nm", methods=["GET"])
 @login_required
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
+)
 def index():
     search_query = request.args.get("search", "")
 
@@ -102,6 +105,9 @@ def index():
 # Endpoint untuk cek status perangkat
 @nm_bp.route("/check_status", methods=["POST"])
 @login_required
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
+)
 def check_status():
     devices = DeviceManager.query.filter_by(is_active=True).all()
     device_status = {}
@@ -142,6 +148,9 @@ def check_status():
 # Endpoint Push Config for multiple devices
 @nm_bp.route("/push_configs", methods=["POST"])
 @login_required
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
+)
 def push_configs():
     data = request.get_json()
     device_ips = data.get("devices", [])
@@ -232,6 +241,9 @@ def push_configs():
 # Endpoint Push Config for single device
 @nm_bp.route("/push_config/<int:device_id>", methods=["POST"])
 @login_required
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
+)
 def push_config(device_id):
     # Mengambil perangkat dari database berdasarkan ID
     device = DeviceManager.query.get_or_404(device_id)

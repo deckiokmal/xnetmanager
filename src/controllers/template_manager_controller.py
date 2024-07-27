@@ -31,11 +31,13 @@ def page_not_found(error):
     return render_template("/main/404.html"), 404
 
 
-# Menyuntikkan username ke dalam konteks
+# Menambahkan username ke dalam konteks halaman
 @tm_bp.context_processor
 def inject_user():
     if current_user.is_authenticated:
-        return dict(username=current_user.username)
+        device_id = current_user.id
+        user = User.query.get(device_id)
+        return dict(username=user.username)
     return dict(username=None)
 
 
@@ -56,6 +58,9 @@ def generate_random_filename(vendor_name):
 # Route untuk menampilkan daftar template
 @tm_bp.route("/tm", methods=["GET"])
 @login_required
+@role_required(
+    roles=["Admin", "User", "View"], permissions=["Manage Templates", "View Templates"], page="Templates Management"
+)
 def index():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
@@ -93,6 +98,9 @@ def allowed_file_params(filename):
 # Route untuk meng-upload template
 @tm_bp.route("/template_upload", methods=["POST"])
 @login_required
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management"
+)
 def template_upload():
     if "j2" not in request.files or "yaml" not in request.files:
         flash("No file part", "error")
@@ -147,6 +155,9 @@ def template_upload():
 # Route untuk memperbarui template
 @tm_bp.route("/template_update/<int:template_id>", methods=["GET", "POST"])
 @login_required
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management"
+)
 def template_update(template_id):
     template = TemplateManager.query.get_or_404(template_id)
 
@@ -260,6 +271,9 @@ def template_update(template_id):
 # Route untuk menghapus template
 @tm_bp.route("/template_delete/<int:template_id>", methods=["POST"])
 @login_required
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management"
+)
 def template_delete(template_id):
     template = TemplateManager.query.get_or_404(template_id)
 
@@ -288,6 +302,9 @@ def template_delete(template_id):
 # Route untuk menghasilkan template dari template Jinja dan parameter YAML
 @tm_bp.route("/template_generator/<int:template_id>", methods=["POST"])
 @login_required
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management"
+)
 def template_generator(template_id):
     template = TemplateManager.query.get_or_404(template_id)
 
@@ -344,6 +361,9 @@ def template_generator(template_id):
 # Route untuk melihat detail template
 @tm_bp.route("/template_detail/<int:template_id>", methods=["GET"])
 @login_required
+@role_required(
+    roles=["Admin", "User", "View"], permissions=["Manage Templates", "View Templates"], page="Templates Management"
+)
 def template_detail(template_id):
     template = TemplateManager.query.get_or_404(template_id)
 
@@ -368,6 +388,9 @@ def template_detail(template_id):
 # Route untuk membuat template manual
 @tm_bp.route("/template_manual_create", methods=["POST"])
 @login_required
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management"
+)
 def template_manual_create():
     # Ambil data dari form
     vendor = request.form.get("vendor")
@@ -431,6 +454,9 @@ def template_manual_create():
 # File konfigurasi view page
 @tm_bp.route("/template_results")
 @login_required
+@role_required(
+    roles=["Admin", "User", "View"], permissions=["Manage Templates", "View Templates"], page="Configuration File Management"
+)
 def template_results():
     # Ambil halaman dan per halaman dari argumen URL
     page = request.args.get("page", 1, type=int)
@@ -481,6 +507,9 @@ def template_results():
     "/template_result_update/<int:template_result_id>", methods=["GET", "POST"]
 )
 @login_required
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Templates"], page="Configuration File Management"
+)
 def template_result_update(template_result_id):
     # 1. Dapatkan objek dari database berdasarkan ID
     template = ConfigurationManager.query.get_or_404(template_result_id)
@@ -553,6 +582,9 @@ def template_result_update(template_result_id):
 # File konfigurasi delete
 @tm_bp.route("/template_result_delete/<int:template_id>", methods=["POST"])
 @login_required
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Templates"], page="Configuration File Management"
+)
 def template_result_delete(template_id):
 
     # Dapatkan objek dari database berdasarkan ID
@@ -576,6 +608,9 @@ def template_result_delete(template_id):
 # Route untuk membuat file konfigurasi manual
 @tm_bp.route("/configuration_manual_create", methods=["POST"])
 @login_required
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Templates"], page="Configuration File Management"
+)
 def configuration_manual_create():
     filename = request.form.get("filename")
     configuration_description = request.form.get("configuration_description")

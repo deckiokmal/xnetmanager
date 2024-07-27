@@ -6,6 +6,7 @@ from flask import (
     flash,
     request,
     session,
+    current_app,
 )
 from flask_login import login_user, logout_user, current_user, login_required
 from src import db, bcrypt
@@ -13,12 +14,22 @@ from src.models.users_model import User
 from src.utils.forms_utils import RegisterForm, LoginForm, TwoFactorForm
 from src.utils.qrcode_utils import get_b64encoded_qr_image
 from .decorators import login_required
+import logging
 
 
 # Membuat blueprint main_bp dan error_bp
 main_bp = Blueprint("main", __name__)
 error_bp = Blueprint("error", __name__)
-error_bp = Blueprint("error_handlers", __name__)
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+
+
+@main_bp.before_app_request
+def setup_logging():
+    current_app.logger.setLevel(logging.INFO)
+    handler = current_app.logger.handlers[0]
+    current_app.logger.addHandler(handler)
 
 
 # Manangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
@@ -169,6 +180,3 @@ def verify_two_factor_auth():
                 "warning",
             )
         return render_template("main/verify-2fa.html", form=form)
-
-
-# Main App End

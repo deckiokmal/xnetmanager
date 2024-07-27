@@ -5,6 +5,7 @@ from flask import (
     redirect,
     url_for,
     flash,
+    jsonify,
 )
 from flask_login import login_required, current_user
 from src import db, bcrypt
@@ -18,7 +19,13 @@ from flask_paginate import Pagination, get_page_args
 # Membuat blueprint users
 users_bp = Blueprint("users", __name__)
 error_bp = Blueprint("error", __name__)
-error_bp = Blueprint("error_handlers", __name__)
+
+
+# middleware untuk autentikasi dan otorisasi
+@users_bp.before_request
+def before_request_func():
+    if not current_user.is_authenticated:
+        return jsonify({"message": "Unauthorized access"}), 401
 
 
 # Manangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
@@ -37,12 +44,14 @@ def inject_user():
     return dict(username=None)
 
 
-# Users App Starting
-
-
 # Menampilkan halaman dashboard setelah user login success.
 @users_bp.route("/")
 @login_required
+@role_required(
+    roles=["Admin", "User", "View"],
+    permissions=["Manage Users"],
+    page="Users Management",
+)
 def dashboard():
     # Mengambil semua perangkat dan template konfigurasi dari database
     devices = DeviceManager.query.all()
@@ -78,6 +87,7 @@ def dashboard():
 # Users Management Page
 @users_bp.route("/users", methods=["GET", "POST"])
 @login_required
+@role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
 # @role_required("Admin", "users")
 def index():
     # Mendapatkan parameter pencarian dari URL
@@ -134,6 +144,7 @@ def index():
 # Update user
 @users_bp.route("/user_update/<int:user_id>", methods=["GET", "POST"])
 @login_required
+@role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
 def user_update(user_id):
     # Mengambil objek User berdasarkan user_id
     user = User.query.get(user_id)
@@ -188,7 +199,7 @@ def user_update(user_id):
 # Delete user
 @users_bp.route("/user_delete/<int:user_id>", methods=["POST"])
 @login_required
-# @role_required("Admin", "user_delete")
+@role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
 def user_delete(user_id):
     if current_user.id == user_id:
         flash("Anda tidak bisa delete akun anda sendiri.", "warning")
@@ -208,6 +219,11 @@ def user_delete(user_id):
 # Users profile
 @users_bp.route("/user_profile", methods=["GET", "POST"])
 @login_required
+@role_required(
+    roles=["Admin", "User", "View"],
+    permissions=["Manage Users", "Manage Profile"],
+    page="Users Management",
+)
 def user_profile():
     # Get data current user
     user_id = current_user.id
