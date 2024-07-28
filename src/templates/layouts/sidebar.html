@@ -1,0 +1,95 @@
+<!-- Sidebar -->
+<ul class="navbar-nav bg-custom-sidebar sidebar accordion" id="accordionSidebar">
+
+    <!-- Sidebar - Brand -->
+    <a class="sidebar-brand d-flex align-items-center justify-content-center" href="/">
+        <div class="sidebar-brand-icon rotate-n-15">
+            <i class="fas fa-cube"></i>
+        </div>
+        <div class="sidebar-brand-text mx-3 white-text-color">XNETMANAGER</div>
+    </a>
+
+    <!-- Divider -->
+    <hr class="sidebar-divider my-0">
+
+    <!-- Nav Item - Dashboard -->
+    <li class="nav-item {{ is_active('/') }}">
+        <a class="nav-link" href="/">
+            <i class="fas fa-fw fa-tachometer-alt"></i>
+            <span><b>Dashboard</b></span>
+        </a>
+    </li>
+
+    <!-- Divider -->
+    <hr class="sidebar-divider">
+
+    <!-- Heading -->
+    <div class="sidebar-heading">
+        Users Management
+    </div>
+
+    <!-- Nav Item - Profile -->
+    <li class="nav-item {{ is_active('/user_profile') }}">
+        <a class="nav-link" href="/user_profile">
+            <i class="fas fa-fw fa-id-badge"></i>
+            <span>My Profile</span>
+        </a>
+    </li>
+
+    <!-- Nav Item - Users Management -->
+    <li class="nav-item {{ is_active('/users') }}">
+        <a class="nav-link" href="/users">
+            <i class="fas fa-fw fa-users"></i>
+            <span>Users Management</span>
+        </a>
+    </li>
+
+    <!-- Nav Item - Users Role -->
+    <li class="nav-item {{ is_active('/user_role') }}">
+        <a class="nav-link" href="/user_role">
+            <i class="fas fa-fw fa-user-tag"></i>
+            <span>Roles Management</span>
+        </a>
+    </li>
+
+    <!-- Divider -->
+    <hr class="sidebar-divider">
+
+    <!-- Heading -->
+    <div class="sidebar-heading">
+        X-Manager
+    </div>
+
+    <!-- Nav Item - Devices List -->
+    <li class="nav-item {{ is_active('/dm') }}">
+        <a class="nav-link" href="/dm">
+            <i class="fas fa-fw fa-list"></i>
+            <span>Devices List</span>
+        </a>
+    </li>
+
+    <!-- Nav Item - Templates Management -->
+    <li class="nav-item {{ is_active('/tm') }}">
+        <a class="nav-link" href="/tm">
+            <i class="fas fa-fw fa-layer-group"></i>
+            <span>Templates Management</span>
+        </a>
+    </li>
+
+    <!-- Nav Item - Configuration Management -->
+    <li class="nav-item {{ is_active('/nm') }}">
+        <a class="nav-link" href="/nm">
+            <i class="fas fa-fw fa-cogs"></i>
+            <span>Config Management</span>
+        </a>
+    </li>
+
+    <!-- Divider -->
+    <hr class="sidebar-divider">
+
+    <!-- Sidebar Toggler (Sidebar) -->
+    <div class="text-center d-none d-md-inline">
+        <button class="rounded-circle border-0" id="sidebarToggle"></button>
+    </div>
+</ul>
+<!-- End of Sidebar -->
