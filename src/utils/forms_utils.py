@@ -2,6 +2,7 @@ from flask_wtf import FlaskForm
 from wtforms import EmailField, PasswordField, StringField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
 from src.models.users_model import User
+from flask_login import current_user
 
 
 class RegisterForm(FlaskForm):
@@ -37,6 +38,33 @@ class RegisterForm(FlaskForm):
         user = User.query.filter_by(email=email.data).first()
         if user:
             raise ValidationError("Email sudah terdaftar.")
+
+
+class UserUpdateForm(FlaskForm):
+    """
+    Formulir untuk memperbarui data pengguna.
+
+    Field:
+    - first_name: StringField untuk nama depan dengan validator untuk data yang diperlukan.
+    - last_name: StringField untuk nama belakang dengan validator untuk data yang diperlukan.
+    - phone_number: StringField untuk nomor telepon.
+    - profile_picture: StringField untuk URL gambar profil.
+    - company: StringField untuk nama perusahaan.
+    - title: StringField untuk jabatan.
+    - city: StringField untuk kota.
+    - division: StringField untuk divisi.
+    - time_zone: StringField untuk zona waktu.
+    """
+
+    first_name = StringField("First Name", validators=[DataRequired()])
+    last_name = StringField("Last Name", validators=[DataRequired()])
+    phone_number = StringField("Phone Number")
+    profile_picture = StringField("Profile Picture URL")
+    company = StringField("Company")
+    title = StringField("Title")
+    city = StringField("City")
+    division = StringField("Division")
+    time_zone = StringField("Time Zone")
 
 
 class LoginForm(FlaskForm):

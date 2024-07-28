@@ -13,6 +13,7 @@ from src.models.users_model import User
 from .decorators import login_required, role_required
 from src import db
 from src.utils.qrcode_utils import get_b64encoded_qr_image
+from src.utils.forms_utils import UserUpdateForm
 import logging
 
 
@@ -69,6 +70,32 @@ def index():
     user = User.query.get(user_id)
 
     return render_template("/users_management/user_profile.html", user=user)
+
+
+# Halaman update data user berdasarkan current_user
+@profile_bp.route("/update_profile", methods=["GET", "POST"])
+@login_required
+def update_profile():
+    user = User.query.get_or_404(current_user.id)
+    form = UserUpdateForm(obj=user)  # Pre-populate form with existing data
+
+    if form.validate_on_submit():
+        # Update user details, except sensitive and unchanged fields
+        user.first_name = form.first_name.data
+        user.last_name = form.last_name.data
+        user.phone_number = form.phone_number.data
+        user.profile_picture = form.profile_picture.data
+        user.company = form.company.data
+        user.title = form.title.data
+        user.city = form.city.data
+        user.division = form.division.data
+        user.time_zone = form.time_zone.data
+
+        db.session.commit()
+        flash("Profil berhasil diperbarui.", "success")
+        return redirect(url_for("profile.index"))
+
+    return render_template("/users_management/user_update.html", form=form)
 
 
 # kirim link email verifikasi

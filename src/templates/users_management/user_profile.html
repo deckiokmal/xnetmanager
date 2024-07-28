@@ -7,10 +7,13 @@
                 <div class="col-md-3 col-12 profile-menu mb-2 text-center">
                         <img src="https://via.placeholder.com/100" alt="Profile Picture"
                                 class="img-fluid rounded-circle mb-3">
-                        <button class="btn btn-github btn-block btn-dark"><i class="fab fa-linkedin"></i> Connect to
-                                Github</button>
-                        <button type="submit" class="btn btn-outline-success mt-2"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-github btn-block btn-dark"><i class="fa-brands fa-square-github"></i>
+                                Connect to Github</button>
+                        <a href="{{ url_for('profile.update_profile') }}" class="btn btn-outline-success mt-2">
+                                <i class="fas fa-edit"></i>
+                        </a>
                 </div>
+
                 <div class="col-md-9 col-12 profile-card text-light">
                         <form>
                                 <h3 class="my-3">My Profile</h3>
