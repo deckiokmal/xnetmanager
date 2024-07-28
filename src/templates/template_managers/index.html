@@ -1,271 +1,238 @@
-{% extends "/layouts/layout.html" %}
+{% extends "/layouts/layout_table.html" %}
 {% block title %}Template Manager{% endblock %}
-{% block content %}
-<!-- Mulai Konten Halaman -->
 
-<!-- Grup Tombol -->
-<div class="d-flex justify-content-between mb-3">
-    <div>
-        <div class="row">
-            <div class="col">
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
-                    <i class="fas fa-upload"></i>
-                </button>
+
+{% block button_group1 %}
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+    <i class="fas fa-upload"></i>
+</button>
+{% endblock %}
+{% block button_group2 %}
+<!-- Tombol untuk Upload dan Create Template -->
+<button type="button" class="btn btn-secondary ms-2" data-bs-toggle="modal" data-bs-target="#createModal">
+    <i class="fas fa-plus"></i>
+</button>
+{% endblock %}
+{% block button_group3 %}
+<!-- Tombol untuk Manage Templates -->
+<form action="{{ url_for('tm.template_results') }}" method="get">
+    <input class="btn btn-warning" type="submit" value="Manage Templates">
+</form>
+{% endblock %}
+
+
+<!-- Tabel Data Templates -->
+{% block table_name %}Daftar Templates{% endblock %}
+
+{% block form_filter_row %}
+<form id="perPageForm" action="{{ url_for('tm.index') }}" method="get">
+    <label class="d-flex align-items-center">
+        <span>Tampilkan</span>
+        <select name="per_page" aria-controls="dataTable"
+            class="custom-select custom-select-sm form-control form-control-sm mx-2" style="padding-right: 1.75rem;"
+            onchange="document.getElementById('perPageForm').submit()">
+            <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
+            <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
+            <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
+        </select>
+        <span>entri</span>
+    </label>
+    <input type="hidden" name="search" value="{{ search_query }}">
+</form>
+{% endblock %}
+
+{% block form_search %}
+<form id="searchForm" method="get" action="{{ url_for('tm.index') }}" class="form-inline d-flex">
+    <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2"
+        placeholder="Cari template" value="{{ search_query }}">
+    <button class="btn btn-outline-success btn-sm" type="submit">
+        <i class="fas fa-search"></i>
+    </button>
+    <input type="hidden" name="per_page" value="{{ per_page }}">
+</form>
+{% endblock %}
+
+{% block table_header %}
+<th scope="col">No</th>
+<th scope="col">Nama File Template</th>
+<th scope="col">Nama File Parameter</th>
+<th scope="col">Vendor</th>
+<th scope="col">Versi</th>
+<th scope="col">Info</th>
+<th scope="col">Aksi</th>
+{% endblock %}
+
+{% block table_body %}
+{% for template in all_templates.items %}
+<tr>
+    <th scope="row">{{ loop.index }}</th>
+    <td>{{ template.template_name }}</td>
+    <td>{{ template.parameter_name }}</td>
+    <td>{{ template.vendor }}</td>
+    <td>{{ template.version }}</td>
+    <td>{{ template.info }}</td>
+    <td>
+        <!-- Tombol untuk Melihat Detail -->
+        <button class="btn btn-info btn-sm mb-2" data-bs-toggle="modal" data-bs-target="#detailModal{{ template.id }}">
+            <i class="fas fa-eye"></i>
+        </button>
+        <!-- Tombol untuk Update -->
+        <a href="{{ url_for('tm.template_update', template_id=template.id) }}" class="btn btn-success btn-sm mb-2">
+            <i class="fas fa-edit"></i>
+        </a>
+        <!-- Tombol untuk Delete -->
+        <form action="{{ url_for('tm.template_delete', template_id=template.id) }}" method="post"
+            style="display:inline;">
+            <button type="submit" class="btn btn-danger btn-sm mb-2"
+                onclick="return confirm('Apakah Anda yakin ingin menghapus template ini?');">
+                <i class="fas fa-trash"></i>
+            </button>
+        </form>
+        <!-- Tombol untuk Generate -->
+        <form action="{{ url_for('tm.template_generator', template_id=template.id) }}" method="post"
+            style="display:inline;">
+            <button type="submit" class="btn btn-primary btn-sm mb-2"
+                onclick="return confirm('Apakah Anda yakin ingin menghasilkan template ini?');">
+                <i class="fas fa-cogs"></i>
+            </button>
+        </form>
+    </td>
+</tr>
+
+<!-- Modal Detail Template -->
+<div class="modal fade" id="detailModal{{ template.id }}" tabindex="-1"
+    aria-labelledby="detailModalLabel{{ template.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailModalLabel{{ template.id }}">
+                    Detail Template</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="col">
-                <!-- Tombol untuk Upload dan Create Template -->
-                <button type="button" class="btn btn-secondary ms-2" data-bs-toggle="modal"
-                    data-bs-target="#createModal">
-                    <i class="fas fa-plus"></i>
-                </button>
+            <div class="modal-body">
+                <p><strong>Nama File Template:</strong> {{ template.template_name }}
+                </p>
+                <p><strong>Nama File Parameter:</strong> {{ template.parameter_name
+                    }}</p>
+                <p><strong>Vendor:</strong> {{ template.vendor }}</p>
+                <p><strong>Versi:</strong> {{ template.version }}</p>
+                <p><strong>Deskripsi:</strong> {{ template.description }}</p>
+                <p><strong>Dibuat oleh:</strong> {{ template.created_by }}</p>
             </div>
-            <div class="col justify-content-end">
-                <!-- Tombol untuk Manage Templates -->
-                <form action="{{ url_for('tm.template_results') }}" method="get">
-                    <input class="btn btn-warning" type="submit" value="Manage Templates">
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block show_total_data %}
+<div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
+    Menampilkan {{ (all_templates.page - 1) * per_page + 1 }} hingga {{ (all_templates.page
+    - 1) * per_page + per_page if (all_templates.page - 1) * per_page + per_page < all_templates.total else
+        all_templates.total }} dari {{ all_templates.total }} entri </div>
+</div>
+{% endblock %}
+
+{% block pagination %}
+<div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
+    <!-- Link Pagination -->
+    {{ all_templates.links }}
+</div>
+{% endblock %}
+
+{% block modal_data %}
+<!-- Modal Upload Template -->
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadModalLabel">Upload Template</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" enctype="multipart/form-data" action="{{ url_for('tm.template_upload') }}">
+                    <div class="mb-3">
+                        <label for="j2" class="form-label">Template J2</label>
+                        <input type="file" class="form-control" id="j2" name="j2" accept=".j2" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="yaml" class="form-label">Parameter YAML</label>
+                        <input type="file" class="form-control" id="yaml" name="yaml" accept=".yml,.yaml" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="vendor" class="form-label">Vendor</label>
+                        <input type="text" class="form-control" id="vendor" name="vendor" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="version" class="form-label">Versi</label>
+                        <input type="text" class="form-control" id="version" name="version" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i></button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Tabel Data Templates -->
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Daftar Template</h6>
+<!-- Modal Create Template -->
+<div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createModalLabel">Buat Template</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{{ url_for('tm.template_manual_create') }}">
+                    <div class="mb-3">
+                        <label for="create_vendor" class="form-label">Vendor</label>
+                        <input type="text" class="form-control" id="create_vendor" name="vendor" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_version" class="form-label">Versi</label>
+                        <input type="text" class="form-control" id="create_version" name="version" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_template_content" class="form-label">Konten Template (Jinja2)</label>
+                        <textarea class="form-control" id="create_template_content" name="template_content"
+                            rows="5"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_parameter_content" class="form-label">Konten Parameter (YAML)</label>
+                        <textarea class="form-control" id="create_parameter_content" name="parameter_content"
+                            rows="5"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Buat
+                        Template</button>
+                </form>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <div id="dataTable_wrapper" class="dataTables_wrapper dt-bootstrap4">
-                <div class="row mb-3">
-                    <div class="col-12 col-md-6 d-flex align-items-center mb-2 mb-md-0">
-                        <!-- Dropdown untuk mengubah jumlah entri yang ditampilkan per halaman -->
-                        <div class="dataTables_length" id="dataTable_length">
-                            <form id="perPageForm" action="{{ url_for('tm.index') }}" method="get">
-                                <label class="d-flex align-items-center">
-                                    <span>Tampilkan</span>
-                                    <select name="per_page" aria-controls="dataTable"
-                                        class="custom-select custom-select-sm form-control form-control-sm mx-2"
-                                        style="padding-right: 1.75rem;"
-                                        onchange="document.getElementById('perPageForm').submit()">
-                                        <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
-                                        <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
-                                        <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
-                                    </select>
-                                    <span>entri</span>
-                                </label>
-                                <input type="hidden" name="search" value="{{ search_query }}">
-                            </form>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-6 d-flex justify-content-md-end">
-                        <!-- Form Pencarian -->
-                        <form id="searchForm" method="get" action="{{ url_for('tm.index') }}"
-                            class="form-inline d-flex">
-                            <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2"
-                                placeholder="Cari template" value="{{ search_query }}">
-                            <button class="btn btn-outline-success btn-sm" type="submit">
-                                <i class="fas fa-search"></i>
-                            </button>
-                            <input type="hidden" name="per_page" value="{{ per_page }}">
-                        </form>
-                    </div>
-                </div>
-                <div class="row">
-                    <!-- Tabel Template -->
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th scope="col">No</th>
-                                    <th scope="col">Nama File Template</th>
-                                    <th scope="col">Nama File Parameter</th>
-                                    <th scope="col">Vendor</th>
-                                    <th scope="col">Versi</th>
-                                    <th scope="col">Info</th>
-                                    <th scope="col">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for template in all_templates.items %}
-                                <tr>
-                                    <th scope="row">{{ loop.index }}</th>
-                                    <td>{{ template.template_name }}</td>
-                                    <td>{{ template.parameter_name }}</td>
-                                    <td>{{ template.vendor }}</td>
-                                    <td>{{ template.version }}</td>
-                                    <td>{{ template.info }}</td>
-                                    <td>
-                                        <!-- Tombol untuk Melihat Detail -->
-                                        <button class="btn btn-info btn-sm mb-2" data-bs-toggle="modal"
-                                            data-bs-target="#detailModal{{ template.id }}">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <!-- Tombol untuk Update -->
-                                        <a href="{{ url_for('tm.template_update', template_id=template.id) }}"
-                                            class="btn btn-success btn-sm mb-2">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <!-- Tombol untuk Delete -->
-                                        <form action="{{ url_for('tm.template_delete', template_id=template.id) }}"
-                                            method="post" style="display:inline;">
-                                            <button type="submit" class="btn btn-danger btn-sm mb-2"
-                                                onclick="return confirm('Apakah Anda yakin ingin menghapus template ini?');">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                        <!-- Tombol untuk Generate -->
-                                        <form action="{{ url_for('tm.template_generator', template_id=template.id) }}"
-                                            method="post" style="display:inline;">
-                                            <button type="submit" class="btn btn-primary btn-sm mb-2"
-                                                onclick="return confirm('Apakah Anda yakin ingin menghasilkan template ini?');">
-                                                <i class="fas fa-cogs"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
+</div>
+{% endblock %}
 
-                                <!-- Modal Detail Template -->
-                                <div class="modal fade" id="detailModal{{ template.id }}" tabindex="-1"
-                                    aria-labelledby="detailModalLabel{{ template.id }}" aria-hidden="true">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title" id="detailModalLabel{{ template.id }}">
-                                                    Detail Template</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                                    aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <p><strong>Nama File Template:</strong> {{ template.template_name }}
-                                                </p>
-                                                <p><strong>Nama File Parameter:</strong> {{ template.parameter_name
-                                                    }}</p>
-                                                <p><strong>Vendor:</strong> {{ template.vendor }}</p>
-                                                <p><strong>Versi:</strong> {{ template.version }}</p>
-                                                <p><strong>Deskripsi:</strong> {{ template.description }}</p>
-                                                <p><strong>Dibuat oleh:</strong> {{ template.created_by }}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    <!-- Akhir Tabel Template -->
-                </div>
-                <div class="row mb-3">
-                    <div class="col-12 col-md-5 d-flex align-items-center mb-2 mb-md-0">
-                        <!-- Informasi jumlah data yang ditampilkan -->
-                        <div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
-                            Menampilkan {{ (all_templates.page - 1) * per_page + 1 }} hingga {{ (all_templates.page
-                            - 1) * per_page + per_page if (all_templates.page - 1) * per_page + per_page <
-                                all_templates.total else all_templates.total }} dari {{ all_templates.total }} entri
-                                </div>
-                        </div>
-                        <div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
-                            <!-- Link Pagination -->
-                            {{ all_templates.links }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+{% block script_js %}
+<!-- JavaScript untuk mengatur visibilitas password dan penundaan pencarian -->
+<script>
+    let timeout = null;
 
-        <!-- Modal Upload Template -->
-        <div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="uploadModalLabel">Upload Template</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form method="post" enctype="multipart/form-data" action="{{ url_for('tm.template_upload') }}">
-                            <div class="mb-3">
-                                <label for="j2" class="form-label">Template J2</label>
-                                <input type="file" class="form-control" id="j2" name="j2" accept=".j2" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="yaml" class="form-label">Parameter YAML</label>
-                                <input type="file" class="form-control" id="yaml" name="yaml" accept=".yml,.yaml"
-                                    required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="vendor" class="form-label">Vendor</label>
-                                <input type="text" class="form-control" id="vendor" name="vendor" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="version" class="form-label">Versi</label>
-                                <input type="text" class="form-control" id="version" name="version" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="description" class="form-label">Description</label>
-                                <textarea class="form-control" id="description" name="description" rows="2"></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i></button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+    // Menangani input pada form pencarian dengan penundaan 1 detik
+    document.getElementById("searchInput").addEventListener("input", function () {
+        // Batalkan timer yang ada sebelumnya jika ada
+        clearTimeout(timeout);
 
-        <!-- Modal Create Template -->
-        <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="createModalLabel">Buat Template</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form method="post" action="{{ url_for('tm.template_manual_create') }}">
-                            <div class="mb-3">
-                                <label for="create_vendor" class="form-label">Vendor</label>
-                                <input type="text" class="form-control" id="create_vendor" name="vendor" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="create_version" class="form-label">Versi</label>
-                                <input type="text" class="form-control" id="create_version" name="version" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="description" class="form-label">Description</label>
-                                <textarea class="form-control" id="description" name="description" rows="2"></textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label for="create_template_content" class="form-label">Konten Template (Jinja2)</label>
-                                <textarea class="form-control" id="create_template_content" name="template_content"
-                                    rows="5"></textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label for="create_parameter_content" class="form-label">Konten Parameter (YAML)</label>
-                                <textarea class="form-control" id="create_parameter_content" name="parameter_content"
-                                    rows="5"></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Buat
-                                Template</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-
-        <!-- JavaScript untuk mengatur visibilitas password dan penundaan pencarian -->
-        <script>
-            let timeout = null;
-
-            // Menangani input pada form pencarian dengan penundaan 1 detik
-            document.getElementById("searchInput").addEventListener("input", function () {
-                // Batalkan timer yang ada sebelumnya jika ada
-                clearTimeout(timeout);
-
-                // Setel timer baru untuk submit form setelah 1 detik
-                timeout = setTimeout(function () {
-                    document.getElementById('searchForm').submit();
-                }, 1000); // 1000 ms = 1 detik
-            });
-        </script>
-
-        {% endblock %}
+        // Setel timer baru untuk submit form setelah 1 detik
+        timeout = setTimeout(function () {
+            document.getElementById('searchForm').submit();
+        }, 1000); // 1000 ms = 1 detik
+    });
+</script>
+{% endblock %}

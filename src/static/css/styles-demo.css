@@ -1,17 +1,25 @@
 /* CSS untuk warna background */
-.bg-custom-primary {
-    background-color: #632a92;
+.bg-custom-topbar {
+    background-color: #712cf9;
+}
+
+/* CSS untuk warna background */
+.bg-custom-sidebar {
+    background-color: #4600d1;
     /* Warna background */
     color: #ffffff;
     /* Warna teks */
 }
 
 /* CSS untuk warna background */
-.bg-custom-secondary {
-    background-color: #631678;
+.bg-custom-main {
+    background-color: #282828;
+}
+
+/* CSS untuk warna background */
+.bg-custom-table {
+    background-color: #712cf9;
     /* Warna background */
-    color: #ffffff;
-    /* Warna teks */
 }
 
 /* Warna teks */

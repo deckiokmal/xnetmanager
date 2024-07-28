@@ -1,249 +1,218 @@
-{% extends "/layouts/layout.html" %}
+{% extends "/layouts/layout_table.html" %}
 {% block title %}User Management{% endblock %}
-{% block content %}
-<!-- Mulai Konten Halaman -->
 
-<!-- Grup Tombol -->
-<div class="d-flex justify-content-between mb-3">
-    <div>
-        <div class="row">
-            <div class="col">
-                <!-- Tombol untuk membuka modal pembuatan perangkat baru -->
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createuserModal">
-                    <i class="fas fa-plus"></i>
-                </button>
+
+{% block button_group1 %}
+<!-- Tombol untuk membuka modal pembuatan perangkat baru -->
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createuserModal">
+    <i class="fas fa-plus"></i>
+</button>
+{% endblock %}
+
+<!-- Data Table Start -->
+{% block table_name %}Daftar Akun Engineer{% endblock %}
+
+{% block form_filter_row %}
+<form id="perPageForm" action="{{ url_for('users.index') }}" method="get">
+    <label class="d-flex align-items-center">
+        <span>Tampilkan</span>
+        <select name="per_page" aria-controls="dataTable"
+            class="custom-select custom-select-sm form-control form-control-sm mx-2" style="padding-right: 1.75rem;"
+            onchange="document.getElementById('perPageForm').submit()">
+            <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
+            <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
+            <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
+        </select>
+        <span>entri</span>
+    </label>
+    <input type="hidden" name="search" value="{{ search_query }}">
+</form>
+{% endblock %}
+
+{% block form_search %}
+<form id="searchForm" method="get" action="{{ url_for('users.index') }}" class="form-inline d-flex">
+    <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2"
+        placeholder="Cari username" value="{{ search_query }}">
+    <button class="btn btn-outline-success btn-sm" type="submit">
+        <i class="fa-solid fa-magnifying-glass"></i>
+    </button>
+    <input type="hidden" name="per_page" value="{{ per_page }}">
+</form>
+{% endblock %}
+
+{% block table_header %}
+<th scope="col" class="justify-content">No</th>
+<th scope="col">Nama Pengguna</th>
+<th scope="col" class="text-justify-content">Password</th>
+<th scope="col">2FA Status</th>
+<th scope="col">Aksi</th>
+{% endblock %}
+
+{% block table_body %}
+{% for user in users %}
+<tr>
+    <th scope="row">{{ loop.index + (page - 1) * per_page }}</th>
+    <td>{{ user.username }}</td>
+    <td>
+        <div class="d-flex align-items-center">
+            <!-- Menampilkan password dengan masker -->
+            <span class="password-display">{{ user.password | mask_password }}</span>
+        </div>
+    </td>
+    <td>{{ user.is_two_factor_authentication_enabled }}</td>
+    <td>
+        <!-- Tombol Detail Perangkat -->
+        <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#detailModal{{ user.id }}">
+            <i class="fas fa-eye"></i>
+        </button>
+        <!-- Tombol Edit Perangkat -->
+        <a href="{{url_for('users.user_update', user_id=user.id)}}" class="btn btn-success btn-sm">
+            <i class="fas fa-edit"></i>
+        </a>
+        <!-- Form untuk Menghapus Perangkat -->
+        <form action="{{url_for('users.user_delete', user_id=user.id)}}" method="post" style="display:inline;">
+            <button type="submit" class="btn btn-danger btn-sm"
+                onclick="return confirm('Apakah Anda yakin ingin menghapus perangkat ini?');">
+                <i class="fas fa-trash"></i>
+            </button>
+        </form>
+    </td>
+</tr>
+
+<!-- Modal Detail User -->
+<div class="modal fade" id="detailModal{{ user.id }}" tabindex="-1" aria-labelledby="detailModalLabel{{ user.id }}"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-black">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailModalLabel{{ user.id }}">Detail
+                    Perangkat
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Username:</strong> {{ user.username }}</p>
+                <p><strong>Password:</strong> {{ user.password }}</p>
+                <p><strong>2FA Status:</strong> {{
+                    user.is_two_factor_authentication_enabled }}</p>
+                <p><strong>Role:</strong> {{ user.roles }}</p>
+                <p><strong>Dibuat pada:</strong> {{ user.created_at }}</p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Tabel Data User -->
-<div class="card shadow mb-4">
-    <div class="card-header py-3 bg-custom-secondary">
-        <h6 class="m-0 font-weight-bold white-text-color">Daftar Akun Engineer</h6>
+{% endfor %}
+{% endblock %}
+
+{% block show_total_data %}
+<div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
+    Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if
+    (page - 1)
+    * per_page + per_page < total_user else total_user }} dari {{ total_user }} entri </div>
+</div>
+{% endblock %}
+
+{% block pagination %}
+<div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
+    <!-- Link Pagination -->
+    {{ pagination.links }}
+</div>
+{% endblock %}
+
+{% block modal_data %}
+<!-- create user Modal -->
+<div class="modal fade" id="createuserModal" tabindex="-1" aria-labelledby="createuserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createuserModalLabel">
+                    Tambah Pengguna Baru
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form class="user" role="form" method="post" action="">
+                    {{ form.csrf_token }}
+
+                    <div class="form-group">
+                        {{ form.username(placeholder="Masukkan username", class="form-control
+                        form-control-user") }}
+                        {% if form.username.errors %}
+                        {% for error in form.username.errors %}
+                        <div class="alert alert-danger" role="alert">
+                            {{ error }}
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.password(placeholder="Masukkan password", class="form-control
+                        form-control-user") }}
+                        {% if form.password.errors %}
+                        {% for error in form.password.errors %}
+                        <div class="alert alert-danger" role="alert">
+                            {{ error }}
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.confirm(placeholder="Retype password", class="form-control form-control-user")
+                        }}
+                        {% if form.confirm.errors %}
+                        {% for error in form.confirm.errors %}
+                        <div class="alert alert-danger" role="alert">
+                            {{ error }}
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                    <button class="btn btn-primary btn-user btn-block" type="submit">Tambah</button>
+                </form>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <div id="dataTable_wrapper" class="dataTables_wrapper dt-bootstrap4">
-                <div class="row mb-3">
-                    <div class="col-12 col-md-6 d-flex align-items-center mb-2 mb-md-0">
-                        <!-- Dropdown untuk mengubah jumlah entri yang ditampilkan per halaman -->
-                        <div class="dataTables_length" id="dataTable_length">
-                            <form id="perPageForm" action="{{ url_for('users.index') }}" method="get">
-                                <label class="d-flex align-items-center">
-                                    <span>Tampilkan</span>
-                                    <select name="per_page" aria-controls="dataTable"
-                                        class="custom-select custom-select-sm form-control form-control-sm mx-2"
-                                        style="padding-right: 1.75rem;"
-                                        onchange="document.getElementById('perPageForm').submit()">
-                                        <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
-                                        <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
-                                        <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
-                                    </select>
-                                    <span>entri</span>
-                                </label>
-                                <input type="hidden" name="search" value="{{ search_query }}">
-                            </form>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-6 d-flex justify-content-md-end">
-                        <!-- Form Pencarian -->
-                        <form id="searchForm" method="get" action="{{ url_for('users.index') }}"
-                            class="form-inline d-flex">
-                            <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2"
-                                placeholder="Cari username" value="{{ search_query }}">
-                            <button class="btn btn-outline-success btn-sm" type="submit">
-                                <i class="fa-solid fa-magnifying-glass"></i>
-                            </button>
-                            <input type="hidden" name="per_page" value="{{ per_page }}">
-                        </form>
-                    </div>
-                </div>
-                <div class="row">
-                    <!-- Tabel User -->
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th scope="col" class="justify-content">No</th>
-                                    <th scope="col">Nama Pengguna</th>
-                                    <th scope="col" class="text-justify-content">Password</th>
-                                    <th scope="col">2FA Status</th>
-                                    <th scope="col">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for user in users %}
-                                <tr>
-                                    <th scope="row">{{ loop.index + (page - 1) * per_page }}</th>
-                                    <td>{{ user.username }}</td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <!-- Menampilkan password dengan masker -->
-                                            <span class="password-display">{{ user.password | mask_password }}</span>
-                                        </div>
-                                    </td>
-                                    <td>{{ user.is_two_factor_authentication_enabled }}</td>
-                                    <td>
-                                        <!-- Tombol Detail Perangkat -->
-                                        <button class="btn btn-info btn-sm" data-bs-toggle="modal"
-                                            data-bs-target="#detailModal{{ user.id }}">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <!-- Tombol Edit Perangkat -->
-                                        <a href="{{url_for('users.user_update', user_id=user.id)}}"
-                                            class="btn btn-success btn-sm">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <!-- Form untuk Menghapus Perangkat -->
-                                        <form action="{{url_for('users.user_delete', user_id=user.id)}}" method="post"
-                                            style="display:inline;">
-                                            <button type="submit" class="btn btn-danger btn-sm"
-                                                onclick="return confirm('Apakah Anda yakin ingin menghapus perangkat ini?');">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
+</div>
+{% endblock %}
+<!-- Data Table End -->
 
-                                <!-- Modal Detail User -->
-                                <div class="modal fade" id="detailModal{{ user.id }}" tabindex="-1"
-                                    aria-labelledby="detailModalLabel{{ user.id }}" aria-hidden="true">
-                                    <div class="modal-dialog modal-lg">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title" id="detailModalLabel{{ user.id }}">Detail
-                                                    Perangkat
-                                                </h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                                    aria-label="Tutup"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <p><strong>Username:</strong> {{ user.username }}</p>
-                                                <p><strong>Password:</strong> {{ user.password }}</p>
-                                                <p><strong>2FA Status:</strong> {{
-                                                    user.is_two_factor_authentication_enabled }}</p>
-                                                <p><strong>Role:</strong> {{ user.roles }}</p>
-                                                <p><strong>Dibuat pada:</strong> {{ user.created_at }}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+{% block script_js %}
+<!-- JavaScript untuk mengatur visibilitas password dan penundaan pencarian -->
+<script>
+    let timeout = null;
 
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-12 col-md-5 d-flex align-items-center mb-2 mb-md-0">
-                        <!-- Informasi jumlah data yang ditampilkan -->
-                        <div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
-                            Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if
-                            (page - 1)
-                            * per_page + per_page < total_user else total_user }} dari {{ total_user }} entri </div>
-                        </div>
-                        <div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
-                            <!-- Link Pagination -->
-                            {{ pagination.links }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    // Menangani input pada form pencarian dengan penundaan 1 detik
+    document.getElementById("searchInput").addEventListener("input", function () {
+        // Batalkan timer yang ada sebelumnya jika ada
+        clearTimeout(timeout);
 
-        <!-- create user Modal -->
-        <div class="modal fade" id="createuserModal" tabindex="-1" aria-labelledby="createuserModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="createuserModalLabel">
-                            Tambah Pengguna Baru
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form class="user" role="form" method="post" action="">
-                            {{ form.csrf_token }}
+        // Setel timer baru untuk submit form setelah 1 detik
+        timeout = setTimeout(function () {
+            document.getElementById('searchForm').submit();
+        }, 1000); // 1000 ms = 1 detik
+    });
 
-                            <div class="form-group">
-                                {{ form.username(placeholder="Masukkan username", class="form-control
-                                form-control-user") }}
-                                {% if form.username.errors %}
-                                {% for error in form.username.errors %}
-                                <div class="alert alert-danger" role="alert">
-                                    {{ error }}
-                                </div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-                            <div class="form-group">
-                                {{ form.password(placeholder="Masukkan password", class="form-control
-                                form-control-user") }}
-                                {% if form.password.errors %}
-                                {% for error in form.password.errors %}
-                                <div class="alert alert-danger" role="alert">
-                                    {{ error }}
-                                </div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-                            <div class="form-group">
-                                {{ form.confirm(placeholder="Retype password", class="form-control form-control-user")
-                                }}
-                                {% if form.confirm.errors %}
-                                {% for error in form.confirm.errors %}
-                                <div class="alert alert-danger" role="alert">
-                                    {{ error }}
-                                </div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-                            <button class="btn btn-primary btn-user btn-block" type="submit">Tambah</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+    // Fungsi untuk memfilter baris tabel berdasarkan input pencarian
+    document.getElementById("searchInput").addEventListener("input", function () {
+        const query = this.value.toLowerCase();
+        const rows = document.querySelectorAll("#deviceTable tbody tr");
 
-        <!-- JavaScript untuk mengatur visibilitas password dan penundaan pencarian -->
-        <script>
-            let timeout = null;
+        rows.forEach(row => {
+            const deviceName = row.cells[2].textContent.toLowerCase();
+            const ipAddress = row.cells[3].textContent.toLowerCase();
+            const vendor = row.cells[4].textContent.toLowerCase();
 
-            // Menangani input pada form pencarian dengan penundaan 1 detik
-            document.getElementById("searchInput").addEventListener("input", function () {
-                // Batalkan timer yang ada sebelumnya jika ada
-                clearTimeout(timeout);
-
-                // Setel timer baru untuk submit form setelah 1 detik
-                timeout = setTimeout(function () {
-                    document.getElementById('searchForm').submit();
-                }, 1000); // 1000 ms = 1 detik
-            });
-
-            // Fungsi untuk memfilter baris tabel berdasarkan input pencarian
-            document.getElementById("searchInput").addEventListener("input", function () {
-                const query = this.value.toLowerCase();
-                const rows = document.querySelectorAll("#deviceTable tbody tr");
-
-                rows.forEach(row => {
-                    const deviceName = row.cells[2].textContent.toLowerCase();
-                    const ipAddress = row.cells[3].textContent.toLowerCase();
-                    const vendor = row.cells[4].textContent.toLowerCase();
-
-                    if (
-                        deviceName.includes(query) ||
-                        ipAddress.includes(query) ||
-                        vendor.includes(query)
-                    ) {
-                        row.style.display = "";
-                    } else {
-                        row.style.display = "none";
-                    }
-                });
-            });
-        </script>
-
-        <!-- End of Page Content -->
-        {% endblock %}
+            if (
+                deviceName.includes(query) ||
+                ipAddress.includes(query) ||
+                vendor.includes(query)
+            ) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,7 @@
+<!-- save token jwt ke cookies -->
+<script>
+    // Simpan token JWT ke dalam cookie setelah pengguna berhasil login
+    function saveTokenToCookie(token) {
+        document.cookie = `access_token_cookie=${token}; path=/;`;
+    }
+</script>

@@ -1,201 +1,174 @@
-{% extends "/layouts/layout.html" %}
+{% extends "/layouts/layout_table.html" %}
 {% block title %}Template Results{% endblock %}
-{% block content %}
-<!-- Mulai Konten Halaman -->
 
-<!-- Grup Tombol -->
-<div class="row g-2 mb-3">
-    <div class="col-md-4 d-flex justify-content-md-start">
-        <!-- Tombol untuk Create Template -->
-        <button type="button" class="btn btn-secondary ms-2" data-bs-toggle="modal" data-bs-target="#createModal">
-            <i class="fas fa-plus"></i>
+
+{% block button_group1 %}
+<!-- Tombol untuk Create Template -->
+<button type="button" class="btn btn-secondary ms-2" data-bs-toggle="modal" data-bs-target="#createModal">
+    <i class="fas fa-plus"></i>
+</button>
+{% endblock %}
+{% block button_group2 %}
+<!-- Tombol untuk Kembali ke Template Page -->
+<a class="btn btn-warning" href="{{ url_for('tm.index') }}">
+    <i class="fa-solid fa-arrow-left"></i>
+</a>
+{% endblock %}
+
+{% block table_name %}Daftar File Konfigurasi{% endblock %}
+
+{% block form_filter_row %}
+<form id="perPageForm" action="{{ url_for('tm.template_results') }}" method="get">
+    <label class="d-flex align-items-center">
+        <span>Tampilkan</span>
+        <select name="per_page" aria-controls="dataTable"
+            class="custom-select custom-select-sm form-control form-control-sm mx-2" style="padding-right: 1.75rem;"
+            onchange="document.getElementById('perPageForm').submit()">
+            <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
+            <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
+            <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
+        </select>
+        <span>entri</span>
+    </label>
+    <input type="hidden" name="search" value="{{ search_query }}">
+</form>
+{% endblock %}
+
+{% block form_search %}
+<!-- Form Pencarian -->
+<form id="searchForm" method="get" action="{{ url_for('tm.template_results') }}" class="form-inline d-flex">
+    <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2"
+        placeholder="Cari file konfigurasi" value="{{ search_query }}">
+    <button class="btn btn-outline-success btn-sm" type="submit">
+        <i class="fas fa-search"></i>
+    </button>
+    <input type="hidden" name="per_page" value="{{ per_page }}">
+</form>
+{% endblock %}
+
+{% block table_header %}
+<th scope="col">No</th>
+<th scope="col">Nama File</th>
+<th scope="col">Deskripsi</th>
+<th scope="col">Aksi</th>
+{% endblock %}
+
+{% block table_body %}
+{% for template in all_templates %}
+<tr>
+    <th scope="row">{{ loop.index + (pagination.page - 1) * per_page }}</th>
+    <td>{{ template.config_name }}</td>
+    <td>{{ template.description }}</td>
+    <td>
+        <!-- Tombol untuk Melihat Detail -->
+        <button class="btn btn-info btn-sm mb-2" data-bs-toggle="modal" data-bs-target="#detailModal{{ template.id }}">
+            <i class="fas fa-eye"></i>
         </button>
-    </div>
-    <div class="col-md-8 d-flex justify-content-md-end">
-        <!-- Tombol untuk Kembali ke Template Page -->
-        <a class="btn btn-warning" href="{{ url_for('tm.index') }}">
-            <i class="fa-solid fa-arrow-left"></i>
+        <!-- Tombol untuk Update -->
+        <a href="{{ url_for('tm.template_result_update', template_result_id=template.id) }}"
+            class="btn btn-success btn-sm mb-2">
+            <i class="fas fa-edit"></i>
         </a>
+        <!-- Tombol untuk Delete -->
+        <form action="{{ url_for('tm.template_result_delete', template_id=template.id) }}" method="post"
+            style="display:inline;">
+            <button type="submit" class="btn btn-danger btn-sm mb-2"
+                onclick="return confirm('Apakah Anda yakin ingin menghapus template ini?');">
+                <i class="fas fa-trash"></i>
+            </button>
+        </form>
+    </td>
+</tr>
+
+<!-- Modal Detail Template -->
+<div class="modal fade" id="detailModal{{ template.id }}" tabindex="-1"
+    aria-labelledby="detailModalLabel{{ template.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailModalLabel{{ template.id }}">
+                    Detail Template</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>File konfigurasi:</strong> {{ template.config_name }}</p>
+                <p><strong>Deskripsi:</strong> {{ template.description }}</p>
+                <p><strong>Dibuat oleh:</strong> {{ template.created_by }}</p>
+                <p><strong>Konten Template:</strong></p>
+                <pre>{{ template_contents[template.id] }}</pre>
+            </div>
+        </div>
     </div>
 </div>
+{% endfor %}
+{% endblock %}
 
-<!-- Tabel Data Template Results -->
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Daftar File Konfigurasi</h6>
+{% block show_total_data %}
+<!-- Informasi jumlah data yang ditampilkan -->
+<div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
+    Menampilkan {{ (pagination.page - 1) * pagination.per_page + 1 }} hingga {{ (pagination.page
+    - 1) * pagination.per_page + pagination.per_page if (pagination.page - 1) *
+    pagination.per_page + pagination.per_page < pagination.total else pagination.total }} dari {{ pagination.total }}
+        entri </div>
+</div>
+{% endblock %}
+
+{% block pagination %}
+<div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
+    <!-- Link Pagination -->
+    {{ pagination.links }}
+</div>
+{% endblock %}
+
+{% block modal_data %}
+<!-- Modal Create Template -->
+<div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createModalLabel">Buat File Konfigurasi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{{ url_for('tm.configuration_manual_create') }}">
+                    <div class="mb-3">
+                        <label for="create_filename" class="form-label">Nama file</label>
+                        <input type="text" class="form-control" id="create_filename" name="filename" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Deskripsi</label>
+                        <input type="text" class="form-control" id="description" name="configuration_description"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_configuration_content" class="form-label">File Konfigurasi</label>
+                        <textarea class="form-control" id="create_configuration_content" name="configuration_content"
+                            rows="5"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary ms-2">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
-    <!-- Tabel Header -->
-    <div class="card-body">
-        <div class="table-responsive">
-            <div id="dataTable_wrapper" class="dataTables_wrapper dt-bootstrap4">
-                <div class="row mb-3">
-                    <div class="col-12 col-md-6 d-flex align-items-center mb-2 mb-md-0">
-                        <!-- Dropdown untuk mengubah jumlah entri yang ditampilkan per halaman -->
-                        <div class="dataTables_length" id="dataTable_length">
-                            <form id="perPageForm" action="{{ url_for('tm.template_results') }}" method="get">
-                                <label class="d-flex align-items-center">
-                                    <span>Tampilkan</span>
-                                    <select name="per_page" aria-controls="dataTable"
-                                        class="custom-select custom-select-sm form-control form-control-sm mx-2"
-                                        style="padding-right: 1.75rem;"
-                                        onchange="document.getElementById('perPageForm').submit()">
-                                        <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
-                                        <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
-                                        <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
-                                    </select>
-                                    <span>entri</span>
-                                </label>
-                                <input type="hidden" name="search" value="{{ search_query }}">
-                            </form>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-6 d-flex justify-content-md-end">
-                        <!-- Form Pencarian -->
-                        <form id="searchForm" method="get" action="{{ url_for('tm.template_results') }}"
-                            class="form-inline d-flex">
-                            <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2"
-                                placeholder="Cari file konfigurasi" value="{{ search_query }}">
-                            <button class="btn btn-outline-success btn-sm" type="submit">
-                                <i class="fas fa-search"></i>
-                            </button>
-                            <input type="hidden" name="per_page" value="{{ per_page }}">
-                        </form>
-                    </div>
-                </div>
-                <!-- Tabel Template Results -->
-                <div class="row">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th scope="col">No</th>
-                                    <th scope="col">Nama File</th>
-                                    <th scope="col">Deskripsi</th>
-                                    <th scope="col">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for template in all_templates %}
-                                <tr>
-                                    <th scope="row">{{ loop.index + (pagination.page - 1) * per_page }}</th>
-                                    <td>{{ template.config_name }}</td>
-                                    <td>{{ template.description }}</td>
-                                    <td>
-                                        <!-- Tombol untuk Melihat Detail -->
-                                        <button class="btn btn-info btn-sm mb-2" data-bs-toggle="modal"
-                                            data-bs-target="#detailModal{{ template.id }}">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <!-- Tombol untuk Update -->
-                                        <a href="{{ url_for('tm.template_result_update', template_result_id=template.id) }}"
-                                            class="btn btn-success btn-sm mb-2">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <!-- Tombol untuk Delete -->
-                                        <form
-                                            action="{{ url_for('tm.template_result_delete', template_id=template.id) }}"
-                                            method="post" style="display:inline;">
-                                            <button type="submit" class="btn btn-danger btn-sm mb-2"
-                                                onclick="return confirm('Apakah Anda yakin ingin menghapus template ini?');">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
+</div>
+{% endblock %}
 
-                                <!-- Modal Detail Template -->
-                                <div class="modal fade" id="detailModal{{ template.id }}" tabindex="-1"
-                                    aria-labelledby="detailModalLabel{{ template.id }}" aria-hidden="true">
-                                    <div class="modal-dialog modal-lg">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title" id="detailModalLabel{{ template.id }}">
-                                                    Detail Template</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                                    aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <p><strong>File konfigurasi:</strong> {{ template.config_name }}</p>
-                                                <p><strong>Deskripsi:</strong> {{ template.description }}</p>
-                                                <p><strong>Dibuat oleh:</strong> {{ template.created_by }}</p>
-                                                <p><strong>Konten Template:</strong></p>
-                                                <pre>{{ template_contents[template.id] }}</pre>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <!-- Akhir Tabel Template Results -->
-                <div class="row mb-3">
-                    <div class="col-12 col-md-5 d-flex align-items-center mb-2 mb-md-0">
-                        <!-- Informasi jumlah data yang ditampilkan -->
-                        <div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
-                            Menampilkan {{ (pagination.page - 1) * pagination.per_page + 1 }} hingga {{ (pagination.page
-                            - 1) * pagination.per_page + pagination.per_page if (pagination.page - 1) *
-                            pagination.per_page + pagination.per_page < pagination.total else pagination.total }} dari
-                                {{ pagination.total }} entri </div>
-                        </div>
-                        <div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
-                            <!-- Link Pagination -->
-                            {{ pagination.links }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+{% block script_js %}
+<!-- JavaScript untuk mengatur penundaan pencarian -->
+<script>
+    let timeout = null;
 
-        <!-- Modal Create Template -->
-        <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="createModalLabel">Buat File Konfigurasi</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form method="post" action="{{ url_for('tm.configuration_manual_create') }}">
-                            <div class="mb-3">
-                                <label for="create_filename" class="form-label">Nama file</label>
-                                <input type="text" class="form-control" id="create_filename" name="filename" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="description" class="form-label">Deskripsi</label>
-                                <input type="text" class="form-control" id="description"
-                                    name="configuration_description" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="create_configuration_content" class="form-label">File Konfigurasi</label>
-                                <textarea class="form-control" id="create_configuration_content"
-                                    name="configuration_content" rows="5"></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary ms-2">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+    // Menangani input pada form pencarian dengan penundaan 1 detik
+    document.getElementById("searchInput").addEventListener("input", function () {
+        // Batalkan timer yang ada sebelumnya jika ada
+        clearTimeout(timeout);
 
-        <!-- JavaScript untuk mengatur penundaan pencarian -->
-        <script>
-            let timeout = null;
-
-            // Menangani input pada form pencarian dengan penundaan 1 detik
-            document.getElementById("searchInput").addEventListener("input", function () {
-                // Batalkan timer yang ada sebelumnya jika ada
-                clearTimeout(timeout);
-
-                // Setel timer baru untuk submit form setelah 1 detik
-                timeout = setTimeout(function () {
-                    document.getElementById('searchForm').submit();
-                }, 1000); // 1000 ms = 1 detik
-            });
-        </script>
-
-        <!-- End of Page Content -->
-        {% endblock %}
+        // Setel timer baru untuk submit form setelah 1 detik
+        timeout = setTimeout(function () {
+            document.getElementById('searchForm').submit();
+        }, 1000); // 1000 ms = 1 detik
+    });
+</script>
+{% endblock %}
