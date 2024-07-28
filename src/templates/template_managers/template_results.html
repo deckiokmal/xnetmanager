@@ -84,10 +84,10 @@
 <div class="modal fade" id="detailModal{{ template.id }}" tabindex="-1"
     aria-labelledby="detailModalLabel{{ template.id }}" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+        <div class="modal-content bg-black text-light">
             <div class="modal-header">
                 <h5 class="modal-title" id="detailModalLabel{{ template.id }}">
-                    Detail Template</h5>
+                    Detail File Konfigurasi</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -95,7 +95,7 @@
                 <p><strong>Deskripsi:</strong> {{ template.description }}</p>
                 <p><strong>Dibuat oleh:</strong> {{ template.created_by }}</p>
                 <p><strong>Konten Template:</strong></p>
-                <pre>{{ template_contents[template.id] }}</pre>
+                <pre class="text-light">{{ template_contents[template.id] }}</pre>
             </div>
         </div>
     </div>
@@ -124,7 +124,7 @@
 <!-- Modal Create Template -->
 <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-content">
+        <div class="modal-content bg-black text-light">
             <div class="modal-header">
                 <h5 class="modal-title" id="createModalLabel">Buat File Konfigurasi</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

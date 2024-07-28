@@ -1,18 +1,28 @@
 {% extends "/layouts/layout.html" %}
-{% block title %}Update User{% endblock %}
+{% block title %}User Update{% endblock %}
 {% block content %}
 <!-- Begin Page Content -->
 
 <div class="card position-relative py-4 px-4">
     <div class="card-header mb-3">
-        Update User
+        User Update
     </div>
     <!-- Form untuk memperbarui Username dan Password User -->
     <form action="{{ url_for('users.user_update', user_id=user.id) }}" method="post">
         <div class="row mb-3">
             <div class="col-md-6">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" class="form-control" value="{{ user.username }}" id="username" name="username">
+                <label for="first_name" class="form-label">Nama Depan</label>
+                <input type="text" class="form-control" value="{{ user.first_name }}" id="first_name" name="first_name">
+            </div>
+            <div class="col-md-6">
+                <label for="last_name" class="form-label">Nama Belakang</label>
+                <input type="text" class="form-control" value="{{ user.last_name }}" id="last_name" name="last_name">
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="email" class="form-label">Email</label>
+                <input type="text" class="form-control" value="{{ user.email }}" id="email" name="email">
             </div>
             <div class="col-md-6">
                 <label for="password_input" class="form-label">Password</label>

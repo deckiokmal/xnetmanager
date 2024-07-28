@@ -163,7 +163,7 @@ def template_upload():
         vendor=vendor,
         version=version,
         description=description,
-        created_by=current_user.username,
+        created_by=current_user.email,
     )
     db.session.add(new_template)
     db.session.commit()
@@ -315,7 +315,7 @@ def template_delete(template_id):
     db.session.delete(template)
     db.session.commit()
 
-    flash(f"Template berhasil dihapus oleh {current_user.username}", "success")
+    flash(f"Template berhasil dihapus oleh {current_user.email}", "success")
     return redirect(url_for("tm.index"))
 
 
@@ -354,7 +354,7 @@ def template_generator(template_id):
         new_file_path = os.path.join(
             current_app.static_folder, GEN_TEMPLATE_FOLDER, newFileName
         )
-        description = f"{gen_filename} dibuat oleh {current_user.username}"
+        description = f"{gen_filename} dibuat oleh {current_user.email}"
 
         # Simpan konfigurasi yang dirender ke file baru
         with open(new_file_path, "w") as new_file:
@@ -364,7 +364,7 @@ def template_generator(template_id):
         new_template_generate = ConfigurationManager(
             config_name=newFileName,
             description=description,
-            created_by=current_user.username,
+            created_by=current_user.email,
         )
         db.session.add(new_template_generate)
         db.session.commit()
@@ -460,7 +460,7 @@ def template_manual_create():
         vendor=vendor,
         version=version,
         description=description,
-        created_by=current_user.username,
+        created_by=current_user.email,
     )
     db.session.add(new_template)
     db.session.commit()
@@ -662,7 +662,7 @@ def configuration_manual_create():
     new_configuration = ConfigurationManager(
         config_name=configuration_name,
         description=configuration_description,
-        created_by=current_user.username,
+        created_by=current_user.email,
     )
     db.session.add(new_configuration)
     db.session.commit()

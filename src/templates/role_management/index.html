@@ -95,10 +95,10 @@
 <div class="modal fade" id="detailModal{{ role.id }}" tabindex="-1" aria-labelledby="detailModalLabel{{ role.id }}"
     aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-content">
+        <div class="modal-content bg-black">
             <div class="modal-header">
                 <h5 class="modal-title" id="detailModalLabel{{ role.id }}">
-                    Detail Template</h5>
+                    Detail Role</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -108,7 +108,7 @@
                         User terasosiasi:
                     </strong>
                     {% for user in role.users %}
-                    <span class="badge bg-success">{{ user.username }}</span>
+                    <span class="badge bg-success">{{ user.email }}</span>
                     {% endfor %}
                 </p>
                 <p>
@@ -144,7 +144,7 @@
 <!-- Create Role Modal -->
 <div class="modal fade" id="rolecreateModal" tabindex="-1" aria-labelledby="rolecreateModalLabel" aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-content">
+        <div class="modal-content bg-black text-light">
             <div class="modal-header">
                 <h5 class="modal-title" id="rolecreateModalLabel">Tambah Role Baru</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -172,7 +172,7 @@
 <div class="modal fade" id="addUserToRoleModal" tabindex="-1" aria-labelledby="addUserToRoleModalLabel"
     aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-content">
+        <div class="modal-content bg-black text-white">
             <div class="modal-header">
                 <h5 class="modal-title" id="addUserToRoleModalLabel">Tambah User ke Role</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
@@ -183,7 +183,7 @@
                         <label for="user_id">Pilih User</label>
                         <select class="form-control" id="user_id" name="user_id">
                             {% for user in all_users %}
-                            <option value="{{ user.id }}">{{ user.username }}</option>
+                            <option value="{{ user.id }}">{{ user.email }}</option>
                             {% endfor %}
                         </select>
                     </div>

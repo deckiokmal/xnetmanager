@@ -37,13 +37,6 @@ def page_not_found(error):
     return render_template("main/404.html"), 404
 
 
-# middleware untuk autentikasi dan otorisasi
-@main_bp.before_request
-def before_request_func():
-    if not current_user.is_authenticated:
-        return jsonify({"message": "Unauthorized access"}), 401
-
-
 # Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @main_bp.context_processor
 def inject_user():

@@ -144,7 +144,7 @@ def device_create():
             password=password,
             ssh=ssh,
             description=description,
-            created_by=current_user.username,
+            created_by=current_user.email,
         )
         db.session.add(new_device)
         db.session.commit()

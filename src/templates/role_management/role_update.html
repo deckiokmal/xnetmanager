@@ -3,25 +3,11 @@
 {% block content %}
 <!-- Begin Page Content -->
 
-<div class="card position-relative py-2 px-4" style="max-width: 32rem;">
+<div class="card py-2 px-4" style="max-width: 32rem;">
     <div class="card-header">
         Role Update
     </div>
     <div class="card-body">
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
-
         <form method="POST" action="{{ url_for('roles.role_update', role_id=role.id) }}">
             <div class="form-group">
                 <label for="name">Role Name</label>
@@ -34,8 +20,8 @@
                     <div class="form-check form-check-inline">
                         <input class="form-check-input" type="checkbox" name="users" id="user{{ user.id }}"
                             value="{{ user.id }}" checked>
-                        <label class="form-check-label badge badge-primary" for="user{{ user.id }}">
-                            {{ user.username }}
+                        <label class="form-check-label badge badge-success" for="user{{ user.id }}">
+                            {{ user.email }}
                         </label>
                     </div>
                     {% endfor %}
@@ -49,7 +35,7 @@
                         <input class="form-check-input" type="checkbox" name="permissions"
                             id="permission{{ permission.id }}" value="{{ permission.id }}" {% if permission.id in
                             associated_permissions %} checked {% endif %}>
-                        <label class="form-check-label badge badge-secondary" for="permission{{ permission.id }}">
+                        <label class="form-check-label badge badge-primary" for="permission{{ permission.id }}">
                             {{ permission.name }}
                         </label>
                     </div>

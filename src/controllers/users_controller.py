@@ -10,7 +10,7 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from src import db, bcrypt
-from src.models.users_model import User
+from src.models.users_model import User, Role
 from src.models.xmanager_model import DeviceManager, TemplateManager
 from src.utils.forms_utils import RegisterForm
 from .decorators import login_required, role_required
@@ -55,7 +55,6 @@ def inject_user():
             first_name=current_user.first_name, last_name=current_user.last_name
         )
     return dict(first_name="", last_name="")
-
 
 
 # Menampilkan halaman dashboard setelah user login success.
@@ -124,24 +123,41 @@ def index():
     users = user_query.limit(per_page).offset(offset).all()
 
     # Membuat objek pagination
-    pagination = Pagination(
-        page=page, per_page=per_page, total=total_user
-    )
+    pagination = Pagination(page=page, per_page=per_page, total=total_user)
 
     # Modal Form Create users
-    form = RegisterForm(request.form)
+    form = RegisterForm()
     if form.validate_on_submit():
-        try:
-            # Buat objek User baru dan simpan ke database
-            user = User(email=form.email.data, password=form.password.data)
-            db.session.add(user)
-            db.session.commit()
+        first_name = form.first_name.data
+        last_name = form.last_name.data
+        email = form.email.data
+        password = form.password.data
 
+        # Check if user already exists
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash("Alamat email sudah terdaftar", "error")
             return redirect(url_for("users.index"))
-        except Exception:
-            # Jika registrasi gagal, batalkan perubahan dan beri pesan kesalahan
-            db.session.rollback()
-            flash("Registration failed. Please try again.", "error")
+
+        # Create new user with hashed password
+        new_user = User(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            password_hash=password,
+        )
+
+        # Add the user to the 'View' role
+        view_role = Role.query.filter_by(name="View").first()
+        if view_role:
+            new_user.roles.append(view_role)
+
+        # Add new user to the database
+        db.session.add(new_user)
+        db.session.commit()
+
+        flash("User berhasil ditambahkan.", "success")
+        return redirect(url_for("users.index"))
 
     return render_template(
         "/users_management/index.html",
@@ -155,7 +171,7 @@ def index():
     )
 
 
-# Update user
+# User Update Page
 @users_bp.route("/user_update/<int:user_id>", methods=["GET", "POST"])
 @login_required
 @role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
@@ -165,6 +181,8 @@ def user_update(user_id):
 
     # Jika metode request adalah POST, proses update user
     if request.method == "POST":
+        new_first_name = request.form["first_name"]
+        new_last_name = request.form["last_name"]
         new_email = request.form["email"]
         old_password = request.form["password_input"]
         new_password = request.form["new_password"]
@@ -183,7 +201,7 @@ def user_update(user_id):
             return render_template("/users_management/user_update.html", user=user)
 
         # Memeriksa apakah password lama benar
-        if not bcrypt.check_password_hash(user.password, old_password):
+        if not bcrypt.check_password_hash(user.password_hash, old_password):
             flash("Incorrect password!", "error")
             return render_template("/users_management/user_update.html", user=user)
         else:
@@ -194,7 +212,7 @@ def user_update(user_id):
 
             # Mengupdate password baru jika valid
             if new_password:
-                user.password = bcrypt.generate_password_hash(new_password).decode(
+                user.password_hash = bcrypt.generate_password_hash(new_password).decode(
                     "utf-8"
                 )
 

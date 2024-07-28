@@ -31,8 +31,8 @@
 
 {% block form_search %}
 <form id="searchForm" method="get" action="{{ url_for('users.index') }}" class="form-inline d-flex">
-    <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2"
-        placeholder="Cari username" value="{{ search_query }}">
+    <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2" placeholder="Search..."
+        value="{{ search_query }}">
     <button class="btn btn-outline-success btn-sm" type="submit">
         <i class="fa-solid fa-magnifying-glass"></i>
     </button>
@@ -41,25 +41,27 @@
 {% endblock %}
 
 {% block table_header %}
-<th scope="col" class="justify-content">No</th>
-<th scope="col">Nama Pengguna</th>
-<th scope="col" class="text-justify-content">Password</th>
-<th scope="col">2FA Status</th>
-<th scope="col">Aksi</th>
+<th scope="col" class="text-justify-content">No</th>
+<th scope="col" class="text-justify-content">Email</th>
+<th scope="col" class="text-justify-content">Hash Password</th>
+<th scope="col" class="text-justify-content">Company</th>
+<th scope="col" class="text-justify-content">Email Verified</th>
+<th scope="col" class="text-justify-content">Aksi</th>
 {% endblock %}
 
 {% block table_body %}
 {% for user in users %}
 <tr>
     <th scope="row">{{ loop.index + (page - 1) * per_page }}</th>
-    <td>{{ user.username }}</td>
+    <td>{{ user.email }}</td>
     <td>
         <div class="d-flex align-items-center">
             <!-- Menampilkan password dengan masker -->
-            <span class="password-display">{{ user.password | mask_password }}</span>
+            <span class="password-display">{{ user.password_hash | mask_password }}</span>
         </div>
     </td>
-    <td>{{ user.is_two_factor_authentication_enabled }}</td>
+    <td>{{ user.company }}</td>
+    <td>{{ user.is_verified }}</td>
     <td>
         <!-- Tombol Detail Perangkat -->
         <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#detailModal{{ user.id }}">
@@ -86,17 +88,18 @@
         <div class="modal-content bg-black">
             <div class="modal-header">
                 <h5 class="modal-title" id="detailModalLabel{{ user.id }}">Detail
-                    Perangkat
+                    User
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
             </div>
             <div class="modal-body">
-                <p><strong>Username:</strong> {{ user.username }}</p>
-                <p><strong>Password:</strong> {{ user.password }}</p>
-                <p><strong>2FA Status:</strong> {{
-                    user.is_two_factor_authentication_enabled }}</p>
+                <p><strong>email:</strong> {{ user.email }}</p>
+                <p><strong>Password:</strong> {{ user.password_hash }}</p>
+                <p><strong>Email Verified Status:</strong> {{
+                    user.is_verified }}</p>
                 <p><strong>Role:</strong> {{ user.roles }}</p>
-                <p><strong>Dibuat pada:</strong> {{ user.created_at }}</p>
+                <p><strong>Dibuat pada:</strong> {{ user.date_joined }}</p>
+                <p><strong>Terakhir login:</strong> {{ user.last_login }}</p>
             </div>
         </div>
     </div>
@@ -136,19 +139,40 @@
                     {{ form.csrf_token }}
 
                     <div class="form-group">
-                        {{ form.username(placeholder="Masukkan username", class="form-control
-                        form-control-user") }}
-                        {% if form.username.errors %}
-                        {% for error in form.username.errors %}
+                        {{ form.first_name(placeholder="First Name", class="form-control form-control-user") }}
+                        {% if form.first_name.errors %}
+                        {% for error in form.first_name.errors %}
                         <div class="alert alert-danger" role="alert">
                             {{ error }}
                         </div>
                         {% endfor %}
                         {% endif %}
                     </div>
+
                     <div class="form-group">
-                        {{ form.password(placeholder="Masukkan password", class="form-control
-                        form-control-user") }}
+                        {{ form.last_name(placeholder="Last Name", class="form-control form-control-user") }}
+                        {% if form.last_name.errors %}
+                        {% for error in form.last_name.errors %}
+                        <div class="alert alert-danger" role="alert">
+                            {{ error }}
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.email(placeholder="Email Address", class="form-control form-control-user") }}
+                        {% if form.email.errors %}
+                        {% for error in form.email.errors %}
+                        <div class="alert alert-danger" role="alert">
+                            {{ error }}
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.password(placeholder="Password", class="form-control form-control-user") }}
                         {% if form.password.errors %}
                         {% for error in form.password.errors %}
                         <div class="alert alert-danger" role="alert">
@@ -157,18 +181,19 @@
                         {% endfor %}
                         {% endif %}
                     </div>
+
                     <div class="form-group">
-                        {{ form.confirm(placeholder="Retype password", class="form-control form-control-user")
+                        {{ form.confirm_password(placeholder="Confirm Password", class="form-control form-control-user")
                         }}
-                        {% if form.confirm.errors %}
-                        {% for error in form.confirm.errors %}
+                        {% if form.confirm_password.errors %}
+                        {% for error in form.confirm_password.errors %}
                         <div class="alert alert-danger" role="alert">
                             {{ error }}
                         </div>
                         {% endfor %}
                         {% endif %}
                     </div>
-                    <button class="btn btn-primary btn-user btn-block" type="submit">Tambah</button>
+                    <button class="btn btn-primary btn-user btn-block" type="submit">Submit</button>
                 </form>
             </div>
         </div>
