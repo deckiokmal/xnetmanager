@@ -6,32 +6,53 @@ from flask import (
     url_for,
     flash,
     jsonify,
+    current_app,
 )
 from flask_login import login_required, current_user
 from flask_paginate import Pagination, get_page_args
 from src import db
-from src.models.users_model import User, Role, Permission, UserRoles, RolePermissions
+from src.models.users_model import User, Role, Permission, UserRoles
 from .decorators import role_required
+import logging
 
 # Membuat blueprint roles_bp dan error_bp
 roles_bp = Blueprint("roles", __name__)
 error_bp = Blueprint("error", __name__)
 
 
-# Menangani kesalahan 404
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+
+
+@roles_bp.before_app_request
+def setup_logging():
+    current_app.logger.setLevel(logging.INFO)
+    handler = current_app.logger.handlers[0]
+    current_app.logger.addHandler(handler)
+
+
+# Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
-    return render_template("/main/404.html"), 404
+    return render_template("main/404.html"), 404
 
 
-# Context processor untuk menambahkan username ke dalam konteks disemua halaman.
+# middleware untuk autentikasi dan otorisasi
+@roles_bp.before_request
+def before_request_func():
+    if not current_user.is_authenticated:
+        return jsonify({"message": "Unauthorized access"}), 401
+
+
+# Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @roles_bp.context_processor
 def inject_user():
     if current_user.is_authenticated:
-        user_id = current_user.id
-        user = User.query.get(user_id)
-        return dict(username=user.username)
-    return dict(username=None)
+        return dict(
+            first_name=current_user.first_name, last_name=current_user.last_name
+        )
+    return dict(first_name="", last_name="")
+
 
 
 # Halaman Roles
@@ -59,7 +80,7 @@ def index():
     )  # Mengambil role untuk halaman ini
 
     pagination = Pagination(
-        page=page, per_page=per_page, total=total_roles, css_framework="bootstrap4"
+        page=page, per_page=per_page, total=total_roles,
     )
 
     return render_template(
@@ -206,10 +227,10 @@ def add_user_to_role():
         user.roles.append(role)
         db.session.commit()
         flash(
-            f"User {user.username} berhasil ditambahkan ke role {role_name}.", "success"
+            f"User {user.email} berhasil ditambahkan ke role {role_name}.", "success"
         )
     else:
-        flash(f"User {user.username} sudah memiliki role {role_name}.", "warning")
+        flash(f"User {user.email} sudah memiliki role {role_name}.", "warning")
 
     return redirect(url_for("roles.index"))
 
@@ -238,10 +259,10 @@ def remove_user_from_role():
         db.session.delete(user_role)
         db.session.commit()
         flash(
-            f"User {user.username} berhasil dihapus dari role {role_name}.", "success"
+            f"User {user.email} berhasil dihapus dari role {role_name}.", "success"
         )
     else:
-        flash(f"User {user.username} tidak memiliki role {role_name}.", "warning")
+        flash(f"User {user.email} tidak memiliki role {role_name}.", "warning")
 
     return redirect(url_for("roles.index"))
 
@@ -362,5 +383,5 @@ def api_permissions():
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="API Users")
 def api_users():
     users = User.query.all()  # Mengambil semua pengguna
-    users_list = [{"id": u.id, "name": u.username} for u in users]
+    users_list = [{"id": u.id, "name": u.email} for u in users]
     return jsonify(users_list)

@@ -6,10 +6,10 @@ from flask import (
     url_for,
     flash,
     current_app,
+    jsonify,
 )
 from flask_login import login_required, current_user
 from src import db
-from src.models.users_model import User
 from src.models.xmanager_model import TemplateManager, ConfigurationManager
 from src.utils.config_manager_utils import ConfigurationManagerUtils
 from werkzeug.utils import secure_filename
@@ -18,27 +18,47 @@ from datetime import datetime
 from .decorators import login_required, role_required
 import random
 import string
-from flask_paginate import Pagination, get_page_args
+from flask_paginate import Pagination
+import logging
 
 # Blueprint untuk template manager
 tm_bp = Blueprint("tm", __name__)
 error_bp = Blueprint("error", __name__)
 
 
-# Menangani kesalahan 404
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+
+
+@tm_bp.before_app_request
+def setup_logging():
+    current_app.logger.setLevel(logging.INFO)
+    handler = current_app.logger.handlers[0]
+    current_app.logger.addHandler(handler)
+
+
+# Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
-    return render_template("/main/404.html"), 404
+    return render_template("main/404.html"), 404
 
 
-# Menambahkan username ke dalam konteks halaman
+# middleware untuk autentikasi dan otorisasi
+@tm_bp.before_request
+def before_request_func():
+    if not current_user.is_authenticated:
+        return jsonify({"message": "Unauthorized access"}), 401
+
+
+# Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @tm_bp.context_processor
 def inject_user():
     if current_user.is_authenticated:
-        device_id = current_user.id
-        user = User.query.get(device_id)
-        return dict(username=user.username)
-    return dict(username=None)
+        return dict(
+            first_name=current_user.first_name, last_name=current_user.last_name
+        )
+    return dict(first_name="", last_name="")
+
 
 
 # Folder untuk template
@@ -329,8 +349,6 @@ def template_generator(template_id):
     rendered_config = net_auto.render_template_config(jinja_template, yaml_params)
 
     if rendered_config:
-        now = datetime.now()
-        date_time_string = now.strftime("%Y%m%d_%H%M%S")
         gen_filename = generate_random_filename(template.vendor)
         newFileName = f"{gen_filename}.txt"
         new_file_path = os.path.join(

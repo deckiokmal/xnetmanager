@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import EmailField, PasswordField, StringField
-from wtforms.validators import DataRequired, Email, EqualTo, Length, InputRequired
+from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
 from src.models.users_model import User
 
 
@@ -9,39 +9,34 @@ class RegisterForm(FlaskForm):
     Formulir untuk registrasi pengguna.
 
     Field:
-    - username: StringField untuk nama pengguna dengan validator untuk data yang diperlukan dan panjang.
+    - first_name: StringField untuk nama depan dengan validator untuk data yang diperlukan.
+    - last_name: StringField untuk nama belakang dengan validator untuk data yang diperlukan.
+    - email: EmailField untuk alamat email dengan validator untuk data yang diperlukan dan format email.
     - password: PasswordField untuk kata sandi dengan validator untuk data yang diperlukan dan panjang.
-    - confirm: PasswordField untuk mengkonfirmasi kata sandi, harus cocok dengan kata sandi.
+    - confirm_password: PasswordField untuk mengkonfirmasi kata sandi, harus cocok dengan kata sandi.
 
     Metode:
-    - validate: Metode validasi kustom untuk memeriksa apakah nama pengguna sudah terdaftar dan apakah kata sandi cocok.
+    - validate_email: Metode validasi kustom untuk memeriksa apakah email sudah terdaftar.
     """
-    username = StringField(
-        "Username", validators=[DataRequired(), Length(min=6, max=40)]
-    )
+
+    first_name = StringField("First Name", validators=[DataRequired()])
+    last_name = StringField("Last Name", validators=[DataRequired()])
+    email = EmailField("Email", validators=[DataRequired(), Email()])
     password = PasswordField(
-        "Password", validators=[DataRequired(), Length(min=6, max=25)]
+        "Password", validators=[DataRequired(), Length(min=8, max=25)]
     )
-    confirm = PasswordField(
-        "Repeat password",
+    confirm_password = PasswordField(
+        "Repeat Password",
         validators=[
             DataRequired(),
-            EqualTo("password", message="Passwords must match."),
+            EqualTo("password", message="Passwords harus match."),
         ],
     )
 
-    def validate(self, extra_validators):
-        initial_validation = super(RegisterForm, self).validate(extra_validators)
-        if not initial_validation:
-            return False
-        user = User.query.filter_by(username=self.username.data).first()
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
         if user:
-            self.username.errors.append("Username already registered")
-            return False
-        if self.password.data != self.confirm.data:
-            self.password.errors.append("Passwords must match")
-            return False
-        return True
+            raise ValidationError("Email sudah terdaftar.")
 
 
 class LoginForm(FlaskForm):
@@ -49,10 +44,11 @@ class LoginForm(FlaskForm):
     Formulir untuk login pengguna.
 
     Field:
-    - username: StringField untuk nama pengguna dengan validator untuk data yang diperlukan.
+    - email: EmailField untuk alamat email dengan validator untuk data yang diperlukan dan format email.
     - password: PasswordField untuk kata sandi dengan validator untuk data yang diperlukan.
     """
-    username = StringField("Username", validators=[DataRequired()])
+
+    email = EmailField("Email", validators=[DataRequired(), Email()])
     password = PasswordField("Password", validators=[DataRequired()])
 
 
@@ -63,4 +59,5 @@ class TwoFactorForm(FlaskForm):
     Field:
     - otp: StringField untuk memasukkan OTP (One-Time Password) dengan validator untuk input yang diperlukan dan panjang.
     """
-    otp = StringField("Enter OTP", validators=[InputRequired(), Length(min=6, max=6)])
+
+    otp = StringField("Enter OTP", validators=[DataRequired(), Length(min=6, max=6)])

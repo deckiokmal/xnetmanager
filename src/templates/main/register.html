@@ -13,17 +13,40 @@
     {{ form.csrf_token }}
 
     <div class="form-group">
-        {{ form.username(placeholder="Enter username...", class="form-control form-control-user") }}
-        {% if form.username.errors %}
-        {% for error in form.username.errors %}
+        {{ form.first_name(placeholder="First Name", class="form-control form-control-user") }}
+        {% if form.first_name.errors %}
+        {% for error in form.first_name.errors %}
         <div class="alert alert-danger" role="alert">
             {{ error }}
         </div>
         {% endfor %}
         {% endif %}
     </div>
+
     <div class="form-group">
-        {{ form.password(placeholder="password", class="form-control form-control-user") }}
+        {{ form.last_name(placeholder="Last Name", class="form-control form-control-user") }}
+        {% if form.last_name.errors %}
+        {% for error in form.last_name.errors %}
+        <div class="alert alert-danger" role="alert">
+            {{ error }}
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+
+    <div class="form-group">
+        {{ form.email(placeholder="Email Address", class="form-control form-control-user") }}
+        {% if form.email.errors %}
+        {% for error in form.email.errors %}
+        <div class="alert alert-danger" role="alert">
+            {{ error }}
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+
+    <div class="form-group">
+        {{ form.password(placeholder="Password", class="form-control form-control-user") }}
         {% if form.password.errors %}
         {% for error in form.password.errors %}
         <div class="alert alert-danger" role="alert">
@@ -32,16 +55,18 @@
         {% endfor %}
         {% endif %}
     </div>
+
     <div class="form-group">
-        {{ form.confirm(placeholder="Confirm Password", class="form-control form-control-user") }}
-        {% if form.confirm.errors %}
-        {% for error in form.confirm.errors %}
+        {{ form.confirm_password(placeholder="Confirm Password", class="form-control form-control-user") }}
+        {% if form.confirm_password.errors %}
+        {% for error in form.confirm_password.errors %}
         <div class="alert alert-danger" role="alert">
             {{ error }}
         </div>
         {% endfor %}
         {% endif %}
     </div>
+
     <button class="btn btn-primary btn-user btn-block" type="submit">Sign up</button>
     <hr>
     <div class="text-center">

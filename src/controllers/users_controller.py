@@ -6,6 +6,7 @@ from flask import (
     url_for,
     flash,
     jsonify,
+    current_app,
 )
 from flask_login import login_required, current_user
 from src import db, bcrypt
@@ -14,11 +15,29 @@ from src.models.xmanager_model import DeviceManager, TemplateManager
 from src.utils.forms_utils import RegisterForm
 from .decorators import login_required, role_required
 from flask_paginate import Pagination, get_page_args
+import logging
 
 
 # Membuat blueprint users
 users_bp = Blueprint("users", __name__)
 error_bp = Blueprint("error", __name__)
+
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+
+
+@users_bp.before_app_request
+def setup_logging():
+    current_app.logger.setLevel(logging.INFO)
+    handler = current_app.logger.handlers[0]
+    current_app.logger.addHandler(handler)
+
+
+# Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
+@error_bp.app_errorhandler(404)
+def page_not_found(error):
+    return render_template("main/404.html"), 404
 
 
 # middleware untuk autentikasi dan otorisasi
@@ -28,20 +47,15 @@ def before_request_func():
         return jsonify({"message": "Unauthorized access"}), 401
 
 
-# Manangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
-@error_bp.app_errorhandler(404)
-def page_not_found(error):
-    return render_template("/main/404.html"), 404
-
-
-# Context processor untuk menambahkan username ke dalam konteks disemua halaman.
+# Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @users_bp.context_processor
 def inject_user():
     if current_user.is_authenticated:
-        user_id = current_user.id
-        user = User.query.get(user_id)
-        return dict(username=user.username)
-    return dict(username=None)
+        return dict(
+            first_name=current_user.first_name, last_name=current_user.last_name
+        )
+    return dict(first_name="", last_name="")
+
 
 
 # Menampilkan halaman dashboard setelah user login success.
@@ -49,8 +63,8 @@ def inject_user():
 @login_required
 @role_required(
     roles=["Admin", "User", "View"],
-    permissions=["Manage Users"],
-    page="Users Management",
+    permissions=["Manage Users", "Manage Profile"],
+    page="Dashboard",
 )
 def dashboard():
     # Mengambil semua perangkat dan template konfigurasi dari database
@@ -100,7 +114,7 @@ def index():
 
     if search_query:
         # Jika ada pencarian, filter perangkat berdasarkan query
-        user_query = User.query.filter(User.username.ilike(f"%{search_query}%"))
+        user_query = User.query.filter(User.email.ilike(f"%{search_query}%"))
     else:
         # Jika tidak ada pencarian, ambil semua perangkat
         user_query = User.query
@@ -111,7 +125,7 @@ def index():
 
     # Membuat objek pagination
     pagination = Pagination(
-        page=page, per_page=per_page, total=total_user, css_framework="bootstrap4"
+        page=page, per_page=per_page, total=total_user
     )
 
     # Modal Form Create users
@@ -119,7 +133,7 @@ def index():
     if form.validate_on_submit():
         try:
             # Buat objek User baru dan simpan ke database
-            user = User(username=form.username.data, password=form.password.data)
+            user = User(email=form.email.data, password=form.password.data)
             db.session.add(user)
             db.session.commit()
 
@@ -151,17 +165,17 @@ def user_update(user_id):
 
     # Jika metode request adalah POST, proses update user
     if request.method == "POST":
-        new_username = request.form["username"]
+        new_email = request.form["email"]
         old_password = request.form["password_input"]
         new_password = request.form["new_password"]
         repeat_new_password = request.form["retype_password"]
 
-        # Memeriksa apakah username baru sudah ada di database
+        # Memeriksa apakah email baru sudah ada di database
         exist_user = User.query.filter(
-            User.username == new_username, User.id != user.id
+            User.email == new_email, User.id != user.id
         ).first()
         if exist_user:
-            flash("Username already exists. Please choose another username!", "info")
+            flash("email already exists. Please choose another email!", "info")
 
         # Memeriksa apakah password lama tidak kosong
         if not old_password:
@@ -184,8 +198,8 @@ def user_update(user_id):
                     "utf-8"
                 )
 
-            # Mengupdate username dan password baru jika valid
-            user.username = new_username
+            # Mengupdate email dan password baru jika valid
+            user.email = new_email
 
             # Commit perubahan ke database
             db.session.commit()
@@ -214,19 +228,3 @@ def user_delete(user_id):
     db.session.commit()
     flash("User telah dihapus.", "success")
     return redirect(url_for("users.index"))
-
-
-# Users profile
-@users_bp.route("/user_profile", methods=["GET", "POST"])
-@login_required
-@role_required(
-    roles=["Admin", "User", "View"],
-    permissions=["Manage Users", "Manage Profile"],
-    page="Users Management",
-)
-def user_profile():
-    # Get data current user
-    user_id = current_user.id
-    user = User.query.get(user_id)
-
-    return render_template("/users_management/user_profile.html", user=user)

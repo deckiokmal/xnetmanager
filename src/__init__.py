@@ -67,6 +67,7 @@ def create_app(config_class=None):
     # Register blueprints
     from .controllers.main_controller import main_bp
     from .controllers.users_controller import users_bp
+    from .controllers.profile_controller import profile_bp
     from .controllers.roles_controller import roles_bp
     from .controllers.device_manager_controller import dm_bp
     from .controllers.template_manager_controller import tm_bp
@@ -75,6 +76,7 @@ def create_app(config_class=None):
 
     app.register_blueprint(main_bp)
     app.register_blueprint(users_bp)
+    app.register_blueprint(profile_bp)
     app.register_blueprint(roles_bp)
     app.register_blueprint(dm_bp)
     app.register_blueprint(tm_bp)

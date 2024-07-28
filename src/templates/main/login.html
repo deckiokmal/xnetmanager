@@ -9,13 +9,15 @@
 {% endblock %}
 
 {% block content %}
-<form class="user" method="POST" action="/login">
+<form class="user" method="POST" action="{{ url_for('main.login') }}">
+    {{ form.hidden_tag() }}
     <div class="form-group">
-        <input type="text" class="form-control form-control-user" name="username" placeholder="Enter Username..."
-            required>
+        {{ form.email.label(class="sr-only") }}
+        {{ form.email(class="form-control form-control-user", placeholder="Enter Email Address...", required=True) }}
     </div>
     <div class="form-group">
-        <input type="password" class="form-control form-control-user" name="password" placeholder="Password" required>
+        {{ form.password.label(class="sr-only") }}
+        {{ form.password(class="form-control form-control-user", placeholder="Password", required=True) }}
     </div>
     <input type="submit" value="Login" class="btn btn-primary btn-user btn-block">
 </form>
@@ -24,6 +26,6 @@
     <a class="small" href="forgot-password.html">Forgot Password?</a>
 </div>
 <div class="text-center">
-    <a class="small" href="/register">Create an Account!</a>
+    <a class="small" href="{{ url_for('main.register') }}">Create an Account!</a>
 </div>
 {% endblock %}

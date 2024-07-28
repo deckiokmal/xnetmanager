@@ -10,25 +10,38 @@ class User(UserMixin, db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String, unique=True, nullable=False)
-    password = db.Column(db.String, nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    is_two_factor_authentication_enabled = db.Column(
-        db.Boolean, nullable=False, default=False
-    )
+    first_name = db.Column(db.String(255), nullable=False)
+    last_name = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    phone_number = db.Column(db.String(20), nullable=True)
+    profile_picture = db.Column(db.String(255), nullable=True)
+    company = db.Column(db.String(255), nullable=True)
+    title = db.Column(db.String(255), nullable=True)
+    city = db.Column(db.String(255), nullable=True)
+    division = db.Column(db.String(255), nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    is_verified = db.Column(db.Boolean, nullable=False, default=False)
+    date_joined = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    last_login = db.Column(db.DateTime, nullable=True)
+    time_zone = db.Column(db.String(50), nullable=True)
+    is_2fa_enabled = db.Column(db.Boolean, nullable=False, default=False)
     secret_token = db.Column(db.String, unique=True, nullable=True)
-
     roles = db.relationship("Role", secondary="user_roles", back_populates="users")
 
-    def __init__(self, username, password):
-        self.username = username
-        self.password = bcrypt.generate_password_hash(password)
-        self.created_at = datetime.utcnow()
+    def __init__(self, first_name, last_name, email, password_hash):
+        self.first_name = first_name
+        self.last_name = last_name
+        self.email = email
+        self.password_hash = bcrypt.generate_password_hash(password_hash).decode(
+            "utf-8"
+        )
+        self.date_joined = datetime.utcnow()
         self.secret_token = pyotp.random_base32()
 
     def get_authentication_setup_uri(self):
         return pyotp.TOTP(self.secret_token).provisioning_uri(
-            name=self.username, issuer_name=Config.APP_NAME
+            name=self.email, issuer_name=Config.APP_NAME
         )
 
     def is_otp_valid(self, user_otp):
@@ -36,7 +49,7 @@ class User(UserMixin, db.Model):
         return totp.verify(user_otp)
 
     def __repr__(self):
-        return f"<User {self.username}>"
+        return f"<User {self.email}>"
 
     def has_role(self, role):
         return (

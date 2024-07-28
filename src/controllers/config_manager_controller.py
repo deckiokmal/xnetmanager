@@ -4,19 +4,14 @@ from flask import (
     jsonify,
     request,
     current_app,
-    flash,
-    redirect,
-    url_for,
 )
 from flask_login import login_required, current_user
 from src.models.users_model import User
 from src.models.xmanager_model import DeviceManager, ConfigurationManager
 from src.utils.config_manager_utils import ConfigurationManagerUtils
-from src import db
 import os
 from .decorators import login_required, role_required
 from flask_paginate import Pagination, get_page_args
-from threading import Thread
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 
@@ -35,6 +30,12 @@ def setup_logging():
     current_app.logger.addHandler(handler)
 
 
+# Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
+@error_bp.app_errorhandler(404)
+def page_not_found(error):
+    return render_template("main/404.html"), 404
+
+
 # middleware untuk autentikasi dan otorisasi
 @nm_bp.before_request
 def before_request_func():
@@ -42,20 +43,14 @@ def before_request_func():
         return jsonify({"message": "Unauthorized access"}), 401
 
 
-# Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
-@error_bp.app_errorhandler(404)
-def page_not_found(error):
-    return render_template("main/404.html"), 404
-
-
-# Context processor untuk menambahkan username ke dalam konteks di semua halaman.
+# Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @nm_bp.context_processor
 def inject_user():
     if current_user.is_authenticated:
-        user_id = current_user.id
-        user = User.query.get(user_id)
-        return dict(username=user.username)
-    return dict(username=None)
+        return dict(
+            first_name=current_user.first_name, last_name=current_user.last_name
+        )
+    return dict(first_name="", last_name="")
 
 
 # Network Manager App Starting

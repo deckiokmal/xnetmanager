@@ -1,9 +1,9 @@
-/* CSS untuk warna background */
+/* Layout base section  */
+
 .bg-custom-topbar {
     background-color: #712cf9;
 }
 
-/* CSS untuk warna background */
 .bg-custom-sidebar {
     background-color: #4600d1;
     /* Warna background */
@@ -11,12 +11,10 @@
     /* Warna teks */
 }
 
-/* CSS untuk warna background */
 .bg-custom-main {
     background-color: #282828;
 }
 
-/* CSS untuk warna background */
 .bg-custom-table {
     background-color: #712cf9;
     /* Warna background */
@@ -26,6 +24,11 @@
 .white-text-color {
     color: #ffffff;
 }
+
+/* end of Layout Base Section */
+
+
+/* Sidebar Section */
 
 .password-container {
     position: relative;
@@ -87,3 +90,64 @@
     color: #fff;
     /* Warna teks yang kontras */
 }
+
+/* end of Sidebar Section */
+
+/* Dashboard Section  */
+
+body {
+    background-color: #121212;
+    color: #ffffff;
+    font-family: 'Roboto', sans-serif;
+}
+
+.card {
+    background-color: #1f1f1f;
+    border: none;
+}
+
+.card-header {
+    background-color: #712cf9;
+    border-bottom: 1px solid #000000;
+}
+
+/* end of Dashboard Section */
+
+/* user profile section  */
+
+.profile-menu {
+    max-width: 400px;
+    max-height: 300px;
+    margin: 0 auto;
+    background-color: rgb(0, 0, 0);
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.profile-menu img {
+    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+}
+
+.profile-card {
+    max-width: 600px;
+    margin: 0 auto;
+    background-color: rgb(0, 0, 0);
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-linkedin {
+    background-color: #0077b5;
+    color: white;
+    margin-top: 15px;
+}
+
+.btn-linkedin:hover {
+    background-color: #005b8c;
+}
+
+/* end of user profile section  */

@@ -2,20 +2,16 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<!-- Begin Page Content -->
-
-<!-- Page Heading -->
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="text-right">Welcome {{ username }}!</h5>
+    <h5 class="text-right text-light">Welcome, {{ first_name }} {{ last_name }}!</h5>
 </div>
 
-<!-- Begin dashboard content -->
 <div class="container">
 
     <div class="row">
         <!-- Pie Chart for Devices by Vendor -->
         <div class="col-12 col-sm-6 col-lg-6 mb-4">
-            <div class="card">
+            <div class="card bg-dark text-light">
                 <div class="card-header">
                     Devices by Vendor
                 </div>
@@ -27,7 +23,7 @@
 
         <!-- Pie Chart for Templates -->
         <div class="col-12 col-sm-6 col-lg-6 mb-4">
-            <div class="card">
+            <div class="card bg-dark text-light">
                 <div class="card-header">
                     Number of Templates
                 </div>
@@ -38,11 +34,9 @@
         </div>
     </div>
 </div>
-<!-- End of dashboard content -->
+{% endblock %}
 
-<!-- End of Page Content -->
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% block script_js %}
 <script>
     // Chart.js Data and Configuration
     document.addEventListener("DOMContentLoaded", function () {
@@ -55,23 +49,18 @@
     }},
         datasets: [{
             data: {{ device_vendor_values | tojson }},
-        backgroundColor: [
-            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
-        ]
+        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
             }]
         };
 
     // Data for Templates Pie Chart
     const templateData = {
-        labels: {{ template_vendor_keys | tojson
-        }},
+        labels: {{ template_vendor_keys | tojson }},
     datasets: [{
         data: {{ template_vendor_values | tojson }},
-        backgroundColor: [
-        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
-    ]
-                }]
-            };
+        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
+            }]
+        };
 
     // Pie Chart for Devices
     new Chart(devicePieCtx, {
@@ -80,9 +69,7 @@
         options: {
             responsive: true,
             plugins: {
-                legend: {
-                    position: 'top',
-                },
+                legend: { position: 'top', labels: { color: '#ffffff' } },
                 tooltip: {
                     callbacks: {
                         label: function (tooltipItem) {
@@ -103,9 +90,7 @@
         options: {
             responsive: true,
             plugins: {
-                legend: {
-                    position: 'top',
-                },
+                legend: { position: 'top', labels: { color: '#ffffff' } },
                 tooltip: {
                     callbacks: {
                         label: function (tooltipItem) {

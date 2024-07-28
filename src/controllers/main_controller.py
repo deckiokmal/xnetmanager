@@ -7,15 +7,14 @@ from flask import (
     request,
     session,
     current_app,
+    jsonify,
 )
 from flask_login import login_user, logout_user, current_user, login_required
 from src import db, bcrypt
-from src.models.users_model import User
+from src.models.users_model import User, Role
 from src.utils.forms_utils import RegisterForm, LoginForm, TwoFactorForm
-from src.utils.qrcode_utils import get_b64encoded_qr_image
-from .decorators import login_required
 import logging
-
+from datetime import datetime
 
 # Membuat blueprint main_bp dan error_bp
 main_bp = Blueprint("main", __name__)
@@ -32,20 +31,27 @@ def setup_logging():
     current_app.logger.addHandler(handler)
 
 
-# Manangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
+# Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
-    return render_template("/main/404.html"), 404
+    return render_template("main/404.html"), 404
 
 
-# Context processor untuk menambahkan username ke dalam konteks disemua halaman.
+# middleware untuk autentikasi dan otorisasi
+@main_bp.before_request
+def before_request_func():
+    if not current_user.is_authenticated:
+        return jsonify({"message": "Unauthorized access"}), 401
+
+
+# Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @main_bp.context_processor
 def inject_user():
     if current_user.is_authenticated:
-        user_id = current_user.id
-        user = User.query.get(user_id)
-        return dict(username=user.username)
-    return dict(username=None)
+        return dict(
+            first_name=current_user.first_name, last_name=current_user.last_name
+        )
+    return dict(first_name="", last_name="")
 
 
 # Main APP starting
@@ -57,43 +63,41 @@ VERIFY_2FA_URL = "main.verify_two_factor_auth"
 # Register Page
 @main_bp.route("/register", methods=["GET", "POST"])
 def register():
-    # Jika pengguna sudah terautentikasi, alihkan ke beranda jika 2FA sudah diaktifkan
-    if current_user.is_authenticated:
-        if current_user.is_two_factor_authentication_enabled:
-            flash("You are already registered.", "info")
-            return redirect(url_for(HOME_URL))
-        else:
-            # Jika 2FA belum diaktifkan, arahkan pengguna untuk mengaktifkannya
-            flash(
-                "You have not enabled 2-Factor Authentication. Please enable first to login.",
-                "warning",
-            )
-            return redirect(url_for(SETUP_2FA_URL))
-
-    # Validasi form registrasi
-    form = RegisterForm(request.form)
+    form = RegisterForm()
     if form.validate_on_submit():
-        try:
-            # Buat objek User baru dan simpan ke database
-            user = User(username=form.username.data, password=form.password.data)
-            db.session.add(user)
-            db.session.commit()
+        first_name = form.first_name.data
+        last_name = form.last_name.data
+        email = form.email.data
+        password = form.password.data
 
-            # Autentikasi pengguna setelah registrasi sukses
-            login_user(user)
-            flash(
-                "You are registered. You have to enable 2-Factor Authentication first to login.",
-                "success",
-            )
+        # Check if user already exists
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash("Alamat email sudah terdaftar", "error")
+            return redirect(url_for("main.register"))
 
-            # Alihkan pengguna untuk mengatur 2FA setelah registrasi sukses
-            return redirect(url_for(SETUP_2FA_URL))
-        except Exception:
-            # Jika registrasi gagal, batalkan perubahan dan beri pesan kesalahan
-            db.session.rollback()
-            flash("Registration failed. Please try again.", "error")
+        # Create new user with hashed password
+        new_user = User(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            password_hash=password,
+        )
 
-    # Render template registrasi dengan form
+        # Add the user to the 'View' role
+        view_role = Role.query.filter_by(name="View").first()
+        if view_role:
+            new_user.roles.append(view_role)
+
+        # Add new user to the database
+        db.session.add(new_user)
+        db.session.commit()
+
+        # Log the user in after successful registration
+        login_user(new_user)
+        flash("Pendaftaran berhasil! Anda telah masuk.", "success")
+        return redirect(url_for(HOME_URL))
+
     return render_template("/main/register.html", form=form)
 
 
@@ -101,32 +105,26 @@ def register():
 @main_bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
-        if current_user.is_two_factor_authentication_enabled:
-            flash("You are already logged in.", "success")
+        return redirect(url_for(HOME_URL))
+
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user and bcrypt.check_password_hash(user.password_hash, form.password.data):
+            login_user(user)
+
+            # Update last_login
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+
+            # Check if user needs to verify their email
+            if not user.is_verified:
+                flash("Silakan verifikasi email Anda untuk akses penuh.", "warning")
+            if user.is_2fa_enabled:
+                return redirect(url_for(VERIFY_2FA_URL))
             return redirect(url_for(HOME_URL))
         else:
-            flash(
-                "You have not enabled 2-Factor Authentication. Please enable first to login.",
-                "warning",
-            )
-            return redirect(url_for(SETUP_2FA_URL))
-
-    form = LoginForm(request.form)
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user and bcrypt.check_password_hash(user.password, request.form["password"]):
-            login_user(user)
-            if not current_user.is_two_factor_authentication_enabled:
-                flash(
-                    "You have not enabled 2-Factor Authentication. Please enable first to login.",
-                    "warning",
-                )
-                return redirect(url_for(SETUP_2FA_URL))
-            return redirect(url_for(VERIFY_2FA_URL))
-        elif not user:
-            flash("You are not registered. Please register.", "error")
-        else:
-            flash("Invalid username and/or password.", "error")
+            flash("Email atau kata sandi tidak valid.", "error")
 
     return render_template("/main/login.html", form=form)
 
@@ -140,43 +138,20 @@ def logout():
     return redirect(url_for("main.login"))
 
 
-@main_bp.route("/setup-2fa")
-@login_required
-def setup_two_factor_auth():
-    secret = current_user.secret_token
-    uri = current_user.get_authentication_setup_uri()
-    base64_qr_image = get_b64encoded_qr_image(uri)
-    return render_template(
-        "main/setup-2fa.html", secret=secret, qr_image=base64_qr_image
-    )
-
-
+# verifikasi kode OTP Google Authenticator jika user mengaktifkan 2fa di user profile
 @main_bp.route("/verify-2fa", methods=["GET", "POST"])
 @login_required
 def verify_two_factor_auth():
     form = TwoFactorForm(request.form)
     if form.validate_on_submit():
         if current_user.is_otp_valid(form.otp.data):
-            if current_user.is_two_factor_authentication_enabled:
-                flash("2FA verification successful. You are logged in!", "success")
-                return redirect(url_for(HOME_URL))
+            if not current_user.is_2fa_enabled:
+                current_user.is_2fa_enabled = True
+                db.session.commit()
+                flash("2FA setup berhasil. Anda telah masuk!", "success")
             else:
-                try:
-                    current_user.is_two_factor_authentication_enabled = True
-                    db.session.commit()
-                    flash("2FA setup successful. You are logged in!", "success")
-                    return redirect(url_for(HOME_URL))
-                except Exception:
-                    db.session.rollback()
-                    flash("2FA setup failed. Please try again.", "error")
-                    return redirect(url_for(VERIFY_2FA_URL))
+                flash("2FA verification successful. You are logged in!", "success")
+            return redirect(url_for(HOME_URL))
         else:
-            flash("Invalid OTP. Please try again.", "error")
-            return redirect(url_for(VERIFY_2FA_URL))
-    else:
-        if not current_user.is_two_factor_authentication_enabled:
-            flash(
-                "You have not enabled 2-Factor Authentication. Please enable it first.",
-                "warning",
-            )
-        return render_template("main/verify-2fa.html", form=form)
+            flash("OTP tidak valid. Silakan coba lagi.", "error")
+    return render_template("main/verify-2fa.html", form=form)

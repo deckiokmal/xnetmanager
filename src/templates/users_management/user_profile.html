@@ -1,18 +1,91 @@
 {% extends "/layouts/layout.html" %}
 {% block title %}My Profile{% endblock %}
 {% block content %}
-<!-- Begin Page Content -->
 
-<div class="container text-center">
-        <div class="row align-items-start">
-                <div class="col-sm-2">
-                        One of three columns
+<div class="container mb-3">
+        <div class="row">
+                <div class="col-md-3 col-12 profile-menu mb-2 text-center">
+                        <img src="https://via.placeholder.com/100" alt="Profile Picture"
+                                class="img-fluid rounded-circle mb-3">
+                        <button class="btn btn-github btn-block btn-dark"><i class="fab fa-linkedin"></i> Connect to
+                                Github</button>
+                        <button type="submit" class="btn btn-outline-success mt-2"><i class="fas fa-edit"></i></button>
                 </div>
-                <div class="col-sm-8">
-                        One of three columns
+                <div class="col-md-9 col-12 profile-card text-light">
+                        <form>
+                                <h3 class="my-3">My Profile</h3>
+                                <div class="row mb-3">
+                                        <div class="col-md-6">
+                                                <div class="card text-light">
+                                                        <div class="card-header">
+                                                                My Account
+                                                        </div>
+                                                        <div class="card-body">
+                                                                <blockquote class="blockquote mb-0">
+                                                                        <p>{{ user.first_name }} {{ user.last_name }}
+                                                                        </p>
+                                                                        <footer class="blockquote-footer">
+                                                                                <cite title="Source Title">{{ user.email
+                                                                                        }}</cite>
+                                                                        </footer>
+                                                                </blockquote>
+                                                        </div>
+                                                </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                                <div class="card text-light">
+                                                        <div class="card-header">
+                                                                Company
+                                                        </div>
+                                                        <div class="card-body">
+                                                                <blockquote class="blockquote mb-0">
+                                                                        <p>{{ user.company }}</p>
+                                                                        <footer class="blockquote-footer">Area:
+                                                                                <cite title="Source Title">{{ user.city
+                                                                                        }}</cite>
+                                                                        </footer>
+                                                                </blockquote>
+                                                        </div>
+                                                </div>
+                                        </div>
+                                </div>
+                                <div class="row mb-3">
+                                        <div class="col-md-6">
+                                                <div class="card text-light">
+                                                        <div class="card-header">
+                                                                Join date
+                                                        </div>
+                                                        <div class="card-body">
+                                                                <blockquote class="blockquote mb-0">
+                                                                        <p></p>
+                                                                        <footer class="blockquote-footer">{{
+                                                                                user.date_joined }}
+                                                                                <cite title="Source Title">.</cite>
+                                                                        </footer>
+                                                                </blockquote>
+                                                        </div>
+                                                </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                                <div class="card text-light">
+                                                        <div class="card-header">
+                                                                Title
+                                                        </div>
+                                                        <div class="card-body">
+                                                                <blockquote class="blockquote mb-0">
+                                                                        <p>{{ user.title }}</p>
+                                                                        <footer class="blockquote-footer">Divisi:
+                                                                                <cite title="Source Title">{{
+                                                                                        user.division }}</cite>
+                                                                        </footer>
+                                                                </blockquote>
+                                                        </div>
+                                                </div>
+                                        </div>
+                                </div>
+                        </form>
                 </div>
         </div>
 </div>
 
-<!-- End of Page Content -->
 {% endblock %}

@@ -10,31 +10,50 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from src import db
-from src.models.users_model import User
 from src.models.xmanager_model import DeviceManager
 from .decorators import login_required, role_required
 from src.utils.ip_validation_utils import is_valid_ip
 from flask_paginate import Pagination, get_page_args
+import logging
 
 # Membuat blueprint untuk device manager
 dm_bp = Blueprint("dm", __name__)
 error_bp = Blueprint("error", __name__)
 
 
-# Menangani error 404 dengan menampilkan halaman 404.html
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+
+
+@dm_bp.before_app_request
+def setup_logging():
+    current_app.logger.setLevel(logging.INFO)
+    handler = current_app.logger.handlers[0]
+    current_app.logger.addHandler(handler)
+
+
+# Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
-    return render_template("/main/404.html"), 404
+    return render_template("main/404.html"), 404
 
 
-# Menambahkan username ke dalam konteks halaman
+# middleware untuk autentikasi dan otorisasi
+@dm_bp.before_request
+def before_request_func():
+    if not current_user.is_authenticated:
+        return jsonify({"message": "Unauthorized access"}), 401
+
+
+# Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @dm_bp.context_processor
 def inject_user():
     if current_user.is_authenticated:
-        device_id = current_user.id
-        user = User.query.get(device_id)
-        return dict(username=user.username)
-    return dict(username=None)
+        return dict(
+            first_name=current_user.first_name, last_name=current_user.last_name
+        )
+    return dict(first_name="", last_name="")
+
 
 
 # Halaman utama Device Manager

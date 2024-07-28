@@ -1,8 +1,8 @@
-"""Initial migration
+"""Initial Migration
 
-Revision ID: 486e44d19e30
+Revision ID: 74062ad69300
 Revises: 
-Create Date: 2024-07-27 01:46:28.032532
+Create Date: 2024-07-28 19:17:00.123101
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '486e44d19e30'
+revision = '74062ad69300'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -21,8 +21,8 @@ def upgrade():
     op.create_table('configuration_manager',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('config_name', sa.String(length=100), nullable=False),
-    sa.Column('description', sa.Text(), nullable=False),
-    sa.Column('created_by', sa.Text(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('created_by', sa.Text(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('config_name')
     )
@@ -34,8 +34,8 @@ def upgrade():
     sa.Column('username', sa.String(length=100), nullable=False),
     sa.Column('password', sa.String(length=100), nullable=False),
     sa.Column('ssh', sa.String(length=5), nullable=False),
-    sa.Column('description', sa.Text(), nullable=False),
-    sa.Column('created_by', sa.Text(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('created_by', sa.Text(), nullable=True),
     sa.Column('status', sa.String(length=20), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
@@ -61,22 +61,32 @@ def upgrade():
     sa.Column('parameter_name', sa.String(length=100), nullable=False),
     sa.Column('vendor', sa.String(length=100), nullable=False),
     sa.Column('version', sa.String(length=10), nullable=False),
-    sa.Column('description', sa.String(length=100), nullable=False),
-    sa.Column('created_by', sa.Text(), nullable=False),
+    sa.Column('description', sa.String(length=100), nullable=True),
+    sa.Column('created_by', sa.Text(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('parameter_name'),
     sa.UniqueConstraint('template_name')
     )
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('username', sa.String(), nullable=False),
-    sa.Column('password', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('is_two_factor_authentication_enabled', sa.Boolean(), nullable=False),
+    sa.Column('first_name', sa.String(length=255), nullable=False),
+    sa.Column('last_name', sa.String(length=255), nullable=False),
+    sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('password_hash', sa.String(length=255), nullable=False),
+    sa.Column('phone_number', sa.String(length=20), nullable=True),
+    sa.Column('profile_picture', sa.String(length=255), nullable=True),
+    sa.Column('company', sa.String(length=255), nullable=True),
+    sa.Column('title', sa.String(length=255), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('is_verified', sa.Boolean(), nullable=False),
+    sa.Column('date_joined', sa.DateTime(), nullable=False),
+    sa.Column('last_login', sa.DateTime(), nullable=True),
+    sa.Column('time_zone', sa.String(length=50), nullable=True),
+    sa.Column('is_2fa_enabled', sa.Boolean(), nullable=False),
     sa.Column('secret_token', sa.String(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('secret_token'),
-    sa.UniqueConstraint('username')
+    sa.UniqueConstraint('email'),
+    sa.UniqueConstraint('secret_token')
     )
     op.create_table('role_permissions',
     sa.Column('id', sa.Integer(), nullable=False),
