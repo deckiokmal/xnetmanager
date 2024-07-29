@@ -58,7 +58,7 @@ def inject_user():
 
 
 # Menampilkan halaman dashboard setelah user login success.
-@users_bp.route("/")
+@users_bp.route("/dashboard")
 @login_required
 @role_required(
     roles=["Admin", "User", "View"],

@@ -20,6 +20,25 @@ from datetime import datetime
 main_bp = Blueprint("main", __name__)
 error_bp = Blueprint("error", __name__)
 
+
+# Middleware untuk autentikasi dan otorisasi
+@main_bp.before_request
+def before_request_func():
+    # List halaman yang tidak perlu autentikasi (seperti login)
+    exempt_pages = ["main.login", "main.register"]  # Tambahkan halaman lain jika perlu
+
+    # Mengecek apakah halaman saat ini termasuk dalam halaman yang tidak perlu autentikasi
+    if request.endpoint in exempt_pages:
+        return None
+
+    # Mengecek apakah pengguna sudah terautentikasi
+    if not current_user.is_authenticated:
+        # Menampilkan pesan flash
+        flash("Unauthorized access. Please log in to access this page.", "danger")
+        # Mengarahkan pengguna ke halaman login
+        return redirect(url_for("main.login"))
+
+
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
@@ -95,7 +114,7 @@ def register():
 
 
 # Login Page
-@main_bp.route("/login", methods=["GET", "POST"])
+@main_bp.route("/", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for(HOME_URL))
