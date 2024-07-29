@@ -12,7 +12,7 @@ from flask_login import login_required, current_user
 from src import db, bcrypt
 from src.models.users_model import User, Role
 from src.models.xmanager_model import DeviceManager, TemplateManager
-from src.utils.forms_utils import RegisterForm
+from src.utils.forms_utils import RegisterForm, UserUpdateForm
 from .decorators import login_required, role_required
 from flask_paginate import Pagination, get_page_args
 import logging
@@ -60,11 +60,6 @@ def inject_user():
 # Menampilkan halaman dashboard setelah user login success.
 @users_bp.route("/dashboard")
 @login_required
-@role_required(
-    roles=["Admin", "User", "View"],
-    permissions=["Manage Users", "Manage Profile"],
-    page="Dashboard",
-)
 def dashboard():
     # Mengambil semua perangkat dan template konfigurasi dari database
     devices = DeviceManager.query.all()
@@ -176,56 +171,46 @@ def index():
 @login_required
 @role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
 def user_update(user_id):
-    # Mengambil objek User berdasarkan user_id
-    user = User.query.get(user_id)
+    user = User.query.get_or_404(user_id)
+    form = UserUpdateForm(obj=user)
 
-    # Jika metode request adalah POST, proses update user
-    if request.method == "POST":
-        new_first_name = request.form["first_name"]
-        new_last_name = request.form["last_name"]
-        new_email = request.form["email"]
-        old_password = request.form["password_input"]
-        new_password = request.form["new_password"]
-        repeat_new_password = request.form["retype_password"]
-
+    if form.validate_on_submit():
         # Memeriksa apakah email baru sudah ada di database
-        exist_user = User.query.filter(
-            User.email == new_email, User.id != user.id
-        ).first()
-        if exist_user:
-            flash("email already exists. Please choose another email!", "info")
+        if User.query.filter(User.email == form.email.data, User.id != user.id).first():
+            flash("Email already exists. Please choose another email!", "info")
+            return render_template(
+                "/users_management/user_update.html", form=form, user=user
+            )
 
-        # Memeriksa apakah password lama tidak kosong
-        if not old_password:
-            flash("Password must not be empty.", "error")
-            return render_template("/users_management/user_update.html", user=user)
+        # Mengupdate data user
+        user.first_name = form.first_name.data
+        user.last_name = form.last_name.data
+        user.email = form.email.data
+        user.phone_number = form.phone_number.data
+        user.profile_picture = form.profile_picture.data
+        user.company = form.company.data
+        user.title = form.title.data
+        user.city = form.city.data
+        user.division = form.division.data
 
-        # Memeriksa apakah password lama benar
-        if not bcrypt.check_password_hash(user.password_hash, old_password):
-            flash("Incorrect password!", "error")
-            return render_template("/users_management/user_update.html", user=user)
-        else:
-            # Memeriksa apakah new_password sama dengan repeat_new_password
-            if new_password != repeat_new_password:
-                flash("New passwords do not match.", "error")
-                return render_template("/users_management/user_update.html", user=user)
+        # Mengonversi nilai string menjadi boolean
+        user.is_verified = form.is_verified.data == "True"
+        user.is_2fa_enabled = form.is_2fa_enabled.data == "True"
+        user.is_active = form.is_active.data == "True"
+        user.time_zone = form.time_zone.data
 
-            # Mengupdate password baru jika valid
-            if new_password:
-                user.password_hash = bcrypt.generate_password_hash(new_password).decode(
-                    "utf-8"
-                )
+        # Memperbarui password jika disediakan
+        if form.password.data:
+            user.password_hash = bcrypt.generate_password_hash(
+                form.password.data
+            ).decode("utf-8")
 
-            # Mengupdate email dan password baru jika valid
-            user.email = new_email
+        # Commit perubahan ke database
+        db.session.commit()
+        flash("User updated successfully.", "success")
+        return redirect(url_for("users.index"))
 
-            # Commit perubahan ke database
-            db.session.commit()
-            flash("User edited successfully.", "success")
-            return redirect(url_for("users.index"))
-
-    # Render halaman update user dengan data user yang akan diupdate
-    return render_template("/users_management/user_update.html", user=user)
+    return render_template("/users_management/user_update.html", form=form, user=user)
 
 
 # Delete user

@@ -1,6 +1,13 @@
 from flask_wtf import FlaskForm
-from wtforms import EmailField, PasswordField, StringField
-from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
+from wtforms import EmailField, PasswordField, StringField, BooleanField, SelectField
+from wtforms.validators import (
+    DataRequired,
+    Email,
+    EqualTo,
+    Length,
+    ValidationError,
+    Optional,
+)
 from src.models.users_model import User
 from flask_login import current_user
 
@@ -40,33 +47,6 @@ class RegisterForm(FlaskForm):
             raise ValidationError("Email sudah terdaftar.")
 
 
-class UserUpdateForm(FlaskForm):
-    """
-    Formulir untuk memperbarui data pengguna.
-
-    Field:
-    - first_name: StringField untuk nama depan dengan validator untuk data yang diperlukan.
-    - last_name: StringField untuk nama belakang dengan validator untuk data yang diperlukan.
-    - phone_number: StringField untuk nomor telepon.
-    - profile_picture: StringField untuk URL gambar profil.
-    - company: StringField untuk nama perusahaan.
-    - title: StringField untuk jabatan.
-    - city: StringField untuk kota.
-    - division: StringField untuk divisi.
-    - time_zone: StringField untuk zona waktu.
-    """
-
-    first_name = StringField("First Name", validators=[DataRequired()])
-    last_name = StringField("Last Name", validators=[DataRequired()])
-    phone_number = StringField("Phone Number")
-    profile_picture = StringField("Profile Picture URL")
-    company = StringField("Company")
-    title = StringField("Title")
-    city = StringField("City")
-    division = StringField("Division")
-    time_zone = StringField("Time Zone")
-
-
 class LoginForm(FlaskForm):
     """
     Formulir untuk login pengguna.
@@ -89,3 +69,48 @@ class TwoFactorForm(FlaskForm):
     """
 
     otp = StringField("Enter OTP", validators=[DataRequired(), Length(min=6, max=6)])
+
+
+class UserUpdateForm(FlaskForm):
+    """
+    Formulir untuk memperbarui data pengguna oleh Role Admin.
+    """
+
+    first_name = StringField("First Name", validators=[DataRequired()])
+    last_name = StringField("Last Name", validators=[DataRequired()])
+    email = StringField("Email", validators=[DataRequired(), Email()])
+    password = PasswordField("New Password", validators=[Optional()])
+    phone_number = StringField("Phone Number")
+    profile_picture = StringField("Profile Picture URL")
+    company = StringField("Company")
+    title = StringField("Title")
+    city = StringField("City")
+    division = StringField("Division")
+    is_verified = SelectField(
+        "Email Verified", choices=[("True", "True"), ("False", "False")], coerce=str
+    )
+    is_2fa_enabled = SelectField(
+        "2FA Enabled", choices=[("True", "True"), ("False", "False")], coerce=str
+    )
+    is_active = SelectField(
+        "Active", choices=[("True", "True"), ("False", "False")], coerce=str
+    )
+    time_zone = StringField("Time Zone")
+
+
+class ProfileUpdateForm(FlaskForm):
+    """
+    Formulir untuk memperbarui data profile pengguna.
+    """
+
+    first_name = StringField("First Name", validators=[DataRequired()])
+    last_name = StringField("Last Name", validators=[DataRequired()])
+    email = StringField("Email", validators=[DataRequired(), Email()])
+    password = PasswordField("New Password", validators=[Optional()])
+    phone_number = StringField("Phone Number")
+    profile_picture = StringField("Profile Picture URL")
+    company = StringField("Company")
+    title = StringField("Title")
+    city = StringField("City")
+    division = StringField("Division")
+    time_zone = StringField("Time Zone")
