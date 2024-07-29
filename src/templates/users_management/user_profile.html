@@ -7,10 +7,22 @@
                 <div class="col-md-3 col-12 profile-menu mb-2 text-center">
                         <img src="https://via.placeholder.com/100" alt="Profile Picture"
                                 class="img-fluid rounded-circle mb-3">
-                        <button class="btn btn-github btn-block btn-dark"><i class="fa-brands fa-square-github"></i>
-                                Connect to Github</button>
-                        <a href="{{ url_for('profile.update_profile') }}" class="btn btn-outline-success mt-2">
+                        <button class="btn btn-github btn-block btn-dark mb-3">
+                                <i class="fa-brands fa-square-github"></i>
+                                Connect to Github
+                        </button>
+                        <p>Profile Menu</p>
+                        <a href="{{ url_for('profile.update_profile') }}" class="btn btn-outline-success">
                                 <i class="fas fa-edit"></i>
+                        </a>
+                        <a href="{{ url_for('profile.update_profile') }}" class="btn btn-outline-warning">
+                                <i class="fas fa-key"></i>
+                        </a>
+                        <a href="{{ url_for('profile.update_profile') }}" class="btn btn-outline-info">
+                                <i class="fas fa-envelope"></i>
+                        </a>
+                        <a href="{{ url_for('profile.update_profile') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-shield-alt"></i>
                         </a>
                 </div>
 

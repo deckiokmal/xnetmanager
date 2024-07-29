@@ -84,13 +84,13 @@
 <!-- Modal Detail User -->
 <div class="modal fade" id="detailModal{{ user.id }}" tabindex="-1" aria-labelledby="detailModalLabel{{ user.id }}"
     aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content bg-black">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="detailModalLabel{{ user.id }}">Detail
                     User
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                <button type="button" class="btn-close btn-light" data-bs-dismiss="modal" aria-label="Tutup"></button>
             </div>
             <div class="modal-body">
                 <p><strong>email:</strong> {{ user.email }}</p>
