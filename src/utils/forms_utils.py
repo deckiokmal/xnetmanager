@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import EmailField, PasswordField, StringField, BooleanField, SelectField
+from wtforms import EmailField, PasswordField, StringField, FileField, SelectField
 from wtforms.validators import (
     DataRequired,
     Email,
@@ -114,3 +114,19 @@ class ProfileUpdateForm(FlaskForm):
     city = StringField("City")
     division = StringField("Division")
     time_zone = StringField("Time Zone")
+
+
+class ChangePasswordForm(FlaskForm):
+    old_password = PasswordField("Old Password", validators=[DataRequired()])
+    new_password = PasswordField("New Password", validators=[DataRequired()])
+    repeat_password = PasswordField(
+        "Repeat New Password",
+        validators=[
+            DataRequired(),
+            EqualTo("new_password", message="Passwords must match."),
+        ],
+    )
+
+
+class ProfilePictureForm(FlaskForm):
+    profile_picture = FileField("Profile Picture", validators=[DataRequired()])

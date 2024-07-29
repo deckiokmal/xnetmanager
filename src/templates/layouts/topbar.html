@@ -89,12 +89,12 @@
                 <span class="mr-2 d-none d-lg-inline text-gray-600 small"><b class="white-text-color">{{first_name}}
                         {{last_name}}</b></span>
                 <img class="img-profile rounded-circle"
-                    src="{{ url_for('static', filename='img/undraw_profile.svg') }}">
+                    src="{{ url_for('static', filename=current_user.profile_picture) if current_user.profile_picture else 'https://via.placeholder.com/100' }}">
             </a>
             <!-- Dropdown - User Information -->
             <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in bg-black"
                 aria-labelledby="userDropdown">
-                <a class="dropdown-item text-white" href="/user_profile">
+                <a class="dropdown-item text-white" href="/profile_user">
                     <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
                     My Profile
                 </a>

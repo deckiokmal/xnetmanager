@@ -5,8 +5,19 @@
 <div class="container mb-3">
         <div class="row">
                 <div class="col-md-3 col-12 profile-menu mb-2 text-center">
-                        <img src="https://via.placeholder.com/100" alt="Profile Picture"
-                                class="img-fluid rounded-circle mb-3">
+                        <!-- Profile Picture Section -->
+                        <div class="text-center position-relative mb-1">
+                                <img src="{{ url_for('static', filename=current_user.profile_picture) if current_user.profile_picture else 'https://via.placeholder.com/100' }}"
+                                        alt="Profile Picture" class="img-fluid rounded-circle mb-3"
+                                        style="width: 100px; height: 100px; object-fit: cover;">
+
+                                <!-- Button to open the modal -->
+                                <button type="button"
+                                        class="btn btn-light position-absolute top-0 end-0 mt-2 me-2 rounded-circle"
+                                        data-bs-toggle="modal" data-bs-target="#updateProfilePictureModal">
+                                        <i class="fa-solid fa-pencil-alt"></i>
+                                </button>
+                        </div>
                         <button class="btn btn-github btn-block btn-dark mb-3">
                                 <i class="fa-brands fa-square-github"></i>
                                 Connect to Github
@@ -15,9 +26,10 @@
                         <a href="{{ url_for('profile.profile_update') }}" class="btn btn-outline-success">
                                 <i class="fas fa-edit"></i>
                         </a>
-                        <a href="{{ url_for('profile.profile_update') }}" class="btn btn-outline-warning">
+                        <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal"
+                                data-bs-target="#changePasswordModal">
                                 <i class="fas fa-key"></i>
-                        </a>
+                        </button>
                         <a href="{{ url_for('profile.profile_update') }}" class="btn btn-outline-info">
                                 <i class="fas fa-envelope"></i>
                         </a>
@@ -99,6 +111,80 @@
                                         </div>
                                 </div>
                         </form>
+                </div>
+        </div>
+</div>
+
+<!-- Modal Change Password -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+                <div class="modal-content bg-dark text-light">
+                        <div class="modal-header">
+                                <h5 class="modal-title" id="changePasswordModalLabel">Change Password</h5>
+                                <button type="button" class="btn-close btn-light" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                                <form action="{{ url_for('profile.change_password') }}" method="post">
+                                        {{ form.hidden_tag() }}
+                                        <div class="mb-3">
+                                                <label for="old_password" class="form-label">Old Password</label>
+                                                {{ form.old_password(class="form-control") }}
+                                                {% if 'Old Password' in get_flashed_messages(with_categories=True) %}
+                                                <small class="text-danger">{{
+                                                        get_flashed_messages(category_filter=["error"])[0] }}</small>
+                                                {% endif %}
+                                        </div>
+                                        <div class="mb-3">
+                                                <label for="new_password" class="form-label">New Password</label>
+                                                {{ form.new_password(class="form-control") }}
+                                        </div>
+                                        <div class="mb-3">
+                                                <label for="repeat_password" class="form-label">Repeat New
+                                                        Password</label>
+                                                {{ form.repeat_password(class="form-control") }}
+                                                {% if 'Repeat New Password' in
+                                                get_flashed_messages(with_categories=True) %}
+                                                <small class="text-danger">{{
+                                                        get_flashed_messages(category_filter=["error"])[1] }}</small>
+                                                {% endif %}
+                                        </div>
+                                        <div class="modal-footer">
+                                                <button type="submit" class="btn btn-primary">Save changes</button>
+                                                <button type="button" class="btn btn-secondary"
+                                                        data-bs-dismiss="modal">Close</button>
+                                        </div>
+                                </form>
+                        </div>
+                </div>
+        </div>
+</div>
+
+<!-- Modal for Profile Picture Update -->
+<div class="modal fade" id="updateProfilePictureModal" tabindex="-1" aria-labelledby="updateProfilePictureModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+                <div class="modal-content">
+                        <div class="modal-header">
+                                <h5 class="modal-title" id="updateProfilePictureModalLabel">Update Profile Picture</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                                <form action="{{ url_for('profile.upload_profile_picture') }}" method="post"
+                                        enctype="multipart/form-data">
+                                        {{ form_picture.hidden_tag() }}
+                                        <div class="mb-3">
+                                                <label for="profile_picture" class="form-label">Choose New
+                                                        Picture</label>
+                                                {{ form_picture.profile_picture(class="form-control") }}
+                                        </div>
+                                        <div class="text-center">
+                                                <button type="submit" class="btn btn-primary">Upload</button>
+                                        </div>
+                                </form>
+                        </div>
                 </div>
         </div>
 </div>

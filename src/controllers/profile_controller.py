@@ -11,10 +11,16 @@ from flask import (
 from flask_login import login_required, current_user
 from src.models.users_model import User
 from .decorators import login_required, role_required
-from src import db
+from src import db, bcrypt
 from src.utils.qrcode_utils import get_b64encoded_qr_image
-from src.utils.forms_utils import ProfileUpdateForm
+from src.utils.forms_utils import (
+    ProfileUpdateForm,
+    ChangePasswordForm,
+    ProfilePictureForm,
+)
 import logging
+from werkzeug.utils import secure_filename
+import os
 
 
 # Membuat blueprint users
@@ -68,8 +74,15 @@ def index():
     # Get data current user
     user_id = current_user.id
     user = User.query.get(user_id)
+    form = ChangePasswordForm()
+    form_picture = ProfilePictureForm()
 
-    return render_template("/users_management/profile_user.html", user=user)
+    return render_template(
+        "/users_management/profile_user.html",
+        user=user,
+        form=form,
+        form_picture=form_picture,
+    )
 
 
 # Halaman update data user berdasarkan current_user
@@ -98,7 +111,83 @@ def profile_update():
         flash("Profile updated successfully.", "success")
         return redirect(url_for("profile.index"))
 
-    return render_template("/users_management/profile_update.html", form=form, user=user)
+    return render_template(
+        "/users_management/profile_update.html", form=form, user=user
+    )
+
+
+@profile_bp.route("/change_password", methods=["POST"])
+@login_required
+def change_password():
+    form = ChangePasswordForm()
+
+    if form.validate_on_submit():
+        # Check old password
+        if not bcrypt.check_password_hash(
+            current_user.password_hash, form.old_password.data
+        ):
+            flash("Old password is incorrect.", "error")
+            return redirect(url_for("profile.index"))
+
+        # Check if new passwords match
+        if form.new_password.data != form.repeat_password.data:
+            flash("New passwords do not match.", "error")
+            return redirect(url_for("profile.index"))
+
+        # Update password
+        current_user.password_hash = bcrypt.generate_password_hash(
+            form.new_password.data
+        ).decode("utf-8")
+        db.session.commit()
+        flash("Password updated successfully.", "success")
+        return redirect(url_for("profile.index"))
+
+    # Handle form validation errors and return to profile page
+    for field, errors in form.errors.items():
+        for error in errors:
+            flash(error, "error")
+
+    return redirect(url_for("profile.index"))
+
+
+# Define a directory for storing uploaded files
+PROFILE_PICTURE_DIRECTORY = "profile_pictures"
+
+
+@profile_bp.route("/upload_profile_picture", methods=["POST"])
+@login_required
+def upload_profile_picture():
+    form_picture = ProfilePictureForm()
+
+    if form_picture.validate_on_submit():
+        file = form_picture.profile_picture.data
+
+        if file:
+            # Ambil nama file dan ekstensi
+            file_extension = os.path.splitext(file.filename)[
+                1
+            ]  # Mengambil ekstensi file
+            # Format nama file
+            filename = (
+                f"{current_user.first_name} {current_user.last_name}{file_extension}"
+            )
+            # Path lengkap untuk menyimpan file
+            file_path = os.path.join(
+                current_app.static_folder, PROFILE_PICTURE_DIRECTORY, filename
+            )
+            file.save(file_path)
+
+            # Simpan path relatif dengan slash
+            current_user.profile_picture = os.path.join(
+                PROFILE_PICTURE_DIRECTORY, filename
+            ).replace("\\", "/")
+            db.session.commit()
+
+            flash("Profile picture updated successfully.", "success")
+        else:
+            flash("No file selected.", "error")
+
+    return redirect(url_for("profile.index"))
 
 
 # kirim link email verifikasi
