@@ -12,7 +12,6 @@ from flask_login import login_required, current_user
 from src.models.users_model import User
 from .decorators import login_required, role_required
 from src import db, bcrypt
-from src.utils.qrcode_utils import get_b64encoded_qr_image
 from src.utils.forms_utils import (
     ProfileUpdateForm,
     ChangePasswordForm,
@@ -154,6 +153,7 @@ def change_password():
 PROFILE_PICTURE_DIRECTORY = "profile_pictures"
 
 
+# Change profile Pictures
 @profile_bp.route("/upload_profile_picture", methods=["POST"])
 @login_required
 def upload_profile_picture():
@@ -188,46 +188,3 @@ def upload_profile_picture():
             flash("No file selected.", "error")
 
     return redirect(url_for("profile.index"))
-
-
-# kirim link email verifikasi
-@profile_bp.route("/verify-email")
-@login_required
-def verify_email():
-    # Send verification email
-    return redirect(url_for("dashboard"))
-
-
-# Halaman confirm verifikasi
-@profile_bp.route("/confirm-verification/<token>")
-@login_required
-def confirm_verification(token):
-    user = User.query.filter_by(secret_token=token).first_or_404()
-    user.is_verified = True
-    user.role = "User"
-    db.session.commit()
-    flash("Email verified successfully.", "success")
-    return redirect(url_for("dashboard"))
-
-
-# mengaktifkan 2fa
-@profile_bp.route("/enable-2fa", methods=["GET", "POST"])
-@login_required
-def enable_2fa():
-    if request.method == "POST":
-        current_user.is_2fa_enabled = True
-        db.session.commit()
-        return redirect(url_for("verify_2fa"))
-    return render_template("enable_2fa.html")
-
-
-# Setup 2fa Google Authenticator dan Scan QR Code
-@profile_bp.route("/setup-2fa")
-@login_required
-def setup_two_factor_auth():
-    secret = current_user.secret_token
-    uri = current_user.get_authentication_setup_uri()
-    base64_qr_image = get_b64encoded_qr_image(uri)
-    return render_template(
-        "main/setup-2fa.html", secret=secret, qr_image=base64_qr_image
-    )

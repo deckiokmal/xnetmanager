@@ -40,7 +40,7 @@ class User(UserMixin, db.Model):
         self.secret_token = pyotp.random_base32()
 
     def get_authentication_setup_uri(self):
-        return pyotp.TOTP(self.secret_token).provisioning_uri(
+        return pyotp.totp.TOTP(self.secret_token).provisioning_uri(
             name=self.email, issuer_name=Config.APP_NAME
         )
 

@@ -7,14 +7,18 @@ from flask import (
     request,
     session,
     current_app,
-    jsonify,
 )
 from flask_login import login_user, logout_user, current_user, login_required
 from src import db, bcrypt
 from src.models.users_model import User, Role
 from src.utils.forms_utils import RegisterForm, LoginForm, TwoFactorForm
+from src.utils.qrcode_utils import get_b64encoded_qr_image
 import logging
 from datetime import datetime
+import pyotp
+import qrcode
+import io
+import base64
 
 # Membuat blueprint main_bp dan error_bp
 main_bp = Blueprint("main", __name__)
@@ -68,8 +72,8 @@ def inject_user():
 
 # Main APP starting
 HOME_URL = "users.dashboard"
-SETUP_2FA_URL = "main.setup_two_factor_auth"
-VERIFY_2FA_URL = "main.verify_two_factor_auth"
+SETUP_2FA_URL = "main.setup_2fa"
+VERIFY_2FA_URL = "main.verify_2fa"
 
 
 # Register Page
@@ -133,6 +137,7 @@ def login():
             if not user.is_verified:
                 flash("Silakan verifikasi email Anda untuk akses penuh.", "warning")
             if user.is_2fa_enabled:
+                session["pre_2fa"] = True
                 return redirect(url_for(VERIFY_2FA_URL))
             return redirect(url_for(HOME_URL))
         else:
@@ -150,20 +155,63 @@ def logout():
     return redirect(url_for("main.login"))
 
 
+# Setup 2fa Google Authenticator dan Scan QR Code
+@main_bp.route("/setup-2fa")
+@login_required
+def setup_2fa():
+    user = current_user
+    if not user.secret_token:
+        user.secret_token = pyotp.random_base32()
+        db.session.commit()
+
+    totp = pyotp.TOTP(user.secret_token)
+    uri = totp.provisioning_uri(user.email, issuer_name="XNETMANAGER")
+
+    qr = qrcode.QRCode()
+    qr.add_data(uri)
+    qr.make()
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = io.BytesIO()
+    img.save(buf)
+    img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+
+    return render_template(
+        "main/setup_2fa.html", qr_image=img_b64, secret=user.secret_token
+    )
+
+
 # verifikasi kode OTP Google Authenticator jika user mengaktifkan 2fa di user profile
 @main_bp.route("/verify-2fa", methods=["GET", "POST"])
 @login_required
-def verify_two_factor_auth():
-    form = TwoFactorForm(request.form)
+def verify_2fa():
+    form = TwoFactorForm()
     if form.validate_on_submit():
         if current_user.is_otp_valid(form.otp.data):
-            if not current_user.is_2fa_enabled:
-                current_user.is_2fa_enabled = True
-                db.session.commit()
-                flash("2FA setup berhasil. Anda telah masuk!", "success")
-            else:
-                flash("2FA verification successful. You are logged in!", "success")
+            current_user.is_2fa_enabled = True
+            db.session.commit()
+            session.pop("pre_2fa", None)
+            flash("2FA verification successful. You are logged in!", "success")
             return redirect(url_for(HOME_URL))
         else:
-            flash("OTP tidak valid. Silakan coba lagi.", "error")
-    return render_template("main/verify-2fa.html", form=form)
+            flash("Invalid OTP. Please try again.", "error")
+    return render_template("main/verify_2fa.html", form=form)
+
+
+# kirim link email verifikasi
+@main_bp.route("/verify-email")
+@login_required
+def verify_email():
+    # Send verification email
+    return redirect(url_for("dashboard"))
+
+
+# Halaman confirm verifikasi
+@main_bp.route("/confirm-verification/<token>")
+@login_required
+def confirm_verification(token):
+    user = User.query.filter_by(secret_token=token).first_or_404()
+    user.is_verified = True
+    user.role = "User"
+    db.session.commit()
+    flash("Email verified successfully.", "success")
+    return redirect(url_for("dashboard"))
