@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from src.utils.is_active_utils import is_active
 from src.utils.mask_password_utils import mask_password
 from src.config import DevelopmentConfig, TestingConfig, ProductionConfig
+from flask_mail import Mail
 
 # Load .env file variable
 load_dotenv()
@@ -21,6 +22,7 @@ db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 csrf = CSRFProtect()
+mail = Mail()
 
 
 def create_app(config_class=None):
@@ -45,6 +47,7 @@ def create_app(config_class=None):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
+    mail.init_app(app)
 
     # Konfigurasi logger
     handler = StreamHandler()

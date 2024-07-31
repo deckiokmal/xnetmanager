@@ -196,23 +196,3 @@ def verify_2fa():
         else:
             flash("Invalid OTP. Please try again.", "error")
     return render_template("main/verify_2fa.html", form=form)
-
-
-# kirim link email verifikasi
-@main_bp.route("/verify-email")
-@login_required
-def verify_email():
-    # Send verification email
-    return redirect(url_for("dashboard"))
-
-
-# Halaman confirm verifikasi
-@main_bp.route("/confirm-verification/<token>")
-@login_required
-def confirm_verification(token):
-    user = User.query.filter_by(secret_token=token).first_or_404()
-    user.is_verified = True
-    user.role = "User"
-    db.session.commit()
-    flash("Email verified successfully.", "success")
-    return redirect(url_for("dashboard"))

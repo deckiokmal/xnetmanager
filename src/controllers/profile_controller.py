@@ -9,7 +9,7 @@ from flask import (
     current_app,
 )
 from flask_login import login_required, current_user
-from src.models.users_model import User
+from src.models.users_model import User, Role
 from .decorators import login_required, role_required, required_2fa
 from src import db, bcrypt
 from src.utils.forms_utils import (
@@ -21,6 +21,11 @@ from src.utils.forms_utils import (
 import logging
 from werkzeug.utils import secure_filename
 import os
+from src.utils.mail_utils import (
+    send_verification_email,
+    generate_verification_token,
+    verify_token,
+)
 
 
 # Membuat blueprint users
@@ -229,3 +234,46 @@ def toggle_2fa():
     # Jika form tidak valid, kembalikan ke profil dengan pesan kesalahan
     flash("Terjadi kesalahan saat memperbarui pengaturan 2FA.", "danger")
     return redirect(url_for("profile.index"))
+
+
+# Mail aktif/nonaktif
+@profile_bp.route("/mail_enabled", methods=["POST"])
+@login_required
+def mail_enabled():
+    email_verification = "email_verification" in request.form
+    user = User.query.get(current_user.id)
+
+    if email_verification and not user.is_verified:
+        send_verification_email(user)
+        flash("A verification email has been sent to your email address.", "info")
+
+    # Update other user profile information if needed
+    db.session.commit()
+
+    return redirect(url_for("profile.index"))
+
+
+# Mail verifikasi link
+@profile_bp.route("/verify_email/<token>")
+def verify_email(token):
+    email = verify_token(token)
+    if not email:
+        flash("The verification link is invalid or has expired.", "danger")
+        return redirect(url_for("main.login"))
+
+    user = User.query.filter_by(email=email).first()
+    if user and not user.is_verified:
+        user.is_verified = True
+        db.session.commit()
+
+        # Optionally, assign 'User' role
+        user_role = Role.query.filter_by(name="User").first()
+        if user_role and user_role not in user.roles:
+            user.roles.append(user_role)
+            db.session.commit()
+
+        flash("Your email has been verified!", "success")
+    else:
+        flash("Your email is already verified.", "info")
+
+    return redirect(url_for("users.dashboard"))

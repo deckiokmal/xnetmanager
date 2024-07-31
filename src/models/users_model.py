@@ -3,6 +3,8 @@ from flask_login import UserMixin
 import pyotp
 from src import bcrypt, db
 from src.config import Config
+from itsdangerous import URLSafeTimedSerializer as Serializer, SignatureExpired
+from flask import current_app
 
 
 class User(UserMixin, db.Model):
@@ -27,6 +29,7 @@ class User(UserMixin, db.Model):
     time_zone = db.Column(db.String(50), nullable=True)
     is_2fa_enabled = db.Column(db.Boolean, nullable=False, default=False)
     secret_token = db.Column(db.String, unique=True, nullable=True)
+    email_verification_token = db.Column(db.String, nullable=True)
     roles = db.relationship("Role", secondary="user_roles", back_populates="users")
 
     def __init__(self, first_name, last_name, email, password_hash):
@@ -47,7 +50,21 @@ class User(UserMixin, db.Model):
     def is_otp_valid(self, user_otp):
         print(f"Secret Token: {self.secret_token}")
         totp = pyotp.TOTP(self.secret_token)
-        return totp.verify(user_otp, valid_window=1)  # valid_window=1 menambah toleransi waktu ±30 detik
+        return totp.verify(
+            user_otp, valid_window=1
+        )  # valid_window=1 menambah toleransi waktu ±30 detik
+
+    def generate_email_verification_token(self):
+        s = Serializer(current_app.config["SECRET_KEY"], salt="email-confirm")
+        return s.dumps(self.email, salt="email-confirm")
+
+    def verify_email_verification_token(self, token, expiration=3600):
+        s = Serializer(current_app.config["SECRET_KEY"], salt="email-confirm")
+        try:
+            email = s.loads(token, max_age=expiration)
+        except SignatureExpired:
+            return False
+        return email == self.email
 
     def __repr__(self):
         return f"<User {self.email}>"

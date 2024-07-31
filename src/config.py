@@ -48,6 +48,14 @@ class Config(object):
     LOGGING_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     LOGGING_LOCATION = "app.log"
 
+    # Pengaturan untuk email
+    MAIL_SERVER = config("MAIL_SERVER", default="smtp.gmail.com")
+    MAIL_PORT = int(config("MAIL_PORT", default=587))
+    MAIL_USERNAME = config("MAIL_USERNAME", default="")
+    MAIL_PASSWORD = config("MAIL_PASSWORD", default="")
+    MAIL_USE_TLS = config("MAIL_USE_TLS", default=True, cast=bool)
+    MAIL_USE_SSL = config("MAIL_USE_SSL", default=False, cast=bool)
+
 
 class DevelopmentConfig(Config):
     """Konfigurasi khusus untuk lingkungan pengembangan."""

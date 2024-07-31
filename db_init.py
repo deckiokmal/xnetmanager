@@ -1,7 +1,6 @@
 from src import db, create_app
 from src.models.users_model import User, Role, Permission, UserRoles, RolePermissions
 
-
 def initialize():
     app = create_app()
     with app.app_context():
@@ -61,10 +60,14 @@ def initialize():
 
         if not User.query.filter_by(email=default_email).first():
             admin_role = Role.query.filter_by(name="Admin").first()
-            admin_user = User(email=default_email, password_hash=default_password)
+            # Tambahkan first_name dan last_name di sini
+            admin_user = User(
+                first_name="Xnet",
+                last_name="Manager",
+                email=default_email,
+                password_hash=default_password
+            )
             # Atur atribut tambahan
-            admin_user.first_name = "Xnet"
-            admin_user.last_name = "Manager"
             admin_user.roles.append(admin_role)
             db.session.add(admin_user)
             db.session.commit()

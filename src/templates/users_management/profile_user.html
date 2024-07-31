@@ -32,8 +32,9 @@
                                 data-bs-target="#changePasswordModal">
                                 <i class="fas fa-key"></i>
                         </button>
-                        <!-- button verifikasi email -->
-                        <a href="{{ url_for('profile.profile_update') }}" class="btn btn-outline-info">
+                        <!-- Button untuk membuka modal verifikasi email -->
+                        <a href="#" class="btn btn-outline-info" data-toggle="modal"
+                                data-target="#emailVerificationModal">
                                 <i class="fas fa-envelope"></i>
                         </a>
                         <!-- modal button mengaktifkan/nonaktif 2fa -->
@@ -119,6 +120,7 @@
                 </div>
         </div>
 </div>
+
 
 <!-- Modal Change Password -->
 <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel"
@@ -213,6 +215,36 @@
                                         <button type="submit" class="btn btn-primary">Simpan</button>
                                 </form>
                         </div>
+                </div>
+        </div>
+</div>
+
+<!-- Modal Mail verified -->
+<div class="modal fade" id="emailVerificationModal" tabindex="-1" role="dialog"
+        aria-labelledby="emailVerificationModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+                <div class="modal-content bg-dark text-light">
+                        <div class="modal-header">
+                                <h5 class="modal-title" id="emailVerificationModalLabel">Enable Email Verification</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                </button>
+                        </div>
+                        <form method="post" action="{{ url_for('profile.mail_enabled') }}">
+                                <div class="modal-body">
+                                        <!-- Other profile fields -->
+                                        <div class="form-group">
+                                                <label for="email_verification">Enable Email Verification:</label>
+                                                <input type="checkbox" id="email_verification" name="email_verification"
+                                                        {% if current_user.is_verified %} checked {% endif %}>
+                                        </div>
+                                </div>
+                                <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary"
+                                                data-dismiss="modal">Close</button>
+                                        <button type="submit" class="btn btn-primary">Send mail verification</button>
+                                </div>
+                        </form>
                 </div>
         </div>
 </div>
