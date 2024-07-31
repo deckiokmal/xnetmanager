@@ -9,7 +9,6 @@ from wtforms.validators import (
     Optional,
 )
 from src.models.users_model import User
-from flask_login import current_user
 
 
 class RegisterForm(FlaskForm):
@@ -130,3 +129,13 @@ class ChangePasswordForm(FlaskForm):
 
 class ProfilePictureForm(FlaskForm):
     profile_picture = FileField("Profile Picture", validators=[DataRequired()])
+
+
+class User2FAEnableForm(FlaskForm):
+    """
+    Formulir untuk mengaktifkan/nonaktifkan 2FA.
+    """
+
+    is_2fa_enabled = SelectField(
+        "2FA Enabled", choices=[("True", "True"), ("False", "False")], coerce=str
+    )

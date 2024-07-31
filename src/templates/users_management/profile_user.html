@@ -11,7 +11,7 @@
                                         alt="Profile Picture" class="img-fluid rounded-circle mb-3"
                                         style="width: 100px; height: 100px; object-fit: cover;">
 
-                                <!-- Button to open the modal -->
+                                <!-- Button to open the modal upload profile pictures -->
                                 <button type="button"
                                         class="btn btn-light position-absolute top-0 end-0 mt-2 me-2 rounded-circle"
                                         data-bs-toggle="modal" data-bs-target="#updateProfilePictureModal">
@@ -23,17 +23,22 @@
                                 Connect to Github
                         </button>
                         <p>Profile Menu</p>
+                        <!-- button edit profile -->
                         <a href="{{ url_for('profile.profile_update') }}" class="btn btn-outline-success">
                                 <i class="fas fa-edit"></i>
                         </a>
+                        <!-- button change password -->
                         <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal"
                                 data-bs-target="#changePasswordModal">
                                 <i class="fas fa-key"></i>
                         </button>
+                        <!-- button verifikasi email -->
                         <a href="{{ url_for('profile.profile_update') }}" class="btn btn-outline-info">
                                 <i class="fas fa-envelope"></i>
                         </a>
-                        <a href="{{ url_for('main.setup_2fa') }}" class="btn btn-outline-primary">
+                        <!-- modal button mengaktifkan/nonaktif 2fa -->
+                        <a href="#" class="btn btn-outline-primary" data-bs-toggle="modal"
+                                data-bs-target="#enable2FAModal">
                                 <i class="fas fa-shield-alt"></i>
                         </a>
                 </div>
@@ -183,6 +188,29 @@
                                         <div class="text-center">
                                                 <button type="submit" class="btn btn-primary">Upload</button>
                                         </div>
+                                </form>
+                        </div>
+                </div>
+        </div>
+</div>
+
+<!-- Modal 2FA aktif/nonaktif -->
+<div class="modal fade" id="enable2FAModal" tabindex="-1" aria-labelledby="enable2FAModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content bg-dark text-light">
+                        <div class="modal-header">
+                                <h5 class="modal-title" id="enable2FAModalLabel">Aktifkan/Nonaktifkan 2FA</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                                <form method="POST" action="{{ url_for('profile.toggle_2fa') }}">
+                                        {{ towfactorform.hidden_tag() }}
+                                        <div class="mb-3">
+                                                {{ towfactorform.is_2fa_enabled.label(class="form-label") }}
+                                                {{ towfactorform.is_2fa_enabled(class="form-select") }}
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Simpan</button>
                                 </form>
                         </div>
                 </div>

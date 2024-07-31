@@ -16,6 +16,7 @@ from src.utils.forms_utils import (
     ProfileUpdateForm,
     ChangePasswordForm,
     ProfilePictureForm,
+    User2FAEnableForm,
 )
 import logging
 from werkzeug.utils import secure_filename
@@ -75,13 +76,18 @@ def index():
     user_id = current_user.id
     user = User.query.get(user_id)
     form = ChangePasswordForm()
+    towfactorform = User2FAEnableForm()
     form_picture = ProfilePictureForm()
+
+    # Set the default value of the form based on the user's 2FA status
+    towfactorform.is_2fa_enabled.data = "True" if user.is_2fa_enabled else "False"
 
     return render_template(
         "/users_management/profile_user.html",
         user=user,
         form=form,
         form_picture=form_picture,
+        towfactorform=towfactorform,
     )
 
 
@@ -191,4 +197,35 @@ def upload_profile_picture():
         else:
             flash("No file selected.", "error")
 
+    return redirect(url_for("profile.index"))
+
+
+# Enable disable 2FA
+@profile_bp.route("/toggle_2fa", methods=["POST"])
+@login_required
+def toggle_2fa():
+    form = User2FAEnableForm()
+
+    if form.validate_on_submit():
+        new_2fa_status = form.is_2fa_enabled.data == "True"
+
+        # Cek apakah status baru berbeda dari status saat ini
+        if current_user.is_2fa_enabled == new_2fa_status:
+            flash("Tidak ada perubahan pada pengaturan 2FA.", "info")
+            return redirect(url_for("profile.index"))
+
+        # Update status 2FA pada pengguna
+        current_user.is_2fa_enabled = new_2fa_status
+        db.session.commit()
+
+        # Arahkan ke halaman yang sesuai
+        if new_2fa_status:
+            flash("2FA telah diaktifkan. Silakan setup 2FA.", "success")
+            return redirect(url_for("main.setup_2fa"))
+        else:
+            flash("2FA telah dinonaktifkan.", "success")
+            return redirect(url_for("profile.index"))
+
+    # Jika form tidak valid, kembalikan ke profil dengan pesan kesalahan
+    flash("Terjadi kesalahan saat memperbarui pengaturan 2FA.", "danger")
     return redirect(url_for("profile.index"))
