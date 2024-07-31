@@ -12,7 +12,6 @@ from flask_login import login_user, logout_user, current_user, login_required
 from src import db, bcrypt
 from src.models.users_model import User, Role
 from src.utils.forms_utils import RegisterForm, LoginForm, TwoFactorForm
-from src.utils.qrcode_utils import get_b64encoded_qr_image
 import logging
 from datetime import datetime
 import pyotp
@@ -151,7 +150,8 @@ def login():
 @login_required
 def logout():
     logout_user()
-    session.pop("authenticated", None)
+    session.pop("authenticated", None)  # Hapus status authenticated login dari sesi
+    session.pop("2fa_verified", None)  # Hapus status verifikasi 2FA dari sesi
     return redirect(url_for("main.login"))
 
 
@@ -190,6 +190,7 @@ def verify_2fa():
             current_user.is_2fa_enabled = True
             db.session.commit()
             session.pop("pre_2fa", None)
+            session["2fa_verified"] = True
             flash("2FA verification successful. You are logged in!", "success")
             return redirect(url_for(HOME_URL))
         else:

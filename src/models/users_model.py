@@ -45,8 +45,9 @@ class User(UserMixin, db.Model):
         )
 
     def is_otp_valid(self, user_otp):
+        print(f"Secret Token: {self.secret_token}")
         totp = pyotp.TOTP(self.secret_token)
-        return totp.verify(user_otp)
+        return totp.verify(user_otp, valid_window=1)  # valid_window=1 menambah toleransi waktu ±30 detik
 
     def __repr__(self):
         return f"<User {self.email}>"

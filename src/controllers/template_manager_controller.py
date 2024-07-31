@@ -15,7 +15,7 @@ from src.utils.config_manager_utils import ConfigurationManagerUtils
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
-from .decorators import login_required, role_required
+from .decorators import login_required, role_required, required_2fa
 import random
 import string
 from flask_paginate import Pagination
@@ -78,6 +78,7 @@ def generate_random_filename(vendor_name):
 # Route untuk menampilkan daftar template
 @tm_bp.route("/tm", methods=["GET"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User", "View"], permissions=["Manage Templates", "View Templates"], page="Templates Management"
 )
@@ -118,6 +119,7 @@ def allowed_file_params(filename):
 # Route untuk meng-upload template
 @tm_bp.route("/template_upload", methods=["POST"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management"
 )
@@ -175,6 +177,7 @@ def template_upload():
 # Route untuk memperbarui template
 @tm_bp.route("/template_update/<int:template_id>", methods=["GET", "POST"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management"
 )
@@ -291,6 +294,7 @@ def template_update(template_id):
 # Route untuk menghapus template
 @tm_bp.route("/template_delete/<int:template_id>", methods=["POST"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management"
 )
@@ -322,6 +326,7 @@ def template_delete(template_id):
 # Route untuk menghasilkan template dari template Jinja dan parameter YAML
 @tm_bp.route("/template_generator/<int:template_id>", methods=["POST"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management"
 )
@@ -379,6 +384,7 @@ def template_generator(template_id):
 # Route untuk melihat detail template
 @tm_bp.route("/template_detail/<int:template_id>", methods=["GET"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User", "View"], permissions=["Manage Templates", "View Templates"], page="Templates Management"
 )
@@ -406,6 +412,7 @@ def template_detail(template_id):
 # Route untuk membuat template manual
 @tm_bp.route("/template_manual_create", methods=["POST"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management"
 )
@@ -472,6 +479,7 @@ def template_manual_create():
 # File konfigurasi view page
 @tm_bp.route("/template_results")
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User", "View"], permissions=["Manage Templates", "View Templates"], page="Configuration File Management"
 )
@@ -525,6 +533,7 @@ def template_results():
     "/template_result_update/<int:template_result_id>", methods=["GET", "POST"]
 )
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Templates"], page="Configuration File Management"
 )
@@ -600,6 +609,7 @@ def template_result_update(template_result_id):
 # File konfigurasi delete
 @tm_bp.route("/template_result_delete/<int:template_id>", methods=["POST"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Templates"], page="Configuration File Management"
 )
@@ -626,6 +636,7 @@ def template_result_delete(template_id):
 # Route untuk membuat file konfigurasi manual
 @tm_bp.route("/configuration_manual_create", methods=["POST"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Templates"], page="Configuration File Management"
 )

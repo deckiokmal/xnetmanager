@@ -10,7 +10,7 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from src.models.users_model import User
-from .decorators import login_required, role_required
+from .decorators import login_required, role_required, required_2fa
 from src import db, bcrypt
 from src.utils.forms_utils import (
     ProfileUpdateForm,
@@ -64,6 +64,7 @@ def inject_user():
 # Users profile
 @profile_bp.route("/profile_user", methods=["GET", "POST"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User", "View"],
     permissions=["Manage Users", "Manage Profile"],
@@ -87,6 +88,7 @@ def index():
 # Halaman update data user berdasarkan current_user
 @profile_bp.route("/profile_update", methods=["GET", "POST"])
 @login_required
+@required_2fa
 def profile_update():
     user = User.query.get_or_404(current_user.id)
     form = ProfileUpdateForm(obj=user)  # Pre-populate form with existing data
@@ -117,6 +119,7 @@ def profile_update():
 
 @profile_bp.route("/change_password", methods=["POST"])
 @login_required
+@required_2fa
 def change_password():
     form = ChangePasswordForm()
 
@@ -156,6 +159,7 @@ PROFILE_PICTURE_DIRECTORY = "profile_pictures"
 # Change profile Pictures
 @profile_bp.route("/upload_profile_picture", methods=["POST"])
 @login_required
+@required_2fa
 def upload_profile_picture():
     form_picture = ProfilePictureForm()
 

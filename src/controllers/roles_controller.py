@@ -12,7 +12,7 @@ from flask_login import login_required, current_user
 from flask_paginate import Pagination, get_page_args
 from src import db
 from src.models.users_model import User, Role, Permission, UserRoles
-from .decorators import role_required
+from .decorators import role_required, login_required, required_2fa
 import logging
 
 # Membuat blueprint roles_bp dan error_bp
@@ -58,6 +58,7 @@ def inject_user():
 # Halaman Roles
 @roles_bp.route("/user_role", methods=["GET", "POST"])
 @login_required
+@required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def index():
     all_roles = Role.query.all()  # Mengambil semua role
@@ -99,6 +100,7 @@ def index():
 # Membuat Role Baru
 @roles_bp.route("/create_role", methods=["GET", "POST"])
 @login_required
+@required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def create_role():
     if request.method == "POST":
@@ -129,6 +131,7 @@ def create_role():
 # Memperbarui Role
 @roles_bp.route("/role_update/<int:role_id>", methods=["GET", "POST"])
 @login_required
+@required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def role_update(role_id):
     role = Role.query.get_or_404(role_id)  # Mengambil role berdasarkan ID
@@ -181,6 +184,7 @@ def role_update(role_id):
 # Menghapus Role
 @roles_bp.route("/role_delete/<int:role_id>", methods=["POST"])
 @login_required
+@required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def role_delete(role_id):
     role = Role.query.get_or_404(role_id)  # Mengambil role berdasarkan ID
@@ -207,6 +211,7 @@ def role_delete(role_id):
 # Menambahkan Pengguna ke Role
 @roles_bp.route("/add_user_to_role", methods=["POST"])
 @login_required
+@required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def add_user_to_role():
     user_id = request.form.get("user_id")
@@ -237,6 +242,7 @@ def add_user_to_role():
 
 @roles_bp.route("/remove_user_from_role", methods=["POST"])
 @login_required
+@required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def remove_user_from_role():
     user_id = request.form.get("user_id")
@@ -270,6 +276,7 @@ def remove_user_from_role():
 # Daftar Permissions
 @roles_bp.route("/permissions", methods=["GET"])
 @login_required
+@required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def list_permissions():
     permissions = Permission.query.all()  # Mengambil semua permissions
@@ -279,6 +286,7 @@ def list_permissions():
 # Membuat Permission Baru
 @roles_bp.route("/permissions/new", methods=["GET", "POST"])
 @login_required
+@required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def create_permission():
     if request.method == "POST":
@@ -305,6 +313,7 @@ def create_permission():
 # Memperbarui Permission
 @roles_bp.route("/permissions/<int:permission_id>/edit", methods=["GET", "POST"])
 @login_required
+@required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def update_permission(permission_id):
     permission = Permission.query.get_or_404(
@@ -333,6 +342,7 @@ def update_permission(permission_id):
 # Menghapus Permission
 @roles_bp.route("/permissions/<int:permission_id>/delete", methods=["POST"])
 @login_required
+@required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def delete_permission(permission_id):
     permission = Permission.query.get_or_404(
@@ -347,6 +357,7 @@ def delete_permission(permission_id):
 # Menambahkan Permission ke Role
 @roles_bp.route("/add_permission_to_role", methods=["POST"])
 @login_required
+@required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def add_permission_to_role():
     role_id = request.form.get("role_id")
@@ -370,6 +381,7 @@ def add_permission_to_role():
 # api endpoint untuk memberikan seluruh data Permission
 @roles_bp.route("/api/permissions", methods=["GET"])
 @login_required
+@required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="API Permissions")
 def api_permissions():
     permissions = Permission.query.all()  # Mengambil semua permissions
@@ -380,6 +392,7 @@ def api_permissions():
 # api endpoint untuk memberikan seluruh data user
 @roles_bp.route("/api/users", methods=["GET"])
 @login_required
+@required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="API Users")
 def api_users():
     users = User.query.all()  # Mengambil semua pengguna

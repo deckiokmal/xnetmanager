@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import flash, redirect, request, url_for
+from flask import flash, redirect, request, url_for, session
 from flask_login import current_user
 from src.models.users_model import Role
 
@@ -76,3 +76,22 @@ def role_required(roles, permissions=None, page=""):
         return decorated_function
 
     return decorator
+
+
+# Decorator untuk memeriksa apakah pengguna mengaktifkan 2FA atau tidak
+def required_2fa(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Cek apakah pengguna sudah login
+        if not current_user.is_authenticated:
+            return redirect(url_for("main.login"))
+
+        # Cek apakah 2FA diaktifkan untuk pengguna
+        if current_user.is_2fa_enabled:
+            # Cek apakah pengguna sudah memverifikasi 2FA
+            if not session.get("2fa_verified", False):
+                return redirect(url_for("main.verify_2fa"))
+
+        return f(*args, **kwargs)
+
+    return decorated_function

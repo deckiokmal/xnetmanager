@@ -13,7 +13,7 @@ from src import db, bcrypt
 from src.models.users_model import User, Role
 from src.models.xmanager_model import DeviceManager, TemplateManager
 from src.utils.forms_utils import RegisterForm, UserUpdateForm
-from .decorators import login_required, role_required
+from .decorators import login_required, role_required, required_2fa
 from flask_paginate import Pagination, get_page_args
 import logging
 
@@ -60,6 +60,7 @@ def inject_user():
 # Menampilkan halaman dashboard setelah user login success.
 @users_bp.route("/dashboard")
 @login_required
+@required_2fa
 def dashboard():
     # Mengambil semua perangkat dan template konfigurasi dari database
     devices = DeviceManager.query.all()
@@ -95,6 +96,7 @@ def dashboard():
 # Users Management Page
 @users_bp.route("/users", methods=["GET", "POST"])
 @login_required
+@required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
 # @role_required("Admin", "users")
 def index():
@@ -169,6 +171,7 @@ def index():
 # User Update Page
 @users_bp.route("/user_update/<int:user_id>", methods=["GET", "POST"])
 @login_required
+@required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
 def user_update(user_id):
     user = User.query.get_or_404(user_id)
@@ -216,6 +219,7 @@ def user_update(user_id):
 # Delete user
 @users_bp.route("/user_delete/<int:user_id>", methods=["POST"])
 @login_required
+@required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
 def user_delete(user_id):
     if current_user.id == user_id:

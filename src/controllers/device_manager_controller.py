@@ -11,7 +11,7 @@ from flask import (
 from flask_login import login_required, current_user
 from src import db
 from src.models.xmanager_model import DeviceManager
-from .decorators import login_required, role_required
+from .decorators import login_required, role_required, required_2fa
 from src.utils.ip_validation_utils import is_valid_ip
 from flask_paginate import Pagination, get_page_args
 import logging
@@ -59,6 +59,7 @@ def inject_user():
 # Halaman utama Device Manager
 @dm_bp.route("/dm", methods=["GET"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User", "View"],
     permissions=["Manage Devices", "View Devices"],
@@ -110,6 +111,7 @@ def index():
 # Menambahkan perangkat baru
 @dm_bp.route("/device_create", methods=["POST"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
 )
@@ -157,6 +159,7 @@ def device_create():
 # Mengupdate informasi perangkat
 @dm_bp.route("/device_update/<int:device_id>", methods=["GET", "POST"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
 )
@@ -209,6 +212,7 @@ def device_update(device_id):
 # Menghapus perangkat
 @dm_bp.route("/device_delete/<int:device_id>", methods=["POST"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
 )
@@ -227,6 +231,7 @@ def device_delete(device_id):
 # Endpoint API get data all devices
 @dm_bp.route("/api/get_devices", methods=["GET"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
 )
@@ -251,6 +256,7 @@ def get_devices():
 # Endpoint untuk mendapatkan data perangkat berdasarkan ID
 @dm_bp.route("/api/get_device_data/<int:device_id>")
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
 )

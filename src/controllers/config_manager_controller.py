@@ -10,7 +10,7 @@ from src.models.users_model import User
 from src.models.xmanager_model import DeviceManager, ConfigurationManager
 from src.utils.config_manager_utils import ConfigurationManagerUtils
 import os
-from .decorators import login_required, role_required
+from .decorators import login_required, role_required, required_2fa
 from flask_paginate import Pagination, get_page_args
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
@@ -60,6 +60,7 @@ GEN_TEMPLATE_FOLDER = "xmanager/gen_templates"
 # Endpoint Network Manager index
 @nm_bp.route("/nm", methods=["GET"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
 )
@@ -103,6 +104,7 @@ def index():
 # Endpoint untuk cek status perangkat
 @nm_bp.route("/check_status", methods=["POST"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
 )
@@ -122,6 +124,7 @@ def check_status():
 # Endpoint Push Config for multiple devices
 @nm_bp.route("/push_configs", methods=["POST"])
 @login_required
+@required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
 )
