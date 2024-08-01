@@ -36,6 +36,7 @@
         </a>
     </li>
 
+    {% if current_user.has_role('Admin') %}
     <!-- Nav Item - Users Management -->
     <li class="nav-item {{ is_active('/users') }}">
         <a class="nav-link" href="/users">
@@ -51,6 +52,7 @@
             <span>Roles Management</span>
         </a>
     </li>
+    {% endif %}
 
     <!-- Divider -->
     <hr class="sidebar-divider">
@@ -76,6 +78,7 @@
         </a>
     </li>
 
+    {% if current_user.has_role('Admin') or current_user.has_role('User') %}
     <!-- Nav Item - Configuration Management -->
     <li class="nav-item {{ is_active('/nm') }}">
         <a class="nav-link" href="/nm">
@@ -83,6 +86,7 @@
             <span>Config Management</span>
         </a>
     </li>
+    {% endif %}
 
     <!-- Divider -->
     <hr class="sidebar-divider">
