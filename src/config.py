@@ -56,6 +56,43 @@ class Config(object):
     MAIL_USE_TLS = config("MAIL_USE_TLS", default=True, cast=bool)
     MAIL_USE_SSL = config("MAIL_USE_SSL", default=False, cast=bool)
 
+    # Pengaturan Flask-Talisman
+    TALISMAN_FORCE_HTTPS = True
+    TALISMAN_STRICT_TRANSPORT_SECURITY = True
+    TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE = 31536000  # 1 year
+    TALISMAN_CONTENT_SECURITY_POLICY = {
+        "default-src": ["'self'"],
+        "img-src": ["'self'", "data:", "cdn.jsdelivr.net", "via.placeholder.com"],
+        "style-src": [
+            "'self'",
+            "'unsafe-inline'",
+            "fonts.googleapis.com",
+            "cdn.jsdelivr.net",
+        ],
+        "script-src": [
+            "'self'",
+            "'unsafe-inline'",
+            "'unsafe-eval'",
+            "kit.fontawesome.com",
+            "cdn.jsdelivr.net",
+        ],
+        "script-src-elem": [
+            "'self'",
+            "'unsafe-inline'",
+            "kit.fontawesome.com",
+            "cdn.jsdelivr.net",
+        ],
+        "font-src": [
+            "'self'",
+            "fonts.gstatic.com",
+            "fonts.googleapis.com",
+            "https://ka-f.fontawesome.com",
+        ],
+        "connect-src": ["'self'", "https://ka-f.fontawesome.com"],
+        "object-src": ["'none'"],
+        "frame-ancestors": ["'none'"],
+    }
+
 
 class DevelopmentConfig(Config):
     """Konfigurasi khusus untuk lingkungan pengembangan."""
@@ -64,6 +101,42 @@ class DevelopmentConfig(Config):
     DEBUG = True
     WTF_CSRF_ENABLED = False
     DEBUG_TB_ENABLED = True
+
+    # Pengaturan Flask-Talisman untuk pengembangan
+    TALISMAN_FORCE_HTTPS = False
+    TALISMAN_STRICT_TRANSPORT_SECURITY = False
+    TALISMAN_CONTENT_SECURITY_POLICY = {
+        "default-src": ["'self'"],
+        "img-src": ["'self'", "data:", "cdn.jsdelivr.net", "via.placeholder.com"],
+        "style-src": [
+            "'self'",
+            "'unsafe-inline'",
+            "fonts.googleapis.com",
+            "cdn.jsdelivr.net",
+        ],
+        "script-src": [
+            "'self'",
+            "'unsafe-inline'",
+            "'unsafe-eval'",
+            "kit.fontawesome.com",
+            "cdn.jsdelivr.net",
+        ],
+        "script-src-elem": [
+            "'self'",
+            "'unsafe-inline'",
+            "kit.fontawesome.com",
+            "cdn.jsdelivr.net",
+        ],
+        "font-src": [
+            "'self'",
+            "fonts.gstatic.com",
+            "fonts.googleapis.com",
+            "https://ka-f.fontawesome.com",
+        ],
+        "connect-src": ["'self'", "https://ka-f.fontawesome.com"],
+        "object-src": ["'none'"],
+        "frame-ancestors": ["'none'"],
+    }
 
 
 class TestingConfig(Config):
@@ -81,3 +154,40 @@ class ProductionConfig(Config):
 
     DEBUG = False
     DEBUG_TB_ENABLED = False
+
+    # Pengaturan Flask-Talisman untuk produksi
+    TALISMAN_FORCE_HTTPS = True
+    TALISMAN_STRICT_TRANSPORT_SECURITY = True
+    TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE = 31536000  # 1 year
+    TALISMAN_CONTENT_SECURITY_POLICY = {
+        "default-src": ["'self'"],
+        "img-src": ["'self'", "data:", "cdn.jsdelivr.net", "via.placeholder.com"],
+        "style-src": [
+            "'self'",
+            "'unsafe-inline'",
+            "fonts.googleapis.com",
+            "cdn.jsdelivr.net",
+        ],
+        "script-src": [
+            "'self'",
+            "'unsafe-inline'",
+            "'unsafe-eval'",
+            "kit.fontawesome.com",
+            "cdn.jsdelivr.net",
+        ],
+        "script-src-elem": [
+            "'self'",
+            "'unsafe-inline'",
+            "kit.fontawesome.com",
+            "cdn.jsdelivr.net",
+        ],
+        "font-src": [
+            "'self'",
+            "fonts.gstatic.com",
+            "fonts.googleapis.com",
+            "https://ka-f.fontawesome.com",
+        ],
+        "connect-src": ["'self'", "https://ka-f.fontawesome.com"],
+        "object-src": ["'none'"],
+        "frame-ancestors": ["'none'"],
+    }

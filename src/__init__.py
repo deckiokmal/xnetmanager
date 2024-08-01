@@ -12,6 +12,7 @@ from src.utils.is_active_utils import is_active
 from src.utils.mask_password_utils import mask_password
 from src.config import DevelopmentConfig, TestingConfig, ProductionConfig
 from flask_mail import Mail
+from flask_talisman import Talisman
 
 # Load .env file variable
 load_dotenv()
@@ -48,6 +49,15 @@ def create_app(config_class=None):
     login_manager.init_app(app)
     csrf.init_app(app)
     mail.init_app(app)
+    talisman = Talisman(
+        app,
+        force_https=app.config["TALISMAN_FORCE_HTTPS"],
+        strict_transport_security=app.config["TALISMAN_STRICT_TRANSPORT_SECURITY"],
+        strict_transport_security_max_age=app.config[
+            "TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE"
+        ],
+        content_security_policy=app.config["TALISMAN_CONTENT_SECURITY_POLICY"],
+    )
 
     # Konfigurasi logger
     handler = StreamHandler()
