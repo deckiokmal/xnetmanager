@@ -14,7 +14,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(255), nullable=False)
     last_name = db.Column(db.String(255), nullable=False)
-    email = db.Column(db.String(255), unique=True, nullable=False)
+    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     phone_number = db.Column(db.String(20), nullable=True)
     profile_picture = db.Column(db.String(255), nullable=True)
@@ -48,7 +48,6 @@ class User(UserMixin, db.Model):
         )
 
     def is_otp_valid(self, user_otp):
-        print(f"Secret Token: {self.secret_token}")
         totp = pyotp.TOTP(self.secret_token)
         return totp.verify(
             user_otp, valid_window=1

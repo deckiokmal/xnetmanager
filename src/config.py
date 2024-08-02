@@ -17,7 +17,9 @@ def validate_config():
 validate_config()
 
 # Database URI
-DATABASE_URI = config("DATABASE_URL")
+DATABASE_URI = config("DATABASE_URL", default="sqlite:///xnetmanager.sqlite")
+
+# Ubah prefix dari PostgreSQL jika diperlukan
 if DATABASE_URI.startswith("postgres://"):
     DATABASE_URI = DATABASE_URI.replace("postgres://", "postgresql://", 1)
 
@@ -144,7 +146,7 @@ class TestingConfig(Config):
 
     TESTING = True
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = "sqlite:///testdb.sqlite"
+    SQLALCHEMY_DATABASE_URI = "sqlite:///testing.sqlite"
     BCRYPT_LOG_ROUNDS = 1
     WTF_CSRF_ENABLED = False
 
