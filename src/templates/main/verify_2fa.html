@@ -1,23 +1,19 @@
-{% extends "/layouts/base.html" %}
-
-{% block bg_content %}
-<div class="col-lg-6 d-none d-lg-block bg-register-image"></div>
-{% endblock %}
-
-{% block head_content %}
-<h1 class="h4 text-gray-900 mb-4">Enter OTP</h1>
-{% endblock %}
+{% extends "/layouts/base_demo.html" %}
 
 {% block content %}
 
-<form class="user" role="form" method="post" action="">
+<form class="mx-auto" role="form" method="post">
     {{ form.csrf_token }}
     {{ form.hidden_tag() }}
-    <div class="form-group">
+    <h4 class="text-center">Verifikasi 2FA</h4>
+    <div class="div mb-3 mt-5">
         {{ form.otp.label(class="form-control-label") }}
         {{ form.otp(class="form-control") }}
     </div>
+    {% include '/layouts/flash_msg.html' %}
+
     <button type="submit" class="btn btn-primary btn-user btn-block">Verify</button>
+
 </form>
 
 {% endblock %}

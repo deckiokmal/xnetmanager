@@ -1,17 +1,9 @@
-{% extends "/layouts/base.html" %}
-
-{% block bg_content %}
-<div class="col-lg-6 d-none d-lg-block bg-register-image"></div>
-{% endblock %}
-
-{% block head_content %}
-<h1 class="h4 text-gray-900 mb-4">Setup your OTP</h1>
-{% endblock %}
+{% extends "/layouts/base_demo.html" %}
 
 {% block content %}
-
-<form role="form">
-    <h5>Instructions!</h5>
+<form role="form" class="mx-auto">
+    {% include '/layouts/flash_msg.html' %}
+    <h4 class="text-center">Instructions</h4>
     <ul>
         <li class="small">Download <a class="small"
                 href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2&hl=en&gl=US"
@@ -21,20 +13,21 @@
     <div class="text-center">
         <img src="data:image/png;base64, {{ qr_image }}" alt="Secret Token" style="width:200px;height:200px" />
     </div>
-    <div class="form-group">
-        <label for="secret">Secret Token</label>
+    <div class="div mb-3">
+        <label for="secret" class="form-label">Secret Token</label>
         <input type="text" class="form-control" id="secret" value="{{ secret }}" readonly>
     </div>
-    <div class="text-center mt-2">
+    <div class="div mb-3">
         <button type="button" class="btn btn-primary" onclick="copySecret()">
             Copy Secret
         </button>
     </div>
-    <p class="mt-4 text-center">
-        Once you have scanned the QR, please click <a href="{{ url_for('main.verify_2fa') }}">here</a>.
-    </p>
+    <div class="mb-3">
+        <p class="mt-4 text-center">
+            Once you have scanned the QR, please click <a href="{{ url_for('main.verify_2fa') }}">here</a>.
+        </p>
+    </div>
 </form>
-
 {% endblock %}
 
 {% block js %}

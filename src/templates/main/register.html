@@ -1,18 +1,13 @@
-{% extends "/layouts/base.html" %}
-
-{% block bg_content %}
-<div class="col-lg-6 d-none d-lg-block bg-register-image"></div>
-{% endblock %}
-
-{% block head_content %}
-<h1 class="h3 mb-3 fw-normal text-center">Please register</h1>
-{% endblock %}
+{% extends "/layouts/base_demo.html" %}
 
 {% block content %}
-<form class="user" role="form" method="post" action="">
+<form class="mx-auto" role="form" method="post">
     {{ form.csrf_token }}
+    {{ form.hidden_tag() }}
 
-    <div class="form-group">
+    <h4 class="text-center">Registrasi Akun</h4>
+    <div class="mb-2 mt-5">
+        <label for="first_name" class="form-label"><strong>Nama depan</strong></label>
         {{ form.first_name(placeholder="First Name", class="form-control form-control-user") }}
         {% if form.first_name.errors %}
         {% for error in form.first_name.errors %}
@@ -22,8 +17,8 @@
         {% endfor %}
         {% endif %}
     </div>
-
-    <div class="form-group">
+    <div class="mb-2 mt-2">
+        <label for="last_name" class="form-label"><strong>Nama Belakang</strong></label>
         {{ form.last_name(placeholder="Last Name", class="form-control form-control-user") }}
         {% if form.last_name.errors %}
         {% for error in form.last_name.errors %}
@@ -33,8 +28,8 @@
         {% endfor %}
         {% endif %}
     </div>
-
-    <div class="form-group">
+    <div class="mb-2 mt-2">
+        <label for="email" class="form-label"><strong>Email</strong></label>
         {{ form.email(placeholder="Email Address", class="form-control form-control-user") }}
         {% if form.email.errors %}
         {% for error in form.email.errors %}
@@ -44,8 +39,8 @@
         {% endfor %}
         {% endif %}
     </div>
-
-    <div class="form-group">
+    <div class="mb-2 mt-2">
+        <label for="password" class="form-label"><strong>Password</strong></label>
         {{ form.password(placeholder="Password", class="form-control form-control-user") }}
         {% if form.password.errors %}
         {% for error in form.password.errors %}
@@ -55,8 +50,8 @@
         {% endfor %}
         {% endif %}
     </div>
-
-    <div class="form-group">
+    <div class="mb-3 mt-2">
+        <label for="confirm-password" class="form-label"><strong>Confirm password</strong></label>
         {{ form.confirm_password(placeholder="Confirm Password", class="form-control form-control-user") }}
         {% if form.confirm_password.errors %}
         {% for error in form.confirm_password.errors %}
@@ -67,11 +62,15 @@
         {% endif %}
     </div>
 
-    <button class="btn btn-primary btn-user btn-block" type="submit">Sign up</button>
-    <hr>
-    <div class="text-center">
-        <a class="small" href="forgot-password.html">Forgot Password?</a>
+    <button type="submit" class="btn btn-primary mt-4">Daftar</button>
+
+    <div class="div d-flex flex-wrap justify-content-between">
+        <div class="form-text mt-3">
+            <a href="{{url_for ('main.login')}}">Lupa Password?</a>
+        </div>
+        <div class="form-text mt-3">
+            <a href="{{url_for('main.login')}}">Login sekarang</a>
+        </div>
     </div>
-    <p class="text-center small">Already registered? <a class="small" href="{{ url_for('main.login') }}">Login now</a></p>
 </form>
 {% endblock %}
