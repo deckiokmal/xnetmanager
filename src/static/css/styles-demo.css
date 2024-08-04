@@ -1,3 +1,29 @@
+html,
+body {
+    height: 100%;
+    margin: 0;
+}
+
+.sidebar {
+    width: 250px;
+    /* Atur lebar sidebar sesuai kebutuhan */
+    min-height: 100vh;
+    /* Memastikan sidebar minimal setinggi layar */
+}
+
+.content {
+    flex: 1;
+    /* Memastikan konten mengisi ruang yang tersisa */
+    min-height: 100vh;
+    /* Memastikan konten minimal setinggi layar */
+}
+
+footer {
+    margin-top: auto;
+    /* Memastikan footer berada di bawah halaman */
+}
+
+
 /* Layout base section  */
 
 .bg-custom-topbar {

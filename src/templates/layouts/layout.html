@@ -29,22 +29,22 @@
 
 
 
-<body id="page-top">
+<body id="page-top" class="d-flex flex-column min-vh-100">
 
     <!-- Page Wrapper -->
-    <div id="wrapper">
+    <div id="wrapper" class="d-flex flex-grow-1">
 
         {% include '/layouts/sidebar.html' %}
 
         <!-- Content Wrapper -->
         <div id="content-wrapper" class="d-flex flex-column">
             <!-- Main Content -->
-            <div id="content" class="bg-custom-main">
+            <div id="content" class="bg-custom-main flex-grow-1">
 
                 {% include '/layouts/topbar.html' %}
 
                 <!-- Begin Page Content -->
-                <div class="min-vw-10">
+                <div class="min-vw-10 content flex-grow-1">
                     <div class="position-relative px-4 mt-0">
 
                         {% block content %}{% endblock %}
