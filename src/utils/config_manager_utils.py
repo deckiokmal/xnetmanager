@@ -110,3 +110,40 @@ class ConfigurationManagerUtils:
         except Exception as e:
             print("Error:", e)
             return None
+
+    def backup_config(self, device, command_backup):
+        """
+        Kirim perintah backup ke perangkat berdasarkan vendor dan simpan STDOUT ke dalam file baru.
+        """
+        try:
+            # Membuat koneksi SSH ke perangkat
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_client.connect(
+                hostname=self.ip_address,
+                username=self.username,
+                password=self.password,
+                port=self.ssh,
+                timeout=5,
+            )
+            stdin, stdout, stderr = ssh_client.exec_command(command_backup)
+
+            # Menunggu hingga perintah selesai dieksekusi
+            stdout.channel.recv_exit_status()
+            response = stdout.read().decode()
+            ssh_client.close()
+
+            return response
+
+        except paramiko.AuthenticationException:
+            error_message = "Authentication failed, please verify your credentials."
+            print(error_message)
+            return error_message, "danger"
+        except paramiko.SSHException as sshException:
+            error_message = f"Unable to establish SSH connection: {sshException}"
+            print(error_message)
+            return error_message, "danger"
+        except Exception as e:
+            error_message = f"Error: {e}"
+            print(error_message)
+            return error_message, "danger"

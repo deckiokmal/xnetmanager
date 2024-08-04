@@ -151,3 +151,23 @@ body {
 }
 
 /* end of user profile section  */
+
+
+/* Define CSS for status indicator */
+.status-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    /* Untuk membuat bentuk bulat */
+    display: inline-block;
+}
+
+.status-indicator-green {
+    background-color: green;
+    /* Warna hijau untuk status OK */
+}
+
+.status-indicator-red {
+    background-color: rgb(228, 17, 17);
+    /* Warna red untuk status NOK */
+}
