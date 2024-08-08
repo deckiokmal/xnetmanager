@@ -48,8 +48,8 @@
 
 {% block table_header %}
 <th scope="col">
-    <!-- Tombol Bulk Config -->
-    <button id="bulkConfigBtn" type="button" class="btn btn-primary btn-sm ml-3">
+    <!-- Tombol Select Perangkat -->
+    <button id="selectDevicesBtn" type="button" class="btn btn-primary btn-sm ml-3">
         <i class="fas fa-cogs"></i> Select
     </button>
 </th>
@@ -66,9 +66,9 @@
     <th>
         <div class="container">
             <!-- Checklist Buttons -->
-            <div id="checklistButtons{{ loop.index }}" class="checklist-buttons btn-sm" style="display: none;">
+            <div id="checklistButtons{{ loop.index }}" class="checklist-buttons" style="display: none;">
                 <div class="btn-group" role="group" aria-label="Basic checkbox toggle button group">
-                    <input type="checkbox" class="btn-check" id="btncheck{{ loop.index }}"
+                    <input type="checkbox" class="btn-check checklist-buttons" id="btncheck{{ loop.index }}"
                         data-ip="{{ device.ip_address }}" autocomplete="off">
                     <label class="btn btn-outline-primary" for="btncheck{{ loop.index }}">Select</label>
                 </div>
@@ -190,15 +190,34 @@
             .catch(error => console.error("Error:", error));
     });
 
+    // Variabel untuk melacak status apakah checklist sedang ditampilkan atau tidak
+    let isChecklistVisible = false;
+
     // Event klik tombol Select Device
-    document.getElementById("bulkConfigBtn").addEventListener("click", function () {
+    document.getElementById("selectDevicesBtn").addEventListener("click", function () {
         const checklistButtons = document.getElementsByClassName("checklist-buttons");
-        for (let i = 0; i < checklistButtons.length; i++) {
-            checklistButtons[i].style.display = checklistButtons[i].style.display === "none" ? "block" : "none";
+
+        if (!isChecklistVisible) {
+            // Jika checklist tidak ditampilkan, tampilkan checklist
+            for (let i = 0; i < checklistButtons.length; i++) {
+                checklistButtons[i].style.display = "block";
+            }
+            isChecklistVisible = true; // Update status checklist menjadi visible
+        } else {
+            // Jika checklist sedang ditampilkan, sembunyikan dan reset status checked
+            for (let i = 0; i < checklistButtons.length; i++) {
+                checklistButtons[i].style.display = "none";
+
+                // Reset status checkbox jika sedang checked
+                if (checklistButtons[i].type === "checkbox" && checklistButtons[i].checked) {
+                    checklistButtons[i].checked = false;
+                }
+            }
+            isChecklistVisible = false; // Update status checklist menjadi hidden
         }
     });
 
-    // Event klik tombol Push Config Multiple
+    // Event klik tombol Push Config
     document.getElementById("pushConfigBtn").addEventListener("click", function () {
         const selectedDevices = [];
         document.querySelectorAll(".btn-check:checked").forEach(function (checkbox) {

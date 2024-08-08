@@ -137,13 +137,10 @@ class ConfigurationManagerUtils:
 
         except paramiko.AuthenticationException:
             error_message = "Authentication failed, please verify your credentials."
-            print(error_message)
             return error_message, "danger"
         except paramiko.SSHException as sshException:
             error_message = f"Unable to establish SSH connection: {sshException}"
-            print(error_message)
             return error_message, "danger"
         except Exception as e:
             error_message = f"Error: {e}"
-            print(error_message)
             return error_message, "danger"
