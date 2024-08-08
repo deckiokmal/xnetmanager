@@ -217,6 +217,44 @@
         }
     });
 
+    // Fungsi untuk memfilter baris tabel berdasarkan input pencarian
+    document.getElementById("searchInput").addEventListener("input", function () {
+        const query = this.value.toLowerCase();
+        const rows = document.querySelectorAll("#deviceTable tbody tr");
+
+        rows.forEach(row => {
+            const deviceName = row.cells[2].textContent.toLowerCase();
+            const ipAddress = row.cells[3].textContent.toLowerCase();
+            const vendor = row.cells[4].textContent.toLowerCase();
+
+            if (
+                deviceName.includes(query) ||
+                ipAddress.includes(query) ||
+                vendor.includes(query)
+            ) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+    });
+
+    // Muat ulang halaman dan reset checklist saat modal ditutup
+    document.getElementById("pushConfigResultModal").addEventListener("hidden.bs.modal", function () {
+        // Reset checklist
+        document.querySelectorAll(".btn-check").forEach(function (checkbox) {
+            checkbox.checked = false;
+        });
+
+        // Simpan nilai input pencarian
+        const searchInput = document.getElementById("searchInput");
+        const searchQuery = searchInput.value;
+
+        // Muat ulang halaman untuk mereset input pencarian
+        location.reload();
+        searchInput.value = searchQuery;
+    });
+
     // Event klik tombol Push Config
     document.getElementById("pushConfigBtn").addEventListener("click", function () {
         const selectedDevices = [];
@@ -276,44 +314,6 @@
         } else {
             alert("Please select a config.");
         }
-    });
-
-    // Fungsi untuk memfilter baris tabel berdasarkan input pencarian
-    document.getElementById("searchInput").addEventListener("input", function () {
-        const query = this.value.toLowerCase();
-        const rows = document.querySelectorAll("#deviceTable tbody tr");
-
-        rows.forEach(row => {
-            const deviceName = row.cells[2].textContent.toLowerCase();
-            const ipAddress = row.cells[3].textContent.toLowerCase();
-            const vendor = row.cells[4].textContent.toLowerCase();
-
-            if (
-                deviceName.includes(query) ||
-                ipAddress.includes(query) ||
-                vendor.includes(query)
-            ) {
-                row.style.display = "";
-            } else {
-                row.style.display = "none";
-            }
-        });
-    });
-
-    // Muat ulang halaman dan reset checklist saat modal ditutup
-    document.getElementById("pushConfigResultModal").addEventListener("hidden.bs.modal", function () {
-        // Reset checklist
-        document.querySelectorAll(".btn-check").forEach(function (checkbox) {
-            checkbox.checked = false;
-        });
-
-        // Simpan nilai input pencarian
-        const searchInput = document.getElementById("searchInput");
-        const searchQuery = searchInput.value;
-
-        // Muat ulang halaman untuk mereset input pencarian
-        location.reload();
-        searchInput.value = searchQuery;
     });
 
 </script>
