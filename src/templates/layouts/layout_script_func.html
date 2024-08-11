@@ -5,3 +5,11 @@
         document.cookie = `access_token_cookie=${token}; path=/;`;
     }
 </script>
+
+<script>
+    function DarkTheme() {
+        var element = document.body;
+        element.dataset.bsTheme =
+            element.dataset.bsTheme == "light" ? "dark" : "light";
+    }
+</script>
