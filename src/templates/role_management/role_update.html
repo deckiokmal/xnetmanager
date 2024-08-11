@@ -3,31 +3,31 @@
 {% block content %}
 <!-- Begin Page Content -->
 
-<div class="card py-2 px-4" style="max-width: 32rem;">
-    <div class="card-header">
+<div class="card position-relative py-4 px-4">
+    <div class="card-header mb-3">
         Role Update
     </div>
-    <div class="card-body">
-        <form method="POST" action="{{ url_for('roles.role_update', role_id=role.id) }}">
-            <div class="form-group">
-                <label for="name">Role Name</label>
-                <input type="text" class="form-control" id="name" name="name" value="{{ role.name }}" required>
-            </div>
-            <div class="form-group">
-                <label>Users</label>
-                <div>
-                    {% for user in associated_users %}
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" name="users" id="user{{ user.id }}"
-                            value="{{ user.id }}" checked>
-                        <label class="form-check-label badge badge-success" for="user{{ user.id }}">
-                            {{ user.email }}
-                        </label>
-                    </div>
-                    {% endfor %}
+    <form action="{{ url_for('roles.role_update', role_id=role.id) }}" method="POST">
+        <div class="row">
+            <div class="col mb-3">
+                <div class="row md-6">
+                    <label for="name" class="text-white">Role Name</label>
+                    <input type="text" class="form-control" id="name" name="name" value="{{ role.name }}" required>
                 </div>
             </div>
-            <div class="form-group">
+            <div class="col mb-3">
+                <label class="text-white">User</label>
+                {% for user in associated_users %}
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="users" id="user{{ user.id }}"
+                        value="{{ user.id }}" checked>
+                    <label class="form-check-label badge badge-success" for="user{{ user.id }}">
+                        {{ user.email }}
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="col mb-3">
                 <label>Permissions</label>
                 <div>
                     {% for permission in all_permissions %}
@@ -42,9 +42,16 @@
                     {% endfor %}
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary">Update Role</button>
-        </form>
-    </div>
+        </div>
+
+        <!-- Tombol untuk menyimpan perubahan dan tombol untuk kembali ke halaman utama -->
+        <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-check"></i>
+        </button>
+        <a class="btn btn-secondary" href="{{ url_for('roles.index') }}">
+            <i class="fa-solid fa-arrow-left"></i>
+        </a>
+    </form>
 </div>
 
 <!-- End of Page Content -->
