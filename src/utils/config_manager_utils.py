@@ -7,6 +7,8 @@ import platform
 import json
 import logging
 import time
+import os
+from flask import current_app
 
 # Konfigurasi logging
 logging.basicConfig(
@@ -60,10 +62,9 @@ class ConfigurationManagerUtils:
             ssh_client.close()
             elapsed_time = time.time() - start_time
             logging.info(
-                "Konfigurasi berhasil pada %s dalam %.2fs: %s",
+                "Konfigurasi berhasil pada %s dalam %.2fs",
                 self.ip_address,
                 elapsed_time,
-                response,
             )
             return json.dumps({"message": response, "status": "success"})
         except paramiko.AuthenticationException:
@@ -168,3 +169,34 @@ class ConfigurationManagerUtils:
             error_message = f"Kesalahan: {e}"
             logging.error("Kesalahan saat merender template: %s", error_message)
             return json.dumps({"message": error_message, "status": "error"})
+
+    def backup_configuration(self, command):
+        """
+        Menjalankan perintah pada perangkat dan mengembalikan hasil konfigurasi dalam format JSON.
+
+        :param command: Perintah konfigurasi yang akan dijalankan pada perangkat.
+        :return: JSON yang berisi status dan pesan hasil eksekusi perintah.
+        """
+        try:
+            # Jalankan perintah konfigurasi pada perangkat
+            result_json = self.configure_device(command)
+
+            # Parse hasil JSON dari perintah konfigurasi
+            result_dict = json.loads(result_json)
+
+            # Cek apakah status sukses dan kembalikan pesan dalam format JSON
+            if result_dict.get("status") == "success":
+                output = result_dict.get("message")
+                return json.dumps({"status": "success", "message": output})
+            else:
+                error_message = result_dict.get("message")
+                logging.error("Konfigurasi gagal: %s", error_message)
+                return json.dumps({"status": "error", "message": error_message})
+        except json.JSONDecodeError as e:
+            error_message = f"Kesalahan parsing JSON: {e}"
+            logging.error(error_message)
+            return json.dumps({"status": "error", "message": error_message})
+        except Exception as e:
+            error_message = f"Kesalahan tidak terduga saat menjalankan perintah: {e}"
+            logging.error(error_message)
+            return json.dumps({"status": "error", "message": error_message})

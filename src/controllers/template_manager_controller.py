@@ -74,7 +74,7 @@ PARAMS_EXTENSIONS = {"yml", "yaml"}
 # Fungsi pembantu untuk menghasilkan nama file acak
 def generate_random_filename(vendor_name):
     random_str = "".join(random.choices(string.ascii_letters + string.digits, k=8))
-    date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    date_str = datetime.now().strftime("%d.%m.%Y_%H.%M.%S")
     filename = f"{vendor_name}_{random_str}_{date_str}"
     current_app.logger.info(
         f"Generated random filename: {filename}"
