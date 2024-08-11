@@ -213,3 +213,5 @@ def push_configs():
                 success = False
 
     return jsonify({"success": success, "results": results})
+
+
