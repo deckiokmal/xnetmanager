@@ -47,6 +47,7 @@ def setup_logging():
 # Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
+    current_app.logger.error(f"Page not found: {request.path}")
     return render_template("main/404.html"), 404
 
 
@@ -54,6 +55,7 @@ def page_not_found(error):
 @profile_bp.before_request
 def before_request_func():
     if not current_user.is_authenticated:
+        current_app.logger.warning(f"Unauthorized access attempt to: {request.path}")
         return jsonify({"message": "Unauthorized access"}), 401
 
 
@@ -87,6 +89,8 @@ def index():
     # Set the default value of the form based on the user's 2FA status
     towfactorform.is_2fa_enabled.data = "True" if user.is_2fa_enabled else "False"
 
+    current_app.logger.info(f"User {current_user.email} accessed profile page.")
+
     return render_template(
         "/users_management/profile_user.html",
         user=user,
@@ -105,23 +109,38 @@ def profile_update():
     form = ProfileUpdateForm(obj=user)  # Pre-populate form with existing data
 
     if form.validate_on_submit():
+        try:
+            # Mengupdate data user
+            user.first_name = form.first_name.data
+            user.last_name = form.last_name.data
+            user.email = form.email.data
+            user.phone_number = form.phone_number.data
+            user.profile_picture = form.profile_picture.data
+            user.company = form.company.data
+            user.title = form.title.data
+            user.city = form.city.data
+            user.division = form.division.data
+            user.time_zone = form.time_zone.data
 
-        # Mengupdate data user
-        user.first_name = form.first_name.data
-        user.last_name = form.last_name.data
-        user.email = form.email.data
-        user.phone_number = form.phone_number.data
-        user.profile_picture = form.profile_picture.data
-        user.company = form.company.data
-        user.title = form.title.data
-        user.city = form.city.data
-        user.division = form.division.data
-        user.time_zone = form.time_zone.data
+            # Commit perubahan ke database
+            db.session.commit()
 
-        # Commit perubahan ke database
-        db.session.commit()
-        flash("Profile updated successfully.", "success")
-        return redirect(url_for("profile.index"))
+            current_app.logger.info(f"User {current_user.email} updated their profile.")
+            flash("Profile updated successfully.", "success")
+
+            # Audit trail
+            current_app.logger.info(f"Profile updated for user ID: {user.id}")
+
+            return redirect(url_for("profile.index"))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(
+                f"Error updating profile for user {user.email}: {e}"
+            )
+            flash(
+                "An error occurred while updating your profile. Please try again later.",
+                "danger",
+            )
 
     return render_template(
         "/users_management/profile_update.html", form=form, user=user
@@ -135,25 +154,42 @@ def change_password():
     form = ChangePasswordForm()
 
     if form.validate_on_submit():
-        # Check old password
-        if not bcrypt.check_password_hash(
-            current_user.password_hash, form.old_password.data
-        ):
-            flash("Old password is incorrect.", "error")
+        try:
+            # Check old password
+            if not bcrypt.check_password_hash(
+                current_user.password_hash, form.old_password.data
+            ):
+                flash("Old password is incorrect.", "error")
+                current_app.logger.warning(
+                    f"User {current_user.email} provided an incorrect old password."
+                )
+                return redirect(url_for("profile.index"))
+
+            # Check if new passwords match
+            if form.new_password.data != form.repeat_password.data:
+                flash("New passwords do not match.", "error")
+                return redirect(url_for("profile.index"))
+
+            # Update password
+            current_user.password_hash = bcrypt.generate_password_hash(
+                form.new_password.data
+            ).decode("utf-8")
+            db.session.commit()
+            flash("Password updated successfully.", "success")
+            current_app.logger.info(
+                f"User {current_user.email} changed their password."
+            )
             return redirect(url_for("profile.index"))
 
-        # Check if new passwords match
-        if form.new_password.data != form.repeat_password.data:
-            flash("New passwords do not match.", "error")
-            return redirect(url_for("profile.index"))
-
-        # Update password
-        current_user.password_hash = bcrypt.generate_password_hash(
-            form.new_password.data
-        ).decode("utf-8")
-        db.session.commit()
-        flash("Password updated successfully.", "success")
-        return redirect(url_for("profile.index"))
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(
+                f"Error changing password for user {current_user.email}: {e}"
+            )
+            flash(
+                "An error occurred while changing your password. Please try again later.",
+                "danger",
+            )
 
     # Handle form validation errors and return to profile page
     for field, errors in form.errors.items():
@@ -175,32 +211,46 @@ def upload_profile_picture():
     form_picture = ProfilePictureForm()
 
     if form_picture.validate_on_submit():
-        file = form_picture.profile_picture.data
+        try:
+            file = form_picture.profile_picture.data
 
-        if file:
-            # Ambil nama file dan ekstensi
-            file_extension = os.path.splitext(file.filename)[
-                1
-            ]  # Mengambil ekstensi file
-            # Format nama file
-            filename = (
-                f"{current_user.first_name} {current_user.last_name}{file_extension}"
+            if file:
+                # Ambil nama file dan ekstensi
+                file_extension = os.path.splitext(file.filename)[
+                    1
+                ]  # Mengambil ekstensi file
+                # Format nama file
+                filename = f"{current_user.first_name} {current_user.last_name}{file_extension}"
+                # Path lengkap untuk menyimpan file
+                file_path = os.path.join(
+                    current_app.static_folder, PROFILE_PICTURE_DIRECTORY, filename
+                )
+                file.save(file_path)
+
+                # Simpan path relatif dengan slash
+                current_user.profile_picture = os.path.join(
+                    PROFILE_PICTURE_DIRECTORY, filename
+                ).replace("\\", "/")
+                db.session.commit()
+
+                flash("Profile picture updated successfully.", "success")
+                current_app.logger.info(
+                    f"User {current_user.email} updated their profile picture."
+                )
+            else:
+                flash("No file selected.", "error")
+                current_app.logger.warning(
+                    f"User {current_user.email} attempted to upload an empty profile picture."
+                )
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(
+                f"Error uploading profile picture for user {current_user.email}: {e}"
             )
-            # Path lengkap untuk menyimpan file
-            file_path = os.path.join(
-                current_app.static_folder, PROFILE_PICTURE_DIRECTORY, filename
+            flash(
+                "An error occurred while uploading your profile picture. Please try again later.",
+                "danger",
             )
-            file.save(file_path)
-
-            # Simpan path relatif dengan slash
-            current_user.profile_picture = os.path.join(
-                PROFILE_PICTURE_DIRECTORY, filename
-            ).replace("\\", "/")
-            db.session.commit()
-
-            flash("Profile picture updated successfully.", "success")
-        else:
-            flash("No file selected.", "error")
 
     return redirect(url_for("profile.index"))
 
@@ -212,27 +262,35 @@ def toggle_2fa():
     form = User2FAEnableForm()
 
     if form.validate_on_submit():
-        new_2fa_status = form.is_2fa_enabled.data == "True"
+        try:
+            new_2fa_status = form.is_2fa_enabled.data == "True"
 
-        # Cek apakah status baru berbeda dari status saat ini
-        if current_user.is_2fa_enabled == new_2fa_status:
-            flash("Tidak ada perubahan pada pengaturan 2FA.", "info")
-            return redirect(url_for("profile.index"))
+            # Cek apakah status baru berbeda dari status saat ini
+            if current_user.is_2fa_enabled == new_2fa_status:
+                flash("Tidak ada perubahan pada pengaturan 2FA.", "info")
+                return redirect(url_for("profile.index"))
 
-        # Update status 2FA pada pengguna
-        current_user.is_2fa_enabled = new_2fa_status
-        db.session.commit()
+            # Update status 2FA pada pengguna
+            current_user.is_2fa_enabled = new_2fa_status
+            db.session.commit()
 
-        # Arahkan ke halaman yang sesuai
-        if new_2fa_status:
-            flash("2FA telah diaktifkan. Silakan setup 2FA.", "success")
-            return redirect(url_for("main.setup_2fa"))
-        else:
-            flash("2FA telah dinonaktifkan.", "success")
-            return redirect(url_for("profile.index"))
+            # Arahkan ke halaman yang sesuai
+            if new_2fa_status:
+                flash("2FA telah diaktifkan. Silakan setup 2FA.", "success")
+                current_app.logger.info(f"User {current_user.email} enabled 2FA.")
+                return redirect(url_for("main.setup_2fa"))
+            else:
+                flash("2FA telah dinonaktifkan.", "success")
+                current_app.logger.info(f"User {current_user.email} disabled 2FA.")
+                return redirect(url_for("profile.index"))
 
-    # Jika form tidak valid, kembalikan ke profil dengan pesan kesalahan
-    flash("Terjadi kesalahan saat memperbarui pengaturan 2FA.", "danger")
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(
+                f"Error toggling 2FA for user {current_user.email}: {e}"
+            )
+            flash("Terjadi kesalahan saat memperbarui pengaturan 2FA.", "danger")
+
     return redirect(url_for("profile.index"))
 
 
@@ -240,40 +298,29 @@ def toggle_2fa():
 @profile_bp.route("/mail_enabled", methods=["POST"])
 @login_required
 def mail_enabled():
-    email_verification = "email_verification" in request.form
-    user = User.query.get(current_user.id)
+    try:
+        email_verification = "email_verification" in request.form
+        user = User.query.get(current_user.id)
 
-    if email_verification and not user.is_verified:
-        send_verification_email(user)
-        flash("A verification email has been sent to your email address.", "info")
+        if email_verification and not user.is_verified:
+            send_verification_email(user)
+            flash("A verification email has been sent to your email address.", "info")
+            current_app.logger.info(
+                f"Verification email sent to user {current_user.email}."
+            )
+        else:
+            flash("Your email is already verified.", "warning")
+            current_app.logger.warning(
+                f"User {current_user.email} attempted to verify an already verified email."
+            )
 
-    # Update other user profile information if needed
-    db.session.commit()
+    except Exception as e:
+        current_app.logger.error(
+            f"Error in email verification for user {current_user.email}: {e}"
+        )
+        flash(
+            "An error occurred while sending the verification email. Please try again later.",
+            "danger",
+        )
 
     return redirect(url_for("profile.index"))
-
-
-# Mail verifikasi link
-@profile_bp.route("/verify_email/<token>")
-def verify_email(token):
-    email = verify_token(token)
-    if not email:
-        flash("The verification link is invalid or has expired.", "danger")
-        return redirect(url_for("main.login"))
-
-    user = User.query.filter_by(email=email).first()
-    if user and not user.is_verified:
-        user.is_verified = True
-        db.session.commit()
-
-        # Optionally, assign 'User' role
-        user_role = Role.query.filter_by(name="User").first()
-        if user_role and user_role not in user.roles:
-            user.roles.append(user_role)
-            db.session.commit()
-
-        flash("Your email has been verified!", "success")
-    else:
-        flash("Your email is already verified.", "info")
-
-    return redirect(url_for("users.dashboard"))

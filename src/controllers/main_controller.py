@@ -7,6 +7,7 @@ from flask import (
     request,
     session,
     current_app,
+    jsonify,
 )
 from flask_login import login_user, logout_user, current_user, login_required
 from src import db, bcrypt
@@ -27,18 +28,12 @@ error_bp = Blueprint("error", __name__)
 # Middleware untuk autentikasi dan otorisasi
 @main_bp.before_request
 def before_request_func():
-    # List halaman yang tidak perlu autentikasi (seperti login)
-    exempt_pages = ["main.login", "main.register"]  # Tambahkan halaman lain jika perlu
-
-    # Mengecek apakah halaman saat ini termasuk dalam halaman yang tidak perlu autentikasi
+    exempt_pages = ["main.login", "main.register"]
     if request.endpoint in exempt_pages:
         return None
 
-    # Mengecek apakah pengguna sudah terautentikasi
     if not current_user.is_authenticated:
-        # Menampilkan pesan flash
         flash("Unauthorized access. Please log in to access this page.", "danger")
-        # Mengarahkan pengguna ke halaman login
         return redirect(url_for("main.login"))
 
 
@@ -53,7 +48,7 @@ def setup_logging():
     current_app.logger.addHandler(handler)
 
 
-# Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
+# Menangani error 404
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
     return render_template("main/404.html"), 404
@@ -85,33 +80,33 @@ def register():
         email = form.email.data
         password = form.password.data
 
-        # Check if user already exists
-        existing_user = User.query.filter_by(email=email).first()
-        if existing_user:
-            flash("Alamat email sudah terdaftar", "error")
-            return redirect(url_for("main.register"))
+        try:
+            existing_user = User.query.filter_by(email=email).first()
+            if existing_user:
+                flash("Alamat email sudah terdaftar", "error")
+                return redirect(url_for("main.register"))
 
-        # Create new user with hashed password
-        new_user = User(
-            first_name=first_name,
-            last_name=last_name,
-            email=email,
-            password_hash=password,
-        )
+            new_user = User(
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                password_hash=bcrypt.generate_password_hash(password).decode("utf-8"),
+            )
 
-        # Add the user to the 'View' role
-        view_role = Role.query.filter_by(name="View").first()
-        if view_role:
-            new_user.roles.append(view_role)
+            view_role = Role.query.filter_by(name="View").first()
+            if view_role:
+                new_user.roles.append(view_role)
 
-        # Add new user to the database
-        db.session.add(new_user)
-        db.session.commit()
+            db.session.add(new_user)
+            db.session.commit()
 
-        # Log the user in after successful registration
-        login_user(new_user)
-        flash("Pendaftaran berhasil! Anda telah masuk.", "success")
-        return redirect(url_for(HOME_URL))
+            current_app.logger.info(f"User {new_user.email} successfully registered.")
+            login_user(new_user)
+            flash("Pendaftaran berhasil! Anda telah masuk.", "success")
+            return redirect(url_for(HOME_URL))
+        except Exception as e:
+            current_app.logger.error(f"Registration error for {email}: {str(e)}")
+            flash("Terjadi kesalahan saat pendaftaran. Silakan coba lagi.", "danger")
 
     return render_template("/main/register.html", form=form)
 
@@ -124,23 +119,32 @@ def login():
 
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
-        if user and bcrypt.check_password_hash(user.password_hash, form.password.data):
-            login_user(user)
+        try:
+            user = User.query.filter_by(email=form.email.data).first()
+            if user and bcrypt.check_password_hash(
+                user.password_hash, form.password.data
+            ):
+                login_user(user)
 
-            # Update last_login
-            user.last_login = datetime.utcnow()
-            db.session.commit()
+                user.last_login = datetime.utcnow()
+                db.session.commit()
 
-            # Check if user needs to verify their email
-            if not user.is_verified:
-                flash("Silakan verifikasi email Anda untuk akses penuh.", "warning")
-            if user.is_2fa_enabled:
-                session["pre_2fa"] = True
-                return redirect(url_for(VERIFY_2FA_URL))
-            return redirect(url_for(HOME_URL))
-        else:
-            flash("Email atau kata sandi tidak valid.", "error")
+                current_app.logger.info(f"User {user.email} logged in.")
+
+                if not user.is_verified:
+                    flash("Silakan verifikasi email Anda untuk akses penuh.", "warning")
+                if user.is_2fa_enabled:
+                    session["pre_2fa"] = True
+                    return redirect(url_for(VERIFY_2FA_URL))
+                return redirect(url_for(HOME_URL))
+            else:
+                current_app.logger.warning(
+                    f"Failed login attempt for {form.email.data}."
+                )
+                flash("Email atau kata sandi tidak valid.", "error")
+        except Exception as e:
+            current_app.logger.error(f"Login error: {str(e)}")
+            flash("Terjadi kesalahan saat login. Silakan coba lagi.", "danger")
 
     return render_template("/main/login.html", form=form)
 
@@ -149,50 +153,74 @@ def login():
 @main_bp.route("/logout")
 @login_required
 def logout():
-    logout_user()
-    session.pop("authenticated", None)  # Hapus status authenticated login dari sesi
-    session.pop("2fa_verified", None)  # Hapus status verifikasi 2FA dari sesi
+    try:
+        user_email = current_user.email
+        logout_user()
+        session.pop("authenticated", None)
+        session.pop("2fa_verified", None)
+        current_app.logger.info(f"User {user_email} logged out.")
+    except Exception as e:
+        current_app.logger.error(f"Logout error: {str(e)}")
+        flash("Terjadi kesalahan saat logout. Silakan coba lagi.", "danger")
+
     return redirect(url_for("main.login"))
 
 
-# Setup 2fa Google Authenticator dan Scan QR Code
+# Setup 2FA Google Authenticator dan Scan QR Code
 @main_bp.route("/setup-2fa")
 @login_required
 def setup_2fa():
     user = current_user
-    if not user.secret_token:
-        user.secret_token = pyotp.random_base32()
-        db.session.commit()
+    try:
+        if not user.secret_token:
+            user.secret_token = pyotp.random_base32()
+            db.session.commit()
 
-    totp = pyotp.TOTP(user.secret_token)
-    uri = totp.provisioning_uri(user.email, issuer_name="XNETMANAGER")
+        totp = pyotp.TOTP(user.secret_token)
+        uri = totp.provisioning_uri(user.email, issuer_name="XNETMANAGER")
 
-    qr = qrcode.QRCode()
-    qr.add_data(uri)
-    qr.make()
-    img = qr.make_image(fill_color="black", back_color="white")
-    buf = io.BytesIO()
-    img.save(buf)
-    img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+        qr = qrcode.QRCode()
+        qr.add_data(uri)
+        qr.make()
+        img = qr.make_image(fill_color="black", back_color="white")
+        buf = io.BytesIO()
+        img.save(buf)
+        img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
 
-    return render_template(
-        "main/setup_2fa.html", qr_image=img_b64, secret=user.secret_token
-    )
+        current_app.logger.info(f"User {user.email} set up 2FA.")
+        return render_template(
+            "main/setup_2fa.html", qr_image=img_b64, secret=user.secret_token
+        )
+    except Exception as e:
+        current_app.logger.error(f"2FA setup error for {user.email}: {str(e)}")
+        flash("Terjadi kesalahan saat setup 2FA. Silakan coba lagi.", "danger")
+        return redirect(url_for(HOME_URL))
 
 
-# verifikasi kode OTP Google Authenticator jika user mengaktifkan 2fa di user profile
+# Verifikasi kode OTP Google Authenticator jika user mengaktifkan 2FA di user profile
 @main_bp.route("/verify-2fa", methods=["GET", "POST"])
 @login_required
 def verify_2fa():
     form = TwoFactorForm()
     if form.validate_on_submit():
-        if current_user.is_otp_valid(form.otp.data):
-            current_user.is_2fa_enabled = True
-            db.session.commit()
-            session.pop("pre_2fa", None)
-            session["2fa_verified"] = True
-            flash("2FA verification successful. You are logged in!", "success")
-            return redirect(url_for(HOME_URL))
-        else:
-            flash("Invalid OTP. Please try again.", "error")
+        try:
+            if current_user.is_otp_valid(form.otp.data):
+                current_user.is_2fa_enabled = True
+                db.session.commit()
+                session.pop("pre_2fa", None)
+                session["2fa_verified"] = True
+                flash("2FA verification successful. You are logged in!", "success")
+                current_app.logger.info(
+                    f"User {current_user.email} successfully verified 2FA."
+                )
+                return redirect(url_for(HOME_URL))
+            else:
+                current_app.logger.warning(
+                    f"Invalid OTP attempt for {current_user.email}."
+                )
+                flash("Invalid OTP. Please try again.", "error")
+        except Exception as e:
+            current_app.logger.error(f"2FA verification error: {str(e)}")
+            flash("Terjadi kesalahan saat verifikasi 2FA. Silakan coba lagi.", "danger")
+
     return render_template("main/verify_2fa.html", form=form)

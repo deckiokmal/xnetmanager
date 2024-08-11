@@ -26,6 +26,7 @@ logging.basicConfig(level=logging.INFO)
 
 @roles_bp.before_app_request
 def setup_logging():
+    """Mengkonfigurasi logging untuk aplikasi."""
     current_app.logger.setLevel(logging.INFO)
     handler = current_app.logger.handlers[0]
     current_app.logger.addHandler(handler)
@@ -34,6 +35,7 @@ def setup_logging():
 # Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
+    current_app.logger.error(f"Page not found: {request.path}")
     return render_template("main/404.html"), 404
 
 
@@ -41,6 +43,7 @@ def page_not_found(error):
 @roles_bp.before_request
 def before_request_func():
     if not current_user.is_authenticated:
+        current_app.logger.warning(f"Unauthorized access attempt to: {request.path}")
         return jsonify({"message": "Unauthorized access"}), 401
 
 
@@ -54,13 +57,13 @@ def inject_user():
     return dict(first_name="", last_name="")
 
 
-
 # Halaman Roles
 @roles_bp.route("/user_role", methods=["GET", "POST"])
 @login_required
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def index():
+    """Menampilkan halaman utama untuk mengelola role dan pengguna."""
     all_roles = Role.query.all()  # Mengambil semua role
     all_users = User.query.all()  # Mengambil semua pengguna
 
@@ -81,7 +84,9 @@ def index():
     )  # Mengambil role untuk halaman ini
 
     pagination = Pagination(
-        page=page, per_page=per_page, total=total_roles,
+        page=page,
+        per_page=per_page,
+        total=total_roles,
     )
 
     return render_template(
@@ -103,15 +108,22 @@ def index():
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def create_role():
+    """Membuat role baru dan menyimpannya ke dalam database."""
     if request.method == "POST":
         role_name = request.form.get("name")
         role_permissions = request.form.getlist("permissions")
 
         if not role_name or not role_permissions:
-            flash("Role name dan permissions tidak boleh kosong!", "warning")
+            current_app.logger.warning(
+                f"User {current_user.email} gagal membuat role baru."
+            )
+            flash("Nama role dan permissions tidak boleh kosong!", "warning")
             return redirect(url_for("roles.index"))
 
         if Role.query.filter_by(name=role_name).first():
+            current_app.logger.warning(
+                f"User {current_user.email} gagal membuat role baru karena role sudah ada."
+            )
             flash("Role sudah ada!", "error")
             return redirect(url_for("roles.index"))
 
@@ -121,6 +133,9 @@ def create_role():
         )
         db.session.add(new_role)
         db.session.commit()
+        current_app.logger.info(
+            f"User {current_user.email} berhasil membuat role baru."
+        )
         flash("Role berhasil ditambah!", "success")
         return redirect(url_for("roles.index"))
 
@@ -134,6 +149,7 @@ def create_role():
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def role_update(role_id):
+    """Memperbarui role yang ada berdasarkan ID."""
     role = Role.query.get_or_404(role_id)  # Mengambil role berdasarkan ID
 
     if request.method == "POST":
@@ -142,10 +158,16 @@ def role_update(role_id):
         selected_users = request.form.getlist("users")
 
         if not role_name:
-            flash("Role name tidak boleh kosong!", "warning")
+            current_app.logger.warning(
+                f"User {current_user.email} gagal memperbarui role {role.name} karena nama role kosong."
+            )
+            flash("Nama role tidak boleh kosong!", "warning")
             return redirect(url_for("roles.role_update", role_id=role_id))
 
         if Role.query.filter(Role.id != role.id, Role.name == role_name).first():
+            current_app.logger.warning(
+                f"User {current_user.email} gagal memperbarui role {role.name} karena role dengan nama tersebut sudah ada."
+            )
             flash("Role dengan nama tersebut sudah ada!", "error")
         else:
             role.name = role_name
@@ -160,6 +182,9 @@ def role_update(role_id):
             role.users = [User.query.get(int(user_id)) for user_id in selected_users]
 
             db.session.commit()
+            current_app.logger.info(
+                f"User {current_user.email} berhasil memperbarui role {role.name}."
+            )
             flash("Role berhasil diubah.", "success")
             return redirect(url_for("roles.index"))
 
@@ -187,15 +212,22 @@ def role_update(role_id):
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def role_delete(role_id):
+    """Menghapus role dari database jika tidak ada asosiasi pengguna atau permissions."""
     role = Role.query.get_or_404(role_id)  # Mengambil role berdasarkan ID
 
     if role.users:
+        current_app.logger.warning(
+            f"User {current_user.email} mencoba menghapus role {role.name}, tetapi role ini terasosiasi dengan pengguna."
+        )
         flash(
             "Role tidak dapat dihapus karena masih terasosiasi dengan pengguna.",
             "warning",
         )
         return redirect(url_for("roles.index"))
     elif role.permissions:
+        current_app.logger.warning(
+            f"User {current_user.email} mencoba menghapus role {role.name}, tetapi role ini terasosiasi dengan permissions."
+        )
         flash(
             "Role tidak dapat dihapus karena masih terasosiasi dengan permissions.",
             "warning",
@@ -204,6 +236,9 @@ def role_delete(role_id):
 
     db.session.delete(role)
     db.session.commit()
+    current_app.logger.info(
+        f"User {current_user.email} berhasil menghapus role {role.name}."
+    )
     flash("Role berhasil dihapus.", "success")
     return redirect(url_for("roles.index"))
 
@@ -214,6 +249,7 @@ def role_delete(role_id):
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def add_user_to_role():
+    """Menambahkan pengguna ke role tertentu."""
     user_id = request.form.get("user_id")
     role_name = request.form.get("role_name")
 
@@ -221,30 +257,42 @@ def add_user_to_role():
     role = Role.query.filter_by(name=role_name).first()
 
     if not user:
-        flash("User not found", "error")
+        current_app.logger.warning(
+            f"User {current_user.email} gagal menambahkan role {role_name} karena pengguna tidak ditemukan."
+        )
+        flash("Pengguna tidak ditemukan", "error")
         return redirect(url_for("roles.index"))
 
     if not role:
-        flash("Role not found", "error")
+        current_app.logger.warning(
+            f"User {current_user.email} gagal menambahkan role {role_name} karena role tidak ditemukan."
+        )
+        flash("Role tidak ditemukan", "error")
         return redirect(url_for("roles.index"))
 
     if role not in user.roles:
         user.roles.append(role)
         db.session.commit()
-        flash(
-            f"User {user.email} berhasil ditambahkan ke role {role_name}.", "success"
+        current_app.logger.info(
+            f"User {current_user.email} berhasil menambahkan role {role_name} ke pengguna {user.email}."
         )
+        flash("Pengguna berhasil ditambahkan ke role.", "success")
     else:
+        current_app.logger.warning(
+            f"User {current_user.email} gagal menambahkan role {role_name} ke pengguna {user.email} karena role ini sudah ada."
+        )
         flash(f"User {user.email} sudah memiliki role {role_name}.", "warning")
 
     return redirect(url_for("roles.index"))
 
 
+# Menghapus pengguna dari role
 @roles_bp.route("/remove_user_from_role", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def remove_user_from_role():
+    """Menghapus pengguna dari role tertentu."""
     user_id = request.form.get("user_id")
     role_name = request.form.get("role_name")
 
@@ -252,11 +300,17 @@ def remove_user_from_role():
     role = Role.query.filter_by(name=role_name).first()
 
     if not user:
-        flash("User not found", "error")
+        current_app.logger.warning(
+            f"User {current_user.email} gagal menghapus role {role_name} dari pengguna karena pengguna tidak ditemukan."
+        )
+        flash("Pengguna tidak ditemukan", "error")
         return redirect(url_for("roles.index"))
 
     if not role:
-        flash("Role not found", "error")
+        current_app.logger.warning(
+            f"User {current_user.email} gagal menghapus role {role_name} dari pengguna karena role tidak ditemukan."
+        )
+        flash("Role tidak ditemukan", "error")
         return redirect(url_for("roles.index"))
 
     user_role = UserRoles.query.filter_by(user_id=user.id, role_id=role.id).first()
@@ -264,10 +318,14 @@ def remove_user_from_role():
     if user_role:
         db.session.delete(user_role)
         db.session.commit()
-        flash(
-            f"User {user.email} berhasil dihapus dari role {role_name}.", "success"
+        current_app.logger.info(
+            f"User {current_user.email} berhasil menghapus role {role_name} dari pengguna {user.email}."
         )
+        flash("Pengguna berhasil dihapus dari role.", "success")
     else:
+        current_app.logger.warning(
+            f"User {current_user.email} gagal menghapus role {role_name} dari pengguna {user.email} karena role ini tidak ada."
+        )
         flash(f"User {user.email} tidak memiliki role {role_name}.", "warning")
 
     return redirect(url_for("roles.index"))
@@ -279,7 +337,10 @@ def remove_user_from_role():
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def list_permissions():
+    """Menampilkan daftar Permissions"""
     permissions = Permission.query.all()  # Mengambil semua permissions
+    current_app.logger.info(f"User {current_user.email} accesing permissions page.")
+
     return render_template("role_management/list.html", permissions=permissions)
 
 
@@ -289,22 +350,32 @@ def list_permissions():
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def create_permission():
+    """Menambahkan Permissions baru dan menyimpannya ke database"""
     if request.method == "POST":
         name = request.form.get("name")
         description = request.form.get("description")
 
         if not name:
+            current_app.logger.warning(
+                f"User {current_user.email} gagal menambahkan permission {name} karena nama permission kosong."
+            )
             flash("Name is required!", "danger")
             return redirect(url_for("roles.create_permission"))
 
         if Permission.query.filter_by(name=name).first():
+            current_app.logger.warning(
+                f"User {current_user.email} gagal menambahkan permission {name} karena nama permission sudah tersedia."
+            )
             flash("Permission with this name already exists!", "danger")
             return redirect(url_for("roles.create_permission"))
 
         new_permission = Permission(name=name, description=description)
         db.session.add(new_permission)
         db.session.commit()
-        flash("Permission created successfully!", "success")
+        current_app.logger.info(
+            f"User {current_user.email} berhasil menambahkan permission {name}."
+        )
+        flash(f"berhasil menambahkan permission {name}", "success")
         return redirect(url_for("roles.list_permissions"))
 
     return render_template("role_management/create.html")
@@ -316,6 +387,7 @@ def create_permission():
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def update_permission(permission_id):
+    """Memperbarui permission"""
     permission = Permission.query.get_or_404(
         permission_id
     )  # Mengambil permission berdasarkan ID
@@ -325,6 +397,9 @@ def update_permission(permission_id):
         description = request.form.get("description")
 
         if not name:
+            current_app.logger.warning(
+                f"User {current_user.email} gagal memperbarui permission {name} karena nama permission kosong."
+            )
             flash("Name is required!", "danger")
             return redirect(
                 url_for("roles.update_permission", permission_id=permission_id)
@@ -333,7 +408,10 @@ def update_permission(permission_id):
         permission.name = name
         permission.description = description
         db.session.commit()
-        flash("Permission updated successfully!", "success")
+        current_app.logger.info(
+            f"User {current_user.email} berhasil memperbarui permission {name}"
+        )
+        flash("Permission berhasil diperbarui.", "success")
         return redirect(url_for("roles.list_permissions"))
 
     return render_template("role_management/update.html", permission=permission)
@@ -345,12 +423,16 @@ def update_permission(permission_id):
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def delete_permission(permission_id):
+    """Menghapus permission"""
     permission = Permission.query.get_or_404(
         permission_id
     )  # Mengambil permission berdasarkan ID
     db.session.delete(permission)
     db.session.commit()
-    flash("Permission deleted successfully!", "success")
+    current_app.logger.info(
+        f"User {current_user.email} berhasil menghapus permission: {permission.name}"
+    )
+    flash("Permission berhaisl dihapus!", "success")
     return redirect(url_for("roles.list_permissions"))
 
 
@@ -360,6 +442,7 @@ def delete_permission(permission_id):
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def add_permission_to_role():
+    """menambahkan permission ke dalam role"""
     role_id = request.form.get("role_id")
     permission_id = request.form.get("permission_id")
 
@@ -371,8 +454,14 @@ def add_permission_to_role():
     if permission not in role.permissions:
         role.permissions.append(permission)
         db.session.commit()
+        current_app.logger.info(
+            f"User {current_user.email} berhasil menambahkan permission {permission.name} ke role {role.name}"
+        )
         flash("Permission berhasil ditambahkan ke role.", "success")
     else:
+        current_app.logger.warning(
+            f"User {current_user.email} gagal menambahkan permission {permission.name} ke role {role.name}"
+        )
         flash("Permission sudah ada dalam role ini.", "warning")
 
     return redirect(url_for("roles.role_update", role_id=role_id))
@@ -384,8 +473,12 @@ def add_permission_to_role():
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="API Permissions")
 def api_permissions():
+    """API endpoint untuk memberikan seluruh data permission"""
     permissions = Permission.query.all()  # Mengambil semua permissions
     permissions_list = [{"id": p.id, "name": p.name} for p in permissions]
+    current_app.logger.warning(
+        f"User {current_user.email} access API permissions data."
+    )
     return jsonify(permissions_list)
 
 
@@ -397,4 +490,5 @@ def api_permissions():
 def api_users():
     users = User.query.all()  # Mengambil semua pengguna
     users_list = [{"id": u.id, "name": u.email} for u in users]
+    current_app.logger.warning(f"User {current_user.email} access API Users data.")
     return jsonify(users_list)

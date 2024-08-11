@@ -1,1 +1,1 @@
-/system identity set name="Hostname Baru"
+/system identity set name="Hostname_b"

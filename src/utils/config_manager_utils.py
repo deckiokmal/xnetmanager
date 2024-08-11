@@ -163,7 +163,7 @@ class ConfigurationManagerUtils:
             # Menggabungkan parameter YAML ke dalam template Jinja2
             rendered_config = template.render(yaml_params_dict)
             logging.info("Template berhasil dirender")
-            return json.dumps({"rendered_config": rendered_config, "status": "success"})
+            return rendered_config
         except Exception as e:
             error_message = f"Kesalahan: {e}"
             logging.error("Kesalahan saat merender template: %s", error_message)

@@ -1,1 +1,5 @@
-test
+testing file konfigurasi
+ini
+adalah
+file
+testing

@@ -1,10 +1,4 @@
-from flask import (
-    Blueprint,
-    render_template,
-    jsonify,
-    request,
-    current_app,
-)
+from flask import Blueprint, render_template, jsonify, request, current_app
 from flask_login import login_required, current_user
 from src.models.users_model import User
 from src.models.xmanager_model import DeviceManager, ConfigurationManager
@@ -16,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 import json
 
-# Membuat blueprint nm_bp dan error_bp
+# Membuat blueprint untuk Network Manager (nm_bp) dan Error Handling (error_bp)
 nm_bp = Blueprint("nm", __name__)
 error_bp = Blueprint("error", __name__)
 
@@ -26,6 +20,9 @@ logging.basicConfig(level=logging.INFO)
 
 @nm_bp.before_app_request
 def setup_logging():
+    """
+    Mengatur level logging untuk aplikasi.
+    """
     current_app.logger.setLevel(logging.INFO)
     handler = current_app.logger.handlers[0]
     current_app.logger.addHandler(handler)
@@ -34,12 +31,19 @@ def setup_logging():
 # Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
+    """
+    Menangani error 404 dan menampilkan halaman 404.
+    """
     return render_template("main/404.html"), 404
 
 
-# middleware untuk autentikasi dan otorisasi
+# Middleware untuk autentikasi dan otorisasi sebelum permintaan.
 @nm_bp.before_request
 def before_request_func():
+    """
+    Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
+    Jika tidak, mengembalikan pesan 'Unauthorized access'.
+    """
     if not current_user.is_authenticated:
         return jsonify({"message": "Unauthorized access"}), 401
 
@@ -47,6 +51,9 @@ def before_request_func():
 # Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @nm_bp.context_processor
 def inject_user():
+    """
+    Menyediakan first_name dan last_name pengguna yang terotentikasi ke dalam template.
+    """
     if current_user.is_authenticated:
         return dict(
             first_name=current_user.first_name, last_name=current_user.last_name
@@ -66,13 +73,18 @@ GEN_TEMPLATE_FOLDER = "xmanager/gen_templates"
     roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
 )
 def index():
+    """
+    Menampilkan halaman index Network Manager.
+    Fitur: Pencarian perangkat, pagination, dan pengambilan data konfigurasi.
+    """
     search_query = request.args.get("search", "")
 
-    # Ambil halaman dan per halaman dari argumen URL
+    # Ambil halaman dan jumlah per halaman dari argumen URL
     page, per_page, offset = get_page_args(
         page_parameter="page", per_page_parameter="per_page", per_page=10
     )
 
+    # Query perangkat berdasarkan pencarian atau semua perangkat jika tidak ada pencarian
     if search_query:
         devices_query = DeviceManager.query.filter(
             DeviceManager.device_name.ilike(f"%{search_query}%")
@@ -86,8 +98,10 @@ def index():
     devices = devices_query.limit(per_page).offset(offset).all()
     config_file = ConfigurationManager.query.all()
 
+    # Setup pagination
     pagination = Pagination(
-        page=page, per_page=per_page, total=total_devices, css_framework="bootstrap4"
+        page=page, per_page=per_page, 
+        total=total_devices,
     )
 
     return render_template(
@@ -102,6 +116,7 @@ def index():
     )
 
 
+# Endpoint untuk mengecek status perangkat
 @nm_bp.route("/check_status", methods=["POST"])
 @login_required
 @required_2fa
@@ -109,18 +124,22 @@ def index():
     roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
 )
 def check_status():
+    """
+    Memeriksa status setiap perangkat di database.
+    Mengembalikan status dalam format JSON untuk setiap perangkat.
+    """
     devices = DeviceManager.query.all()
-
     device_status = {}
+
+    # Mengecek status setiap perangkat
     for device in devices:
         check_device_status = ConfigurationManagerUtils(ip_address=device.ip_address)
         status_json = check_device_status.check_device_status_threaded()
 
         try:
+            # Parsing hasil JSON dari status perangkat
             status_dict = json.loads(status_json)
-            device_status[device.id] = status_dict[
-                "status"
-            ]  # Menggunakan 'status' dari hasil JSON
+            device_status[device.id] = status_dict["status"]
         except json.JSONDecodeError as e:
             logging.error("Error decoding JSON response: %s", e)
             device_status[device.id] = "error"
@@ -128,6 +147,7 @@ def check_status():
     return jsonify(device_status)
 
 
+# Endpoint untuk push konfigurasi ke perangkat
 @nm_bp.route("/push_configs", methods=["POST"])
 @login_required
 @required_2fa
@@ -135,16 +155,21 @@ def check_status():
     roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
 )
 def push_configs():
+    """
+    Mengirimkan konfigurasi ke perangkat yang dipilih.
+    Fitur: Memvalidasi input, membaca file konfigurasi, dan push konfigurasi secara paralel ke banyak perangkat.
+    """
     data = request.get_json()
     device_ips = data.get("devices", [])
     config_id = data.get("config_id")
 
+    # Validasi input
     if not device_ips:
         return jsonify({"success": False, "message": "No devices selected."}), 400
-
     if not config_id:
         return jsonify({"success": False, "message": "No config selected."}), 400
 
+    # Query perangkat dan konfigurasi berdasarkan input
     devices = DeviceManager.query.filter(DeviceManager.ip_address.in_(device_ips)).all()
     if not devices:
         return (
@@ -158,6 +183,7 @@ def push_configs():
     if not config:
         return jsonify({"success": False, "message": "Selected config not found."}), 404
 
+    # Membaca file konfigurasi
     def read_config(filename):
         config_path = os.path.join(
             current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
@@ -179,6 +205,7 @@ def push_configs():
     results = []
     success = True
 
+    # Fungsi untuk mengkonfigurasi perangkat
     def configure_device(device):
         nonlocal success
         try:
@@ -190,7 +217,6 @@ def push_configs():
             )
             response_json = config_utils.configure_device(config_content)
             response_dict = json.loads(response_json)
-            # Jika tidak ada pesan yang dikembalikan, set default message
             message = response_dict.get("message", "Konfigurasi sukses")
             status = response_dict.get("status", "success")
             return {
@@ -216,7 +242,8 @@ def push_configs():
                 "message": str(e),
             }
 
-    max_threads = 10  # Adjust as necessary
+    # Push konfigurasi ke perangkat secara paralel menggunakan threading
+    max_threads = 10  # Jumlah maksimal thread yang digunakan
     with ThreadPoolExecutor(max_threads) as executor:
         futures = {
             executor.submit(configure_device, device): device for device in devices

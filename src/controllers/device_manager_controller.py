@@ -20,34 +20,38 @@ import logging
 dm_bp = Blueprint("dm", __name__)
 error_bp = Blueprint("error", __name__)
 
-
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
 
 @dm_bp.before_app_request
 def setup_logging():
+    """Mengatur logging untuk aplikasi"""
     current_app.logger.setLevel(logging.INFO)
     handler = current_app.logger.handlers[0]
     current_app.logger.addHandler(handler)
 
 
-# Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
+    """Menangani error 404 dan mengarahkan ke halaman 404.html"""
+    current_app.logger.error(f"Error 404: {error}")
     return render_template("main/404.html"), 404
 
 
-# middleware untuk autentikasi dan otorisasi
 @dm_bp.before_request
 def before_request_func():
+    """Middleware untuk memastikan pengguna sudah terautentikasi sebelum akses"""
     if not current_user.is_authenticated:
+        current_app.logger.warning(
+            f"Unauthorized access attempt by {request.remote_addr}"
+        )
         return jsonify({"message": "Unauthorized access"}), 401
 
 
-# Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @dm_bp.context_processor
 def inject_user():
+    """Menambahkan informasi pengguna yang sedang login ke dalam konteks halaman"""
     if current_user.is_authenticated:
         return dict(
             first_name=current_user.first_name, last_name=current_user.last_name
@@ -55,8 +59,6 @@ def inject_user():
     return dict(first_name="", last_name="")
 
 
-
-# Halaman utama Device Manager
 @dm_bp.route("/dm", methods=["GET"])
 @login_required
 @required_2fa
@@ -66,16 +68,14 @@ def inject_user():
     page="Devices Management",
 )
 def index():
-    # Mendapatkan parameter pencarian dari URL
+    """Menampilkan halaman utama Device Manager dengan data perangkat dan pagination"""
     search_query = request.args.get("search", "").lower()
 
-    # Mendapatkan halaman saat ini dan jumlah entri per halaman
     page, per_page, offset = get_page_args(
         page_parameter="page", per_page_parameter="per_page", per_page=10
     )
 
     if search_query:
-        # Jika ada pencarian, filter perangkat berdasarkan query
         devices_query = DeviceManager.query.filter(
             DeviceManager.device_name.ilike(f"%{search_query}%")
             | DeviceManager.ip_address.ilike(f"%{search_query}%")
@@ -84,19 +84,17 @@ def index():
             | DeviceManager.created_by.ilike(f"%{search_query}%")
         )
     else:
-        # Jika tidak ada pencarian, ambil semua perangkat
         devices_query = DeviceManager.query
 
-    # Menghitung total perangkat dan mengambil perangkat untuk halaman saat ini
     total_devices = devices_query.count()
     devices = devices_query.limit(per_page).offset(offset).all()
 
-    # Membuat objek pagination
     pagination = Pagination(
         page=page, per_page=per_page, total=total_devices, css_framework="bootstrap4"
     )
 
-    # Menampilkan template dengan data perangkat dan pagination
+    current_app.logger.info(f"User {current_user.email} accessed Device Manager page.")
+
     return render_template(
         "/device_managers/index.html",
         devices=devices,
@@ -108,7 +106,6 @@ def index():
     )
 
 
-# Menambahkan perangkat baru
 @dm_bp.route("/device_create", methods=["POST"])
 @login_required
 @required_2fa
@@ -116,6 +113,7 @@ def index():
     roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
 )
 def device_create():
+    """Menambahkan perangkat baru ke dalam database"""
     device_name = request.form["device_name"]
     vendor = request.form["vendor"]
     ip_address = request.form["ip_address"]
@@ -124,20 +122,21 @@ def device_create():
     ssh = request.form["ssh"]
     description = request.form["description"]
 
-    # Mengecek apakah perangkat dengan IP atau nama sudah ada
     exist_address = DeviceManager.query.filter_by(ip_address=ip_address).first()
     exist_device = DeviceManager.query.filter_by(device_name=device_name).first()
     if exist_device or exist_address:
         flash("Device sudah terdaftar!", "info")
-    # Validasi input dari form
+        current_app.logger.info(
+            f"Duplicate device attempt: {device_name} or {ip_address}"
+        )
     elif not username or not password or not ssh:
         flash("Username, password, dan SSH tidak boleh kosong!", "info")
     elif not is_valid_ip(ip_address):
         flash("IP Address tidak valid!", "error")
+        current_app.logger.warning(f"Invalid IP attempt: {ip_address}")
     elif not ssh.isdigit():
         flash("SSH port harus angka!", "error")
     else:
-        # Menambahkan perangkat baru ke database
         new_device = DeviceManager(
             device_name=device_name,
             vendor=vendor,
@@ -151,12 +150,14 @@ def device_create():
         db.session.add(new_device)
         db.session.commit()
         flash("Device berhasil ditambah!", "success")
+        current_app.logger.info(
+            f"Device created: {device_name} by {current_user.email}"
+        )
         return redirect(url_for("dm.index"))
 
     return redirect(url_for("dm.index"))
 
 
-# Mengupdate informasi perangkat
 @dm_bp.route("/device_update/<int:device_id>", methods=["GET", "POST"])
 @login_required
 @required_2fa
@@ -164,6 +165,7 @@ def device_create():
     roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
 )
 def device_update(device_id):
+    """Mengupdate informasi perangkat di database"""
     device = DeviceManager.query.get(device_id)
 
     if request.method == "POST":
@@ -175,7 +177,6 @@ def device_update(device_id):
         new_ssh = request.form["ssh"]
         new_description = request.form["description"]
 
-        # Mengecek apakah nama perangkat atau IP sudah ada di perangkat lain
         exist_device = DeviceManager.query.filter(
             DeviceManager.device_name == new_device_name, DeviceManager.id != device.id
         ).first()
@@ -187,13 +188,15 @@ def device_update(device_id):
                 "Device name atau IP Address sudah ada. Silahkan masukkan yang lain!",
                 "error",
             )
+            current_app.logger.warning(
+                f"Duplicate update attempt for device ID {device_id}"
+            )
         elif not new_username or not new_password or not new_ssh:
             flash("Username, password dan SSH tidak boleh kosong.", "info")
             return render_template("/device_managers/device_update.html", device=device)
         elif not new_ssh.isdigit():
             flash("SSH port harus angka!", "error")
         else:
-            # Memperbarui informasi perangkat
             device.device_name = new_device_name
             device.vendor = new_vendor
             device.ip_address = new_ip_address
@@ -204,12 +207,14 @@ def device_update(device_id):
 
             db.session.commit()
             flash("Device update berhasil.", "success")
+            current_app.logger.info(
+                f"Device ID {device_id} updated by {current_user.email}"
+            )
             return redirect(url_for("dm.index"))
 
     return render_template("/device_managers/device_update.html", device=device)
 
 
-# Menghapus perangkat
 @dm_bp.route("/device_delete/<int:device_id>", methods=["POST"])
 @login_required
 @required_2fa
@@ -217,18 +222,22 @@ def device_update(device_id):
     roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
 )
 def device_delete(device_id):
+    """Menghapus perangkat dari database"""
     device = DeviceManager.query.get(device_id)
     if not device:
         flash("Device tidak ditemukan.", "info")
+        current_app.logger.warning(
+            f"Delete attempt for non-existent device ID {device_id}"
+        )
         return redirect(url_for("dm.index"))
 
     db.session.delete(device)
     db.session.commit()
     flash("Device telah dihapus.", "success")
+    current_app.logger.info(f"Device ID {device_id} deleted by {current_user.email}")
     return redirect(url_for("dm.index"))
 
 
-# Endpoint API get data all devices
 @dm_bp.route("/api/get_devices", methods=["GET"])
 @login_required
 @required_2fa
@@ -236,6 +245,7 @@ def device_delete(device_id):
     roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
 )
 def get_devices():
+    """Mendapatkan data semua perangkat dalam format JSON"""
     devices = DeviceManager.query.all()
     device_list = [
         {
@@ -250,10 +260,10 @@ def get_devices():
         }
         for device in devices
     ]
+    current_app.logger.info(f"User {current_user.email} retrieved all devices data.")
     return jsonify({"devices": device_list})
 
 
-# Endpoint untuk mendapatkan data perangkat berdasarkan ID
 @dm_bp.route("/api/get_device_data/<int:device_id>")
 @login_required
 @required_2fa
@@ -261,22 +271,23 @@ def get_devices():
     roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
 )
 def get_device_data(device_id):
+    """Mendapatkan data perangkat berdasarkan ID dalam format JSON"""
     try:
-        # Mengambil perangkat dari database berdasarkan ID
         device = DeviceManager.query.get_or_404(device_id)
-
-        # Mengembalikan data perangkat dalam format JSON
+        current_app.logger.info(
+            f"User {current_user.email} accessed data for device ID {device_id}"
+        )
         return jsonify(
             {
                 "ip_address": device.ip_address,
                 "username": device.username,
                 "password": device.password,
                 "ssh": device.ssh,
+                "device_name": device.device_name,
+                "vendor": device.vendor,
+                "description": device.description,
             }
         )
     except Exception as e:
-        # Log kesalahan dan kembalikan respon error
-        current_app.logger.error(
-            f"Error mendapatkan data perangkat ID {device_id}: {e}"
-        )
-        return jsonify({"error": str(e)}), 400
+        current_app.logger.error(f"Error retrieving device ID {device_id}: {str(e)}")
+        return jsonify({"error": "Data tidak ditemukan"}), 404

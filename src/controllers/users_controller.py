@@ -17,18 +17,18 @@ from .decorators import login_required, role_required, required_2fa
 from flask_paginate import Pagination, get_page_args
 import logging
 
-
-# Membuat blueprint users
+# Membuat blueprint users dan error
 users_bp = Blueprint("users", __name__)
 error_bp = Blueprint("error", __name__)
 
-
 # Setup logging
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 @users_bp.before_app_request
 def setup_logging():
+    """Setup logging configuration."""
     current_app.logger.setLevel(logging.INFO)
     handler = current_app.logger.handlers[0]
     current_app.logger.addHandler(handler)
@@ -37,19 +37,26 @@ def setup_logging():
 # Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
+    """Menangani halaman yang tidak ditemukan dengan menampilkan halaman 404."""
+    current_app.logger.warning(f"Page not found: {request.path}")  # Logging 404 error
     return render_template("main/404.html"), 404
 
 
-# middleware untuk autentikasi dan otorisasi
+# Middleware untuk autentikasi dan otorisasi
 @users_bp.before_request
 def before_request_func():
+    """Middleware untuk memastikan pengguna sudah terautentikasi sebelum mengakses halaman."""
     if not current_user.is_authenticated:
+        current_app.logger.info(
+            f"Unauthorized access attempt: {request.path}"
+        )  # Logging unauthorized access attempt
         return jsonify({"message": "Unauthorized access"}), 401
 
 
 # Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @users_bp.context_processor
 def inject_user():
+    """Menambahkan first_name dan last_name ke dalam konteks di semua halaman jika pengguna terautentikasi."""
     if current_user.is_authenticated:
         return dict(
             first_name=current_user.first_name, last_name=current_user.last_name
@@ -133,6 +140,7 @@ def index():
         # Check if user already exists
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
+            current_app.logger.warning(f"Registration attempt failed: {email} already exists")
             flash("Alamat email sudah terdaftar", "error")
             return redirect(url_for("users.index"))
 
@@ -153,6 +161,7 @@ def index():
         db.session.add(new_user)
         db.session.commit()
 
+        current_app.logger.info(f"New user created: {email}")
         flash("User berhasil ditambahkan.", "success")
         return redirect(url_for("users.index"))
 
@@ -177,10 +186,13 @@ def user_update(user_id):
     user = User.query.get_or_404(user_id)
     form = UserUpdateForm(obj=user)
 
+    current_app.logger.info(f"Updating user with ID: {user_id}")
+
     if form.validate_on_submit():
         # Memeriksa apakah email baru sudah ada di database
         if User.query.filter(User.email == form.email.data, User.id != user.id).first():
             flash("Email already exists. Please choose another email!", "info")
+            current_app.logger.warning(f"Update attempt failed: {form.email.data} already exists.")
             return render_template(
                 "/users_management/user_update.html", form=form, user=user
             )
@@ -207,10 +219,12 @@ def user_update(user_id):
             user.password_hash = bcrypt.generate_password_hash(
                 form.password.data
             ).decode("utf-8")
+            current_app.logger.info(f"Password updated for user ID: {user_id}")
 
         # Commit perubahan ke database
         db.session.commit()
         flash("User updated successfully.", "success")
+        current_app.logger.info(f"User updated successfully: {user_id}")
         return redirect(url_for("users.index"))
 
     return render_template("/users_management/user_update.html", form=form, user=user)
@@ -222,16 +236,21 @@ def user_update(user_id):
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
 def user_delete(user_id):
+    current_app.logger.info(f"Attempting to delete user with ID: {user_id}")
+
     if current_user.id == user_id:
         flash("Anda tidak bisa delete akun anda sendiri.", "warning")
+        current_app.logger.warning(f"User with ID: {user_id} attempted to delete their own account.")
         return redirect(url_for("users.index"))
 
     user = User.query.get(user_id)
     if not user:
         flash("User tidak ditemukan.", "info")
+        current_app.logger.info(f"User with ID: {user_id} not found for deletion.")
         return redirect(url_for("users.index"))
 
     db.session.delete(user)
     db.session.commit()
     flash("User telah dihapus.", "success")
+    current_app.logger.info(f"User with ID: {user_id} has been deleted successfully.")
     return redirect(url_for("users.index"))
