@@ -1,3 +1,6 @@
 .env
 .venv/
 migrations/
+instance/
+**/__pycache__/
+__pycache__/
