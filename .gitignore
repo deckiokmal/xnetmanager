@@ -6,3 +6,4 @@ instance/
 __pycache__/
 docker/
 setupProduction/
+**/../__pycache__/

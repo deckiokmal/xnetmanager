@@ -288,19 +288,17 @@
             })
                 .then(response => response.json())
                 .then(data => {
-                    // Siapkan HTML untuk tabel hasil push config
+                    console.log("Response data:", data);  // Debugging log
                     let tableHTML = '<table class="table table-bordered"><thead><tr><th>Device Name</th><th>IP Address</th><th>Status</th><th>Message</th></tr></thead><tbody>';
 
                     data.results.forEach(result => {
-                        tableHTML += `<tr><td>${result.device_name}</td><td>${result.ip}</td><td>${result.status}</td><td>${result.message}</td></tr>`;
+                        tableHTML += `<tr><td>${result.device_name}</td><td>${result.ip}</td><td>${result.status}</td><td>${result.message || 'Konfigurasi sukses'}</td></tr>`;
                     });
 
                     tableHTML += '</tbody></table>';
 
-                    // Tampilkan hasil dalam modal
                     document.getElementById("pushConfigResultTable").innerHTML = tableHTML;
 
-                    // Sembunyikan modal pemilihan config dan tampilkan modal hasil push config
                     const selectConfigModal = bootstrap.Modal.getInstance(document.getElementById("selectConfigModal"));
                     selectConfigModal.hide();
 
@@ -315,6 +313,7 @@
             alert("Please select a config.");
         }
     });
+
 
 </script>
 {% endblock %}

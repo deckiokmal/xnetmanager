@@ -14,6 +14,7 @@ from .decorators import login_required, role_required, required_2fa
 from flask_paginate import Pagination, get_page_args
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
+import json
 
 # Membuat blueprint nm_bp dan error_bp
 nm_bp = Blueprint("nm", __name__)
@@ -101,7 +102,6 @@ def index():
     )
 
 
-# Endpoint untuk cek status perangkat
 @nm_bp.route("/check_status", methods=["POST"])
 @login_required
 @required_2fa
@@ -114,14 +114,20 @@ def check_status():
     device_status = {}
     for device in devices:
         check_device_status = ConfigurationManagerUtils(ip_address=device.ip_address)
-        check_device_status.check_device_status_threaded()
+        status_json = check_device_status.check_device_status_threaded()
 
-        device_status[device.id] = check_device_status.device_status
+        try:
+            status_dict = json.loads(status_json)
+            device_status[device.id] = status_dict[
+                "status"
+            ]  # Menggunakan 'status' dari hasil JSON
+        except json.JSONDecodeError as e:
+            logging.error("Error decoding JSON response: %s", e)
+            device_status[device.id] = "error"
 
     return jsonify(device_status)
 
 
-# Endpoint Push Config for multiple devices
 @nm_bp.route("/push_configs", methods=["POST"])
 @login_required
 @required_2fa
@@ -173,7 +179,6 @@ def push_configs():
     results = []
     success = True
 
-    # Use ThreadPoolExecutor to manage threads
     def configure_device(device):
         nonlocal success
         try:
@@ -183,12 +188,24 @@ def push_configs():
                 password=device.password,
                 ssh=device.ssh,
             )
-            message, status = config_utils.configure_device(config_content)
+            response_json = config_utils.configure_device(config_content)
+            response_dict = json.loads(response_json)
+            # Jika tidak ada pesan yang dikembalikan, set default message
+            message = response_dict.get("message", "Konfigurasi sukses")
+            status = response_dict.get("status", "success")
             return {
                 "device_name": device.device_name,
                 "ip": device.ip_address,
                 "status": status,
                 "message": message,
+            }
+        except json.JSONDecodeError as e:
+            logging.error("Error decoding JSON response: %s", e)
+            return {
+                "device_name": device.device_name,
+                "ip": device.ip_address,
+                "status": "error",
+                "message": "Error decoding JSON response",
             }
         except Exception as e:
             logging.error("Error configuring device %s: %s", device.ip_address, e)
@@ -199,7 +216,6 @@ def push_configs():
                 "message": str(e),
             }
 
-    # Create a ThreadPoolExecutor with a maximum number of threads
     max_threads = 10  # Adjust as necessary
     with ThreadPoolExecutor(max_threads) as executor:
         futures = {
@@ -213,5 +229,3 @@ def push_configs():
                 success = False
 
     return jsonify({"success": success, "results": results})
-
-
