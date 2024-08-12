@@ -13,6 +13,7 @@ from flask_login import login_user, logout_user, current_user, login_required
 from src import db, bcrypt
 from src.models.users_model import User, Role
 from src.utils.forms_utils import RegisterForm, LoginForm, TwoFactorForm
+from src.utils.LoginUtils import LoginUtils
 import logging
 from datetime import datetime
 import pyotp
@@ -119,8 +120,12 @@ def login():
 
     form = LoginForm()
     if form.validate_on_submit():
+        username = form.email.data
+        if not LoginUtils.check_login_attempts(username):
+            return redirect(url_for("main.login"))
+
         try:
-            user = User.query.filter_by(email=form.email.data).first()
+            user = User.query.filter_by(email=username).first()
             if user and bcrypt.check_password_hash(
                 user.password_hash, form.password.data
             ):
@@ -136,12 +141,15 @@ def login():
                 if user.is_2fa_enabled:
                     session["pre_2fa"] = True
                     return redirect(url_for(VERIFY_2FA_URL))
+                LoginUtils.reset_login_attempts(
+                    username
+                )  # Reset percobaan login setelah berhasil
                 return redirect(url_for(HOME_URL))
             else:
-                current_app.logger.warning(
-                    f"Failed login attempt for {form.email.data}."
-                )
-                flash("Email atau kata sandi tidak valid.", "error")
+                current_app.logger.warning(f"Failed login attempt for {username}.")
+                LoginUtils.increment_login_attempts(
+                    username
+                )  # Tambahkan percobaan login gagal
         except Exception as e:
             current_app.logger.error(f"Login error: {str(e)}")
             flash("Terjadi kesalahan saat login. Silakan coba lagi.", "danger")

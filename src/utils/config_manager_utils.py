@@ -7,8 +7,6 @@ import platform
 import json
 import logging
 import time
-import os
-from flask import current_app
 
 # Konfigurasi logging
 logging.basicConfig(
