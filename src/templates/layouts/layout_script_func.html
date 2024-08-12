@@ -13,3 +13,18 @@
             element.dataset.bsTheme == "light" ? "dark" : "light";
     }
 </script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Waktu delay untuk menghilangkan alert (dalam milidetik)
+        var delay = 3000;
+
+        var alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function (alert) {
+            setTimeout(function () {
+                alert.classList.remove('show');
+                alert.classList.add('fade');
+            }, delay);
+        });
+    });
+</script>
