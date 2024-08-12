@@ -126,7 +126,9 @@ def login():
 
         try:
             user = User.query.filter_by(email=username).first()
-            if user and bcrypt.check_password_hash(
+            if not user:
+                flash(f"User belum terdaftar!. Silahkan register", "warning")
+            elif user and bcrypt.check_password_hash(
                 user.password_hash, form.password.data
             ):
                 login_user(user)
