@@ -90,7 +90,7 @@ def register():
                 first_name=first_name,
                 last_name=last_name,
                 email=email,
-                password_hash=bcrypt.generate_password_hash(password).decode("utf-8"),
+                password_hash=password,
             )
 
             view_role = Role.query.filter_by(name="View").first()
