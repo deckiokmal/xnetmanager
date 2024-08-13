@@ -196,6 +196,9 @@ def device_update(device_id):
             return render_template("/device_managers/device_update.html", device=device)
         elif not new_ssh.isdigit():
             flash("SSH port harus angka!", "error")
+        elif not is_valid_ip(new_ip_address):
+            flash("IP Address tidak valid!", "error")
+            current_app.logger.warning(f"Invalid IP attempt: {new_ip_address}")
         else:
             device.device_name = new_device_name
             device.vendor = new_vendor
