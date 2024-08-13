@@ -113,9 +113,11 @@ class ConfigurationManagerUtils:
             if "Reply from" in response.stdout or "reply from" in response.stdout:
                 self.device_status = True
                 status_message = "Perangkat online"
+                status = "success"
             else:
                 self.device_status = False
                 status_message = "Perangkat offline"
+                status = "error"
 
             logging.info(
                 "Status perangkat diperiksa untuk %s dalam %.2fs: %s",
@@ -123,7 +125,7 @@ class ConfigurationManagerUtils:
                 elapsed_time,
                 status_message,
             )
-            return json.dumps({"message": status_message, "status": "success"})
+            return json.dumps({"message": status_message, "status": status})
         except Exception as e:
             error_message = f"Kesalahan: {e}"
             logging.error(

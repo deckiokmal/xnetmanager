@@ -186,7 +186,8 @@
                     const statusIndicator = document.getElementById("statusIndicator" + deviceId);
                     statusIndicator.classList.remove("status-indicator-green", "status-indicator-red");
 
-                    if (data[deviceId]) {
+                    // Ubah logika berdasarkan status yang dikembalikan dari server
+                    if (data[deviceId] === "success") {
                         statusIndicator.classList.add("status-indicator-green");
                     } else {
                         statusIndicator.classList.add("status-indicator-red");

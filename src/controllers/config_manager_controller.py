@@ -161,7 +161,11 @@ def check_status():
         try:
             # Parsing hasil JSON dari status perangkat
             status_dict = json.loads(status_json)
-            device_status[device.id] = status_dict["status"]
+            # Set status berdasarkan hasil ping
+            if status_dict["status"] == "success":
+                device_status[device.id] = "success"
+            else:
+                device_status[device.id] = "error"
         except json.JSONDecodeError as e:
             logging.error("Error decoding JSON response: %s", e)
             device_status[device.id] = "error"
