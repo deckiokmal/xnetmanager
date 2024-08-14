@@ -12,6 +12,8 @@
 <button type="button" class="btn btn-secondary ms-2" data-bs-toggle="modal" data-bs-target="#createModal">
     <i class="fas fa-plus"></i>
 </button>
+<button id="generateWithAIButton">Generate Template with AI</button>
+<button id="validateAndFixWithAIButton">Validate & Fix Template with AI</button>
 {% endblock %}
 {% block button_group3 %}
 <!-- Tombol untuk Manage Templates -->
@@ -233,6 +235,50 @@
         timeout = setTimeout(function () {
             document.getElementById('searchForm').submit();
         }, 1000); // 1000 ms = 1 detik
+    });
+</script>
+
+<script>
+    document.getElementById("generateWithAIButton").addEventListener("click", function () {
+        const userInput = prompt("Please enter the details for your network configuration template:");
+
+        fetch("/generate_template_with_ai", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ user_input: userInput })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert("Error: " + data.error);
+                } else {
+                    alert("Template generated successfully.");
+                }
+            })
+            .catch(error => console.error("Error:", error));
+    });
+
+    document.getElementById("validateAndFixWithAIButton").addEventListener("click", function () {
+        const userTemplate = document.getElementById("templateContent").value;
+
+        fetch("/validate_and_fix_template_with_ai", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ user_template: userTemplate })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert("Error: " + data.error);
+                } else {
+                    alert("Template validated and fixed successfully.");
+                }
+            })
+            .catch(error => console.error("Error:", error));
     });
 </script>
 {% endblock %}

@@ -12,6 +12,8 @@ from flask_login import login_required, current_user
 from src import db
 from src.models.xmanager_model import TemplateManager, ConfigurationManager
 from src.utils.config_manager_utils import ConfigurationManagerUtils
+from src.utils.openai_utils import generate_chatgpt_response
+from src.utils.template_validation import validate_jinja2, validate_yaml
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
@@ -904,3 +906,167 @@ def configuration_manual_create():
 
     flash("File konfigurasi berhasil dibuat.", "success")
     return redirect(url_for("tm.template_results"))
+
+
+@tm_bp.route("/generate_template_with_ai", methods=["POST"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Templates"],
+    page="Templates Management",
+)
+def generate_template_with_ai():
+    user_input = request.json.get("user_input")
+    prompt = f"Help me create a network configuration template using Jinja2. The user provided input: {user_input}"
+
+    try:
+        generated_template = generate_chatgpt_response(prompt)
+
+        if not generated_template:
+            flash("Failed to generate template using AI.", "error")
+            return redirect(url_for("tm.index"))
+
+        # Lakukan validasi pada template yang dihasilkan
+        if not validate_jinja2(generated_template):
+            flash("Generated template has invalid Jinja2 syntax", "error")
+            return redirect(url_for("tm.index"))
+
+        # Simpan template yang dihasilkan ke database atau file
+        # Ambil data dari form
+        vendor = request.form.get("vendor")
+        version = request.form.get("version")
+        description = request.form.get("description")
+        template_content = request.form.get("template_content")
+        parameter_content = request.form.get("parameter_content")
+
+        current_app.logger.info(
+            f"Attempting to create a manual template by {current_user.email}"
+        )  # Logging template creation attempt
+
+        # Validasi data vendor tidak boleh kosong
+        if not vendor:
+            flash("Data vendor tidak boleh kosong!", "info")
+            current_app.logger.warning(
+                "Vendor field is empty"
+            )  # Logging missing vendor field
+            return redirect(request.url)
+
+        # Buat nama file dengan format vendor_tanggal
+        gen_filename = generate_random_filename(vendor)
+        template_filename = f"{gen_filename}.j2"
+        parameter_filename = f"{gen_filename}.yml"
+
+        # Tentukan path file
+        template_path = os.path.join(
+            current_app.static_folder, RAW_TEMPLATE_FOLDER, template_filename
+        )
+        parameter_path = os.path.join(
+            current_app.static_folder, RAW_TEMPLATE_FOLDER, parameter_filename
+        )
+
+        # Pastikan newline konsisten dan tidak ada newline tambahan
+        if template_content:
+            template_content = (
+                template_content.replace("\r\n", "\n").replace("\r", "\n").strip()
+            )
+        if parameter_content:
+            parameter_content = (
+                parameter_content.replace("\r\n", "\n").replace("\r", "\n").strip()
+            )
+
+        # Simpan konten template ke dalam file
+        try:
+            with open(template_path, "w", encoding="utf-8") as template_file:
+                template_file.write(template_content)
+            current_app.logger.info(
+                f"Successfully saved template content to file: {template_path}"
+            )  # Logging successful template save
+        except Exception as e:
+            current_app.logger.error(
+                f"Error saving template content to file: {e}"
+            )  # Logging file save error
+            flash("Gagal menyimpan konten template.", "error")
+            return redirect(request.url)
+
+        # Simpan konten parameter ke dalam file
+        try:
+            with open(parameter_path, "w", encoding="utf-8") as parameter_file:
+                parameter_file.write(parameter_content)
+            current_app.logger.info(
+                f"Successfully saved parameter content to file: {parameter_path}"
+            )  # Logging successful parameter save
+        except Exception as e:
+            current_app.logger.error(
+                f"Error saving parameter content to file: {e}"
+            )  # Logging file save error
+            flash("Gagal menyimpan konten parameter.", "error")
+            return redirect(request.url)
+
+        # Simpan data ke dalam database
+        try:
+            new_template = TemplateManager(
+                template_name=template_filename,
+                parameter_name=parameter_filename,
+                vendor=vendor,
+                version=version,
+                description=description,
+                created_by=current_user.email,
+            )
+            db.session.add(new_template)
+            db.session.commit()
+            current_app.logger.info(
+                f"Successfully added new template to database: {template_filename}"
+            )  # Logging successful database save
+        except Exception as e:
+            current_app.logger.error(
+                f"Error saving new template to database: {e}"
+            )  # Logging database save error
+            flash("Gagal menyimpan template ke database.", "error")
+            return redirect(request.url)
+
+            flash("Template generated successfully using AI.", "success")
+            return redirect(url_for("tm.index"))
+    except Exception as e:
+        current_app.logger.error(f"Error generating template with AI: {e}")
+        flash("Error generating template with AI.", "error")
+    return redirect(url_for("tm.index"))
+
+
+@tm_bp.route("/validate_and_fix_template_with_ai", methods=["POST"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Templates"],
+    page="Templates Management",
+)
+def validate_and_fix_template_with_ai():
+    user_template = request.json.get("user_template")
+
+    if validate_jinja2(user_template) and validate_yaml(user_template):
+        flash("Template is valid.", "success")
+        return redirect(url_for("tm.index"))
+
+    prompt = f"The following network configuration template has errors. Please fix it: {user_template}"
+
+    try:
+        fixed_template = generate_chatgpt_response(prompt)
+
+        if not fixed_template:
+            flash("Failed to fix template using AI.", "error")
+            return redirect(url_for("tm.index"))
+
+        if not validate_jinja2(fixed_template):
+            flash("Fixed template has invalid Jinja2 syntax", "error")
+            return redirect(url_for("tm.index"))
+
+        # Simpan template yang diperbaiki ke database atau file
+        # (Tambahkan logika untuk menyimpan template yang diperbaiki ke dalam database atau file)
+
+        flash("Template fixed successfully using AI.", "success")
+        return redirect(url_for("tm.index"))
+    except Exception as e:
+        current_app.logger.error(f"Error fixing template with AI: {e}")
+        flash("Error fixing template with AI.", "error")
+        return redirect(url_for("tm.index"))

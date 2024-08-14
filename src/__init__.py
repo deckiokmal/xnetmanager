@@ -13,6 +13,7 @@ from src.utils.mask_password_utils import mask_password
 from src.config import DevelopmentConfig, TestingConfig, ProductionConfig
 from flask_mail import Mail
 from flask_talisman import Talisman
+import openai
 
 # Load .env file variable
 load_dotenv()
@@ -41,6 +42,9 @@ def create_app(config_class=None):
         app.config.from_object(ProductionConfig)
     else:
         raise ValueError("Invalid CONFIG_NAME")
+
+    # Inisiasi pustaka OpenAI dengan API key
+    openai.api_key = decouple_config("OPENAI_API_KEY")
 
     # Initialize extensions
     bcrypt.init_app(app)
