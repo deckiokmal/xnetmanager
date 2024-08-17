@@ -1,62 +1,57 @@
 {% extends "/layouts/layout.html" %}
 {% block title %}Update Template{% endblock %}
 {% block content %}
-<!-- Konten Halaman Update Template -->
-
+<!-- Page Content for Updating Template -->
 <div class="card position-relative py-4 px-4">
     <div class="card-header mb-3">
         Template Update
     </div>
-    <!-- Form untuk memperbarui informasi template -->
     <form action="{{ url_for('tm.template_update', template_id=template.id) }}" method="post">
         <div class="row mb-3">
             <div class="col-md-6">
                 <label for="template_name" class="form-label">Template Filename</label>
                 <input type="text" class="form-control" value="{{ template.template_name }}" id="template_name"
-                    name="template_name">
+                    name="template_name" required>
             </div>
             <div class="col-md-6">
                 <label for="parameter_name" class="form-label">Parameter Filename</label>
                 <input type="text" class="form-control" value="{{ template.parameter_name }}" id="parameter_name"
-                    name="parameter_name">
+                    name="parameter_name" required>
             </div>
         </div>
         <div class="row mb-3">
             <div class="col-md-6">
                 <label for="vendor" class="form-label">Vendor Name</label>
-                <input type="text" class="form-control" value="{{ template.vendor }}" id="vendor" name="vendor">
+                <input type="text" class="form-control" value="{{ template.vendor }}" id="vendor" name="vendor"
+                    required>
             </div>
             <div class="col-md-6">
                 <label for="version" class="form-label">Version Name</label>
-                <input type="text" class="form-control" value="{{ template.version }}" id="version" name="version">
+                <input type="text" class="form-control" value="{{ template.version }}" id="version" name="version"
+                    required>
             </div>
         </div>
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label for="description" class="form-label">Deskripsi</label>
-                <input type="text" class="form-control" value="{{ template.description }}" id="description"
-                    name="description">
-            </div>
+        <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            <input type="text" class="form-control" value="{{ template.description }}" id="description"
+                name="description">
         </div>
         <div class="mb-3">
             <label for="template_content" class="form-label">Template Content</label>
-            <textarea name="template_content" id="template_content" rows="5"
-                class="form-control">{{template_content}}</textarea>
+            <textarea name="template_content" id="template_content" rows="5" class="form-control"
+                required>{{ template_content }}</textarea>
         </div>
         <div class="mb-3">
             <label for="parameter_content" class="form-label">Parameter Content</label>
-            <textarea name="parameter_content" id="parameter_content" rows="5"
-                class="form-control">{{parameter_content}}</textarea>
+            <textarea name="parameter_content" id="parameter_content" rows="5" class="form-control"
+                required>{{ parameter_content }}</textarea>
         </div>
-        <!-- Tombol untuk menyimpan perubahan dan tombol untuk kembali ke halaman utama -->
         <button type="submit" class="btn btn-primary">
-            <i class="fa-solid fa-check"></i>
+            <i class="fas fa-check"></i> Save Changes
         </button>
         <a class="btn btn-secondary" href="{{ url_for('tm.index') }}">
-            <i class="fa-solid fa-arrow-left"></i>
+            <i class="fas fa-arrow-left"></i> Back
         </a>
     </form>
 </div>
-
-<!-- Akhir Konten Halaman -->
 {% endblock %}

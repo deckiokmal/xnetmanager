@@ -12,8 +12,7 @@ from flask_login import login_required, current_user
 from src import db
 from src.models.xmanager_model import TemplateManager, ConfigurationManager
 from src.utils.config_manager_utils import ConfigurationManagerUtils
-from src.utils.openai_utils import generate_chatgpt_response
-from src.utils.template_validation import validate_jinja2, validate_yaml
+from src.utils.openai_utils import validate_generated_template_with_openai
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
@@ -31,7 +30,6 @@ error_bp = Blueprint("error", __name__)
 logging.basicConfig(level=logging.INFO)
 
 
-# Fungsi untuk setup logging pada aplikasi
 @tm_bp.before_app_request
 def setup_logging():
     current_app.logger.setLevel(logging.INFO)
@@ -39,24 +37,21 @@ def setup_logging():
     current_app.logger.addHandler(handler)
 
 
-# Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
-    current_app.logger.error(f"Error 404: {error}")  # Logging error 404
+    current_app.logger.error(f"Error 404: {error}")
     return render_template("main/404.html"), 404
 
 
-# Middleware untuk autentikasi dan otorisasi
 @tm_bp.before_request
 def before_request_func():
     if not current_user.is_authenticated:
         current_app.logger.warning(
             f"Unauthorized access attempt by {request.remote_addr}"
-        )  # Logging akses tidak sah
+        )
         return jsonify({"message": "Unauthorized access"}), 401
 
 
-# Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @tm_bp.context_processor
 def inject_user():
     if current_user.is_authenticated:
@@ -66,25 +61,50 @@ def inject_user():
     return dict(first_name="", last_name="")
 
 
-# Folder untuk template
-RAW_TEMPLATE_FOLDER = "xmanager/raw_templates"
-GEN_TEMPLATE_FOLDER = "xmanager/gen_templates"
-TEMPLE_EXTENSIONS = {"j2"}
-PARAMS_EXTENSIONS = {"yml", "yaml"}
+# --------------------------------------------------------------------------------
+# Bagian Template Management
+# --------------------------------------------------------------------------------
 
 
-# Fungsi pembantu untuk menghasilkan nama file acak
+def allowed_file(filename, allowed_extensions):
+    """Memeriksa apakah ekstensi file termasuk dalam ekstensi yang diperbolehkan."""
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in allowed_extensions
+
+
+def save_uploaded_file(file, upload_folder):
+    filename = secure_filename(file.filename)
+    file_path = os.path.join(current_app.static_folder, upload_folder, filename)
+    file.save(file_path)
+    current_app.logger.info(f"File uploaded: {filename}")
+    return filename
+
+
+def read_file(filepath):
+    try:
+        with open(filepath, "r", encoding="utf-8") as file:
+            return file.read()
+    except FileNotFoundError:
+        current_app.logger.error(f"File not found: {filepath}")
+        return None
+    except Exception as e:
+        current_app.logger.error(f"Error reading file {filepath}: {e}")
+        return None
+
+
 def generate_random_filename(vendor_name):
     random_str = "".join(random.choices(string.ascii_letters + string.digits, k=8))
     date_str = datetime.now().strftime("%d.%m.%Y_%H.%M.%S")
     filename = f"{vendor_name}_{random_str}_{date_str}"
-    current_app.logger.info(
-        f"Generated random filename: {filename}"
-    )  # Logging nama file yang dihasilkan
+    current_app.logger.info(f"Generated random filename: {filename}")
     return filename
 
 
-# Route untuk menampilkan daftar template
+RAW_TEMPLATE_FOLDER = "xmanager/raw_templates"
+GEN_TEMPLATE_FOLDER = "xmanager/gen_templates"
+TEMPLATE_EXTENSIONS = {"j2"}
+PARAMS_EXTENSIONS = {"yml", "yaml"}
+
+
 @tm_bp.route("/tm", methods=["GET"])
 @login_required
 @required_2fa
@@ -98,7 +118,6 @@ def index():
     per_page = request.args.get("per_page", 10, type=int)
     search_query = request.args.get("search", "")
 
-    # Mencari template berdasarkan query pencarian
     query = TemplateManager.query
     if search_query:
         query = query.filter(
@@ -118,18 +137,6 @@ def index():
     )
 
 
-# Validasi ekstensi file untuk template dan parameter
-def allowed_file_temple(filename):
-    """Memeriksa apakah ekstensi file termasuk dalam ekstensi template yang diperbolehkan."""
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in TEMPLE_EXTENSIONS
-
-
-def allowed_file_params(filename):
-    """Memeriksa apakah ekstensi file termasuk dalam ekstensi parameter yang diperbolehkan."""
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in PARAMS_EXTENSIONS
-
-
-# Route untuk meng-upload template
 @tm_bp.route("/template_upload", methods=["POST"])
 @login_required
 @required_2fa
@@ -140,8 +147,6 @@ def allowed_file_params(filename):
 )
 def template_upload():
     """Meng-handle upload file template dan parameter serta menyimpan data ke database."""
-
-    # Memeriksa apakah file 'j2' dan 'yaml' ada dalam permintaan
     if "j2" not in request.files or "yaml" not in request.files:
         flash("No file part", "error")
         current_app.logger.warning("File part missing in upload request")
@@ -153,38 +158,24 @@ def template_upload():
     version = request.form.get("version")
     description = request.form.get("description")
 
-    # Memeriksa apakah vendor dan version ada
     if not vendor or not version:
-        flash("Data tidak boleh kosong!", "info")
+        flash("Vendor and version fields cannot be empty.", "info")
         return redirect(request.url)
 
-    # Memeriksa dan menyimpan file template jika valid
-    if j2.filename and allowed_file_temple(j2.filename):
-        template_name = secure_filename(j2.filename)
-        file_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, template_name
-        )
-        j2.save(file_path)
-        current_app.logger.info(f"Template file uploaded: {template_name}")
+    if j2.filename and allowed_file(j2.filename, TEMPLATE_EXTENSIONS):
+        template_name = save_uploaded_file(j2, RAW_TEMPLATE_FOLDER)
     else:
-        flash("Jenis file yang dimasukkan tidak sesuai. hint j2.", "error")
+        flash("Invalid template file type. Allowed: j2.", "error")
         current_app.logger.warning(f"Invalid template file type: {j2.filename}")
         return redirect(request.url)
 
-    # Memeriksa dan menyimpan file parameter jika valid
-    if yaml.filename and allowed_file_params(yaml.filename):
-        parameter_name = secure_filename(yaml.filename)
-        file_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, parameter_name
-        )
-        yaml.save(file_path)
-        current_app.logger.info(f"Parameter file uploaded: {parameter_name}")
+    if yaml.filename and allowed_file(yaml.filename, PARAMS_EXTENSIONS):
+        parameter_name = save_uploaded_file(yaml, RAW_TEMPLATE_FOLDER)
     else:
-        flash("Jenis file yang dimasukkan tidak sesuai. hint yml, yaml.", "error")
+        flash("Invalid parameter file type. Allowed: yml, yaml.", "error")
         current_app.logger.warning(f"Invalid parameter file type: {yaml.filename}")
         return redirect(request.url)
 
-    # Simpan data template ke database
     new_template = TemplateManager(
         template_name=template_name,
         parameter_name=parameter_name,
@@ -196,12 +187,10 @@ def template_upload():
     db.session.add(new_template)
     db.session.commit()
     current_app.logger.info(f"New template saved to database: {template_name}")
-    flash("File berhasil upload.", "success")
-
+    flash("File successfully uploaded.", "success")
     return redirect(url_for("tm.index"))
 
 
-# Route untuk memperbarui template
 @tm_bp.route("/template_update/<int:template_id>", methods=["GET", "POST"])
 @login_required
 @required_2fa
@@ -212,32 +201,43 @@ def template_upload():
 )
 def template_update(template_id):
     """Meng-handle pembaruan template berdasarkan ID template."""
-
-    # Ambil template berdasarkan ID, atau tampilkan error 404 jika tidak ditemukan
     template = TemplateManager.query.get_or_404(template_id)
     current_app.logger.info(f"Accessed template update for template_id: {template_id}")
 
-    def read_file(filename):
-        """Membaca konten file berdasarkan nama file."""
-        file_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, filename
+    template_content = read_file(
+        os.path.join(
+            current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
         )
-        with open(file_path, "r") as file:
-            return file.read()
+    )
+    parameter_content = read_file(
+        os.path.join(
+            current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
+        )
+    )
 
-    template_content = read_file(template.template_name)
-    parameter_content = read_file(template.parameter_name)
+    if template_content is None or parameter_content is None:
+        flash("Error loading template or parameter content.", "error")
+        return redirect(url_for("tm.index"))
 
     if request.method == "POST":
-        new_template_name = request.form["template_name"]
-        new_parameter_name = request.form["parameter_name"]
+        new_template_name = secure_filename(request.form["template_name"])
+        new_parameter_name = secure_filename(request.form["parameter_name"])
         new_vendor = request.form["vendor"]
         new_version = request.form["version"]
         new_description = request.form["description"]
-        new_template_content = request.form["template_content"]
-        new_parameter_content = request.form["parameter_content"]
+        new_template_content = (
+            request.form["template_content"]
+            .replace("\r\n", "\n")
+            .replace("\r", "\n")
+            .strip()
+        )
+        new_parameter_content = (
+            request.form["parameter_content"]
+            .replace("\r\n", "\n")
+            .replace("\r", "\n")
+            .strip()
+        )
 
-        # Periksa apakah nama template atau parameter baru sudah ada di database
         existing_template = TemplateManager.query.filter(
             TemplateManager.template_name == new_template_name,
             TemplateManager.id != template.id,
@@ -261,82 +261,74 @@ def template_update(template_id):
             flash(f"Parameter name '{new_parameter_name}' already exists.", "danger")
             return redirect(url_for("tm.template_update", template_id=template_id))
 
-        if new_template_content:
-            # Gantikan semua jenis newline dengan newline Unix (\n) dan hapus newline tambahan di akhir
-            new_template_content = (
-                new_template_content.replace("\r\n", "\n").replace("\r", "\n").strip()
-            )
-        if new_parameter_content:
-            # Gantikan semua jenis newline dengan newline Unix (\n) dan hapus newline tambahan di akhir
-            new_parameter_content = (
-                new_parameter_content.replace("\r\n", "\n").replace("\r", "\n").strip()
-            )
+        try:
+            if new_template_content != template_content:
+                template_path = os.path.join(
+                    current_app.static_folder,
+                    RAW_TEMPLATE_FOLDER,
+                    template.template_name,
+                )
+                with open(template_path, "w", encoding="utf-8") as file:
+                    file.write(new_template_content)
+                current_app.logger.info(
+                    f"Template content updated: {template.template_name}"
+                )
 
-        # Update konten file jika ada perubahan
-        if new_template_content != read_file(template.template_name):
-            template_path = os.path.join(
-                current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
-            )
-            with open(template_path, "w", encoding="utf-8") as file:
-                file.write(new_template_content)
+            if new_parameter_content != parameter_content:
+                parameter_path = os.path.join(
+                    current_app.static_folder,
+                    RAW_TEMPLATE_FOLDER,
+                    template.parameter_name,
+                )
+                with open(parameter_path, "w", encoding="utf-8") as file:
+                    file.write(new_parameter_content)
+                current_app.logger.info(
+                    f"Parameter content updated: {template.parameter_name}"
+                )
 
-            current_app.logger.info(
-                f"Template content updated: {template.template_name}"
-            )
+            if new_template_name != template.template_name:
+                new_path_template = os.path.join(
+                    current_app.static_folder, RAW_TEMPLATE_FOLDER, new_template_name
+                )
+                old_path_template = os.path.join(
+                    current_app.static_folder,
+                    RAW_TEMPLATE_FOLDER,
+                    template.template_name,
+                )
+                os.rename(old_path_template, new_path_template)
+                template.template_name = new_template_name
+                current_app.logger.info(
+                    f"Template file renamed from {template.template_name} to {new_template_name}"
+                )
 
-        if new_parameter_content != read_file(template.parameter_name):
-            parameter_path = os.path.join(
-                current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
-            )
-            with open(parameter_path, "w", encoding="utf-8") as file:
-                file.write(new_parameter_content)
+            if new_parameter_name != template.parameter_name:
+                new_path_parameter = os.path.join(
+                    current_app.static_folder, RAW_TEMPLATE_FOLDER, new_parameter_name
+                )
+                old_path_parameter = os.path.join(
+                    current_app.static_folder,
+                    RAW_TEMPLATE_FOLDER,
+                    template.parameter_name,
+                )
+                os.rename(old_path_parameter, new_path_parameter)
+                template.parameter_name = new_parameter_name
+                current_app.logger.info(
+                    f"Parameter file renamed from {template.parameter_name} to {new_parameter_name}"
+                )
 
-            current_app.logger.info(
-                f"Parameter content updated: {template.parameter_name}"
-            )
+            template.vendor = new_vendor
+            template.version = new_version
+            template.description = new_description
 
-        # Update nama file jika ada perubahan
-        if new_template_name != template.template_name:
-            new_path_template = os.path.join(
-                current_app.static_folder, RAW_TEMPLATE_FOLDER, new_template_name
-            )
-            old_path_template = os.path.join(
-                current_app.static_folder,
-                RAW_TEMPLATE_FOLDER,
-                template.template_name,
-            )
-            os.rename(old_path_template, new_path_template)
-            template.template_name = new_template_name
-            current_app.logger.info(
-                f"Template file renamed from {template.template_name} to {new_template_name}"
-            )
+            db.session.commit()
+            current_app.logger.info(f"Template updated successfully: {template_id}")
+            flash("Template update successful.", "success")
+            return redirect(url_for("tm.index"))
 
-        if new_parameter_name != template.parameter_name:
-            new_path_parameter = os.path.join(
-                current_app.static_folder, RAW_TEMPLATE_FOLDER, new_parameter_name
-            )
-            old_path_parameter = os.path.join(
-                current_app.static_folder,
-                RAW_TEMPLATE_FOLDER,
-                template.parameter_name,
-            )
-            os.rename(old_path_parameter, new_path_parameter)
-            template.parameter_name = new_parameter_name
-            current_app.logger.info(
-                f"Parameter file renamed from {template.parameter_name} to {new_parameter_name}"
-            )
-
-        # Update data template di database
-        template.template_name = new_template_name
-        template.parameter_name = new_parameter_name
-        template.vendor = new_vendor
-        template.version = new_version
-        template.description = new_description
-
-        db.session.commit()
-        current_app.logger.info(f"Template updated successfully: {template_id}")
-        flash("Template update berhasil.", "success")
-        return redirect(url_for("tm.index"))
+        except Exception as e:
+            current_app.logger.error(f"Error updating template: {e}")
+            flash("Failed to update template.", "error")
+            return redirect(url_for("tm.template_update", template_id=template_id))
 
     return render_template(
         "/template_managers/template_update.html",
@@ -346,7 +338,6 @@ def template_update(template_id):
     )
 
 
-# Route untuk menghapus template
 @tm_bp.route("/template_delete/<int:template_id>", methods=["POST"])
 @login_required
 @required_2fa
@@ -357,137 +348,42 @@ def template_update(template_id):
 )
 def template_delete(template_id):
     """Meng-handle penghapusan template berdasarkan ID template."""
-
-    # Ambil template berdasarkan ID, atau tampilkan error 404 jika tidak ditemukan
     template = TemplateManager.query.get_or_404(template_id)
 
-    # Hapus file template
-    file_path = os.path.join(
-        current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
-    )
-    if os.path.exists(file_path):
-        os.remove(file_path)
-        current_app.logger.info(f"Deleted template file: {file_path}")
-
-    # Hapus file parameter
-    file_path = os.path.join(
-        current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
-    )
-    if os.path.exists(file_path):
-        os.remove(file_path)
-        current_app.logger.info(f"Deleted parameter file: {file_path}")
-
-    # Hapus data dari database
-    db.session.delete(template)
-    db.session.commit()
-    current_app.logger.info(f"Template deleted successfully: {template_id}")
-
-    flash(f"Template berhasil dihapus oleh {current_user.email}", "success")
-    return redirect(url_for("tm.index"))
-
-
-# Route untuk menghasilkan template dari template Jinja dan parameter YAML
-@tm_bp.route("/template_generator/<int:template_id>", methods=["POST"])
-@login_required
-@required_2fa
-@role_required(
-    roles=["Admin", "User"],
-    permissions=["Manage Templates"],
-    page="Templates Management",
-)
-def template_generator(template_id):
-    """Meng-handle pembuatan template konfigurasi dari template Jinja dan parameter YAML."""
-
-    # Ambil template berdasarkan ID, atau tampilkan error 404 jika tidak ditemukan
-    template = TemplateManager.query.get_or_404(template_id)
-
-    # Tentukan path untuk template Jinja dan parameter YAML
-    jinja_template_path = os.path.join(
-        current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
-    )
-    yaml_params_path = os.path.join(
-        current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
-    )
-
-    # Baca konten template Jinja dan parameter YAML
     try:
-        with open(jinja_template_path, "r") as jinja_template_file:
-            jinja_template = jinja_template_file.read()
-
-        with open(yaml_params_path, "r") as yaml_params_file:
-            yaml_params = yaml_params_file.read()
-        current_app.logger.info("Successfully read Jinja template and YAML parameters")
-    except Exception as e:
-        current_app.logger.error(f"Error reading files: {e}")
-        flash("Gagal membaca file template atau parameter.", "error")
-        return redirect(url_for("tm.index"))
-
-    # Render template Jinja dengan parameter YAML
-    try:
-        net_auto = ConfigurationManagerUtils(
-            ip_address="0.0.0.0", username="none", password="none", ssh=22
+        template_file_path = os.path.join(
+            current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
         )
-        rendered_config = net_auto.render_template_config(jinja_template, yaml_params)
-        current_app.logger.info("Successfully rendered Jinja template")
+        parameter_file_path = os.path.join(
+            current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
+        )
+
+        if os.path.exists(template_file_path):
+            os.remove(template_file_path)
+            current_app.logger.info(f"Deleted template file: {template_file_path}")
+        else:
+            current_app.logger.warning(f"Template file not found: {template_file_path}")
+
+        if os.path.exists(parameter_file_path):
+            os.remove(parameter_file_path)
+            current_app.logger.info(f"Deleted parameter file: {parameter_file_path}")
+        else:
+            current_app.logger.warning(
+                f"Parameter file not found: {parameter_file_path}"
+            )
+
+        db.session.delete(template)
+        db.session.commit()
+        current_app.logger.info(f"Template deleted successfully: {template_id}")
+        flash(f"Template successfully deleted by {current_user.email}", "success")
 
     except Exception as e:
-        current_app.logger.error(
-            f"Error rendering template: {e}"
-        )  # Logging rendering error
-        flash("Gagal merender template.", "error")
-        return redirect(url_for("tm.index"))
-
-    if rendered_config:
-        gen_filename = generate_random_filename(template.vendor)
-        newFileName = f"{gen_filename}.txt"
-        new_file_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, newFileName
-        )
-        description = f"{gen_filename} dibuat oleh {current_user.email}"
-
-        # Simpan konfigurasi yang dirender ke file baru
-        try:
-            with open(new_file_path, "w") as new_file:
-                new_file.write(rendered_config)
-            current_app.logger.info(
-                f"Successfully saved rendered config to file: {new_file_path}"
-            )
-
-        except Exception as e:
-            current_app.logger.error(
-                f"Error saving rendered config to file: {e}"
-            )  # Logging file save error
-            flash("Gagal menyimpan konfigurasi yang dirender.", "error")
-            return redirect(url_for("tm.index"))
-
-        # Simpan template yang dihasilkan ke database
-        try:
-            new_template_generate = ConfigurationManager(
-                config_name=newFileName,
-                description=description,
-                created_by=current_user.email,
-            )
-            db.session.add(new_template_generate)
-            db.session.commit()
-            current_app.logger.info(
-                f"Successfully saved generated template to database: {newFileName}"
-            )
-
-        except Exception as e:
-            current_app.logger.error(
-                f"Error saving generated template to database: {e}"
-            )  # Logging database save error
-            flash("Gagal menyimpan template ke database.", "error")
-            return redirect(url_for("tm.index"))
-
-        flash("Template berhasil di-generate.", "success")
-    else:
-        flash("Gagal merender template.", "error")
+        current_app.logger.error(f"Error deleting template: {e}")
+        flash("Failed to delete template.", "error")
 
     return redirect(url_for("tm.index"))
 
 
-# Route untuk melihat detail template
 @tm_bp.route("/template_detail/<int:template_id>", methods=["GET"])
 @login_required
 @required_2fa
@@ -499,15 +395,20 @@ def template_generator(template_id):
 def template_detail(template_id):
     template = TemplateManager.query.get_or_404(template_id)
 
-    def read_file(filename):
-        file_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, filename
+    template_content = read_file(
+        os.path.join(
+            current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
         )
-        with open(file_path, "r") as file:
-            return file.read()
+    )
+    parameter_content = read_file(
+        os.path.join(
+            current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
+        )
+    )
 
-    template_content = read_file(template.template_name)
-    parameter_content = read_file(template.parameter_name)
+    if template_content is None or parameter_content is None:
+        flash("Error loading template or parameter content.", "error")
+        return redirect(url_for("tm.index"))
 
     return render_template(
         "/template_managers/template_detail.html",
@@ -517,7 +418,6 @@ def template_detail(template_id):
     )
 
 
-# Route untuk membuat template manual
 @tm_bp.route("/template_manual_create", methods=["POST"])
 @login_required
 @required_2fa
@@ -528,32 +428,35 @@ def template_detail(template_id):
 )
 def template_manual_create():
     """Meng-handle pembuatan template manual dari input pengguna."""
-
-    # Ambil data dari form
     vendor = request.form.get("vendor")
     version = request.form.get("version")
     description = request.form.get("description")
-    template_content = request.form.get("template_content")
-    parameter_content = request.form.get("parameter_content")
+    template_content = (
+        request.form.get("template_content")
+        .replace("\r\n", "\n")
+        .replace("\r", "\n")
+        .strip()
+    )
+    parameter_content = (
+        request.form.get("parameter_content")
+        .replace("\r\n", "\n")
+        .replace("\r", "\n")
+        .strip()
+    )
 
     current_app.logger.info(
         f"Attempting to create a manual template by {current_user.email}"
-    )  # Logging template creation attempt
+    )
 
-    # Validasi data vendor tidak boleh kosong
     if not vendor:
-        flash("Data vendor tidak boleh kosong!", "info")
-        current_app.logger.warning(
-            "Vendor field is empty"
-        )  # Logging missing vendor field
+        flash("Vendor field cannot be empty!", "info")
+        current_app.logger.warning("Vendor field is empty")
         return redirect(request.url)
 
-    # Buat nama file dengan format vendor_tanggal
     gen_filename = generate_random_filename(vendor)
     template_filename = f"{gen_filename}.j2"
     parameter_filename = f"{gen_filename}.yml"
 
-    # Tentukan path file
     template_path = os.path.join(
         current_app.static_folder, RAW_TEMPLATE_FOLDER, template_filename
     )
@@ -561,46 +464,19 @@ def template_manual_create():
         current_app.static_folder, RAW_TEMPLATE_FOLDER, parameter_filename
     )
 
-    # Pastikan newline konsisten dan tidak ada newline tambahan
-    if template_content:
-        template_content = (
-            template_content.replace("\r\n", "\n").replace("\r", "\n").strip()
-        )
-    if parameter_content:
-        parameter_content = (
-            parameter_content.replace("\r\n", "\n").replace("\r", "\n").strip()
-        )
-
-    # Simpan konten template ke dalam file
     try:
         with open(template_path, "w", encoding="utf-8") as template_file:
             template_file.write(template_content)
         current_app.logger.info(
             f"Successfully saved template content to file: {template_path}"
-        )  # Logging successful template save
-    except Exception as e:
-        current_app.logger.error(
-            f"Error saving template content to file: {e}"
-        )  # Logging file save error
-        flash("Gagal menyimpan konten template.", "error")
-        return redirect(request.url)
+        )
 
-    # Simpan konten parameter ke dalam file
-    try:
         with open(parameter_path, "w", encoding="utf-8") as parameter_file:
             parameter_file.write(parameter_content)
         current_app.logger.info(
             f"Successfully saved parameter content to file: {parameter_path}"
-        )  # Logging successful parameter save
-    except Exception as e:
-        current_app.logger.error(
-            f"Error saving parameter content to file: {e}"
-        )  # Logging file save error
-        flash("Gagal menyimpan konten parameter.", "error")
-        return redirect(request.url)
+        )
 
-    # Simpan data ke dalam database
-    try:
         new_template = TemplateManager(
             template_name=template_filename,
             parameter_name=parameter_filename,
@@ -613,19 +489,112 @@ def template_manual_create():
         db.session.commit()
         current_app.logger.info(
             f"Successfully added new template to database: {template_filename}"
-        )  # Logging successful database save
+        )
+        flash("Template successfully created.", "success")
+        return redirect(url_for("tm.index"))
+
     except Exception as e:
-        current_app.logger.error(
-            f"Error saving new template to database: {e}"
-        )  # Logging database save error
-        flash("Gagal menyimpan template ke database.", "error")
+        current_app.logger.error(f"Error creating template: {e}")
+        flash("Failed to create template.", "error")
         return redirect(request.url)
 
-    flash("Template berhasil dibuat.", "success")
+
+@tm_bp.route("/template_generator/<int:template_id>", methods=["POST"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Templates"],
+    page="Templates Management",
+)
+def template_generator(template_id):
+    template = TemplateManager.query.get_or_404(template_id)
+    vendor = template.vendor
+
+    jinja_template_path = os.path.join(
+        current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
+    )
+    yaml_params_path = os.path.join(
+        current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
+    )
+
+    try:
+        jinja_template = read_file(jinja_template_path)
+        yaml_params = read_file(yaml_params_path)
+
+        if jinja_template is None or yaml_params is None:
+            flash("Error loading template or parameter content.", "error")
+            return redirect(url_for("tm.index"))
+
+        current_app.logger.info("Successfully read Jinja template and YAML parameters")
+
+        net_auto = ConfigurationManagerUtils(
+            ip_address="0.0.0.0", username="none", password="none", ssh=22
+        )
+        rendered_config = net_auto.render_template_config(jinja_template, yaml_params)
+        current_app.logger.info("Successfully rendered Jinja template")
+
+        current_app.logger.info("Validating rendered template with OpenAI...")
+        config_validated = validate_generated_template_with_openai(
+            config=rendered_config, vendor=vendor
+        )
+
+        if not config_validated.get("is_valid"):
+            error_message = config_validated.get("error_message")
+            current_app.logger.error(f"Template validation failed: {error_message}")
+            flash(f"Template validation failed: {error_message}", "error")
+            return jsonify({"is_valid": False, "error_message": error_message})
+
+    except Exception as e:
+        current_app.logger.error(f"Error rendering or validating template: {e}")
+        flash("Failed to render or validate template.", "error")
+        return jsonify(
+            {
+                "is_valid": False,
+                "error_message": f"Gagal merender atau memvalidasi template: {e}",
+            }
+        )
+
+    try:
+        gen_filename = generate_random_filename(template.vendor)
+        newFileName = f"{gen_filename}.txt"
+        new_file_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, newFileName
+        )
+
+        with open(new_file_path, "w", encoding="utf-8") as new_file:
+            new_file.write(rendered_config)
+        current_app.logger.info(
+            f"Successfully saved rendered config to file: {new_file_path}"
+        )
+
+        new_template_generate = ConfigurationManager(
+            config_name=newFileName,
+            description=f"{gen_filename} created by {current_user.email}",
+            created_by=current_user.email,
+        )
+        db.session.add(new_template_generate)
+        db.session.commit()
+        current_app.logger.info(
+            f"Successfully saved generated template to database: {newFileName}"
+        )
+        flash("Template successfully generated.", "success")
+        return jsonify({"is_valid": True})
+
+    except Exception as e:
+        current_app.logger.error(
+            f"Error saving rendered config or template to database: {e}"
+        )
+        flash("Failed to save configuration or template to database.", "error")
+
     return redirect(url_for("tm.index"))
 
 
-# File konfigurasi view page
+# --------------------------------------------------------------------------------
+# Bagian File konfigurasi (hasil dari generate template yang telah di validasi AI)
+# --------------------------------------------------------------------------------
+
+
 @tm_bp.route("/template_results")
 @login_required
 @required_2fa
@@ -635,12 +604,10 @@ def template_manual_create():
     page="Configuration File Management",
 )
 def template_results():
-    # Ambil halaman dan per halaman dari argumen URL
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
     search_query = request.args.get("search", "")
 
-    # Mencari template berdasarkan query pencarian
     query = ConfigurationManager.query
     if search_query:
         query = query.filter(
@@ -648,26 +615,19 @@ def template_results():
             | ConfigurationManager.description.ilike(f"%{search_query}%")
         )
 
-    # Mengambil total item dan pagination
     total_templates = query.count()
     all_templates = query.paginate(page=page, per_page=per_page)
 
-    # Membuat objek pagination
     pagination = Pagination(
         page=page, per_page=per_page, total=total_templates, css_framework="bootstrap4"
     )
 
-    # Read content for all templates
     template_contents = {}
     for template in all_templates.items:
         template_path = os.path.join(
             current_app.static_folder, GEN_TEMPLATE_FOLDER, template.config_name
         )
-        if os.path.exists(template_path):
-            with open(template_path, "r", encoding="utf-8") as file:
-                template_contents[template.id] = file.read()
-        else:
-            template_contents[template.id] = "File tidak ditemukan"
+        template_contents[template.id] = read_file(template_path) or "File not found"
 
     return render_template(
         "/template_managers/template_results.html",
@@ -679,7 +639,6 @@ def template_results():
     )
 
 
-# File konfigurasi update
 @tm_bp.route(
     "/template_result_update/<int:template_result_id>", methods=["GET", "POST"]
 )
@@ -692,37 +651,31 @@ def template_results():
 )
 def template_result_update(template_result_id):
     """Meng-handle pembaruan file konfigurasi template yang ada."""
-
     current_app.logger.info(
         f"Attempting to update configuration file with ID {template_result_id} by {current_user.email}"
-    )  # Logging update attempt
+    )
 
-    # 1. Dapatkan objek dari database berdasarkan ID
     template = ConfigurationManager.query.get_or_404(template_result_id)
-
-    # Fungsi untuk membaca isi file template
-    def read_template(filename):
-        template_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
+    template_content = read_file(
+        os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, template.config_name
         )
-        with open(template_path, "r", encoding="utf-8") as file:
-            return file.read()
+    )
 
-    # Membaca konten template
-    template_content = read_template(template.config_name)
+    if template_content is None:
+        flash("Error loading template content.", "error")
+        return redirect(url_for("tm.template_results"))
 
-    # Ketika user mengirimkan form dengan method 'POST'
     if request.method == "POST":
-        new_template_name = request.form["template_name"]
+        new_template_name = secure_filename(request.form["template_name"])
         new_description = request.form["description"]
-        new_template_content = request.form["template_content"].strip()
-
-        # Memastikan newline konsisten
-        new_template_content = new_template_content.replace("\r\n", "\n").replace(
-            "\r", "\n"
+        new_template_content = (
+            request.form["template_content"]
+            .replace("\r\n", "\n")
+            .replace("\r", "\n")
+            .strip()
         )
 
-        # 5.1 Update file template_content jika ada perubahan
         try:
             if new_template_content != template_content:
                 template_path = os.path.join(
@@ -732,29 +685,19 @@ def template_result_update(template_result_id):
                     file.write(new_template_content)
                 current_app.logger.info(
                     f"Successfully updated template content in file: {template_path}"
-                )  # Logging successful file update
-        except Exception as e:
-            current_app.logger.error(
-                f"Error updating template content in file: {e}"
-            )  # Logging file update error
-            flash("Gagal memperbarui konten template.", "error")
-            return redirect(request.url)
+                )
 
-        # 5.2 Update file name jika ada perubahan
-        if new_template_name != template.config_name:
-            new_path_template = os.path.join(
-                current_app.static_folder, GEN_TEMPLATE_FOLDER, new_template_name
-            )
+            if new_template_name != template.config_name:
+                new_path_template = os.path.join(
+                    current_app.static_folder, GEN_TEMPLATE_FOLDER, new_template_name
+                )
 
-            # cek filename existing, filename tidak boleh sama dengan filename existing
-            if os.path.exists(new_path_template):
-                flash("File dengan nama baru sudah ada.", "info")
-                current_app.logger.warning(
-                    f"File with the new name already exists: {new_path_template}"
-                )  # Logging file exists warning
-            else:
-                try:
-                    # old_path_template
+                if os.path.exists(new_path_template):
+                    flash("File with the new name already exists.", "info")
+                    current_app.logger.warning(
+                        f"File with the new name already exists: {new_path_template}"
+                    )
+                else:
                     old_path_template = os.path.join(
                         current_app.static_folder,
                         GEN_TEMPLATE_FOLDER,
@@ -764,33 +707,21 @@ def template_result_update(template_result_id):
                     template.config_name = new_template_name
                     current_app.logger.info(
                         f"Successfully renamed file from {old_path_template} to {new_path_template}"
-                    )  # Logging successful rename
-                except Exception as e:
-                    current_app.logger.error(
-                        f"Error renaming file: {e}"
-                    )  # Logging rename error
-                    flash("Gagal mengganti nama file.", "error")
-                    return redirect(request.url)
+                    )
 
-        # 5.3 Update data ke dalam database
-        try:
             template.description = new_description
-            template.config_name = new_template_name
             db.session.commit()
             current_app.logger.info(
                 f"Successfully updated template data in database: ID {template_result_id}"
-            )  # Logging successful database update
+            )
+            flash("Template update successful.", "success")
+            return redirect(url_for("tm.template_results"))
+
         except Exception as e:
-            current_app.logger.error(
-                f"Error updating template data in database: {e}"
-            )  # Logging database update error
-            flash("Gagal memperbarui data template di database.", "error")
+            current_app.logger.error(f"Error updating template: {e}")
+            flash("Failed to update template.", "error")
             return redirect(request.url)
 
-        flash("Template update berhasil.", "success")
-        return redirect(url_for("tm.template_results"))
-
-    # 3. Tampilkan halaman template_update dengan data file di update page.
     return render_template(
         "/template_managers/template_result_update.html",
         template=template,
@@ -798,7 +729,6 @@ def template_result_update(template_result_id):
     )
 
 
-# File konfigurasi delete
 @tm_bp.route("/template_result_delete/<int:template_id>", methods=["POST"])
 @login_required
 @required_2fa
@@ -808,27 +738,32 @@ def template_result_update(template_result_id):
     page="Configuration File Management",
 )
 def template_result_delete(template_id):
-
-    # Dapatkan objek dari database berdasarkan ID
     template = ConfigurationManager.query.get_or_404(template_id)
 
-    # Hapus file template
-    file_path = os.path.join(
-        current_app.static_folder, GEN_TEMPLATE_FOLDER, str(template.config_name)
-    )
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    try:
+        file_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, str(template.config_name)
+        )
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            current_app.logger.info(f"Deleted configuration file: {file_path}")
+        else:
+            current_app.logger.warning(f"Configuration file not found: {file_path}")
 
-    # Hapus data dari database
-    db.session.delete(template)
-    db.session.commit()
-    current_app.logger.info(f"File konfigurasi berhasil di delete ID {template.id}")
+        db.session.delete(template)
+        db.session.commit()
+        current_app.logger.info(
+            f"Configuration file successfully deleted: ID {template.id}"
+        )
+        flash("Configuration file successfully deleted.", "success")
 
-    # Redirect ke halaman templates
+    except Exception as e:
+        current_app.logger.error(f"Error deleting configuration file: {e}")
+        flash("Failed to delete configuration file.", "error")
+
     return redirect(url_for("tm.template_results"))
 
 
-# Route untuk membuat file konfigurasi manual
 @tm_bp.route("/configuration_manual_create", methods=["POST"])
 @login_required
 @required_2fa
@@ -839,54 +774,36 @@ def template_result_delete(template_id):
 )
 def configuration_manual_create():
     """Membuat file konfigurasi manual dan menyimpannya ke dalam database."""
-
-    filename = request.form.get("filename")
+    filename = secure_filename(request.form.get("filename"))
     configuration_description = request.form.get("configuration_description")
-    configuration_content = request.form.get("configuration_content")
+    configuration_content = (
+        request.form.get("configuration_content")
+        .replace("\r\n", "\n")
+        .replace("\r", "\n")
+        .strip()
+    )
 
     current_app.logger.info(
         f"Attempting to create a manual configuration file by {current_user.email}"
-    )  # Logging creation attempt
+    )
 
-    # Memastikan newline konsisten dan tidak ada newline tambahan
-    if configuration_content:
-        # Gantikan semua jenis newline dengan newline Unix (\n) dan hapus newline tambahan di akhir
-        configuration_content = (
-            configuration_content.replace("\r\n", "\n").replace("\r", "\n").strip()
-        )
-
-    # Cek jika data filename kosong
     if not filename:
-        flash("Data tidak boleh kosong!", "info")
-        current_app.logger.warning(
-            "Filename is empty."
-        )  # Logging filename empty warning
+        flash("Filename cannot be empty!", "info")
+        current_app.logger.warning("Filename is empty.")
         return redirect(request.url)
 
-    # Generate nama file dengan ekstensi .txt
     configuration_name = f"{filename}.txt"
-
-    # Tentukan path file
     file_path = os.path.join(
         current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration_name
     )
 
-    # Simpan konten ke dalam file .txt
     try:
         with open(file_path, "w", encoding="utf-8") as configuration_file:
             configuration_file.write(configuration_content)
         current_app.logger.info(
             f"Successfully created configuration file at: {file_path}"
-        )  # Logging successful file creation
-    except Exception as e:
-        current_app.logger.error(
-            f"Error creating configuration file: {e}"
-        )  # Logging file creation error
-        flash("Gagal membuat file konfigurasi.", "error")
-        return redirect(request.url)
+        )
 
-    # Simpan data ke dalam database
-    try:
         new_configuration = ConfigurationManager(
             config_name=configuration_name,
             description=configuration_description,
@@ -896,177 +813,11 @@ def configuration_manual_create():
         db.session.commit()
         current_app.logger.info(
             f"Successfully added configuration to database: {configuration_name}"
-        )  # Logging successful database addition
+        )
+        flash("Configuration file successfully created.", "success")
+        return redirect(url_for("tm.template_results"))
+
     except Exception as e:
-        current_app.logger.error(
-            f"Error adding configuration to database: {e}"
-        )  # Logging database addition error
-        flash("Gagal menyimpan data ke database.", "error")
+        current_app.logger.error(f"Error creating configuration file: {e}")
+        flash("Failed to create configuration file.", "error")
         return redirect(request.url)
-
-    flash("File konfigurasi berhasil dibuat.", "success")
-    return redirect(url_for("tm.template_results"))
-
-
-@tm_bp.route("/generate_template_with_ai", methods=["POST"])
-@login_required
-@required_2fa
-@role_required(
-    roles=["Admin", "User"],
-    permissions=["Manage Templates"],
-    page="Templates Management",
-)
-def generate_template_with_ai():
-    user_input = request.json.get("user_input")
-    prompt = f"Help me create a network configuration template using Jinja2. The user provided input: {user_input}"
-
-    try:
-        generated_template = generate_chatgpt_response(prompt)
-
-        if not generated_template:
-            flash("Failed to generate template using AI.", "error")
-            return redirect(url_for("tm.index"))
-
-        # Lakukan validasi pada template yang dihasilkan
-        if not validate_jinja2(generated_template):
-            flash("Generated template has invalid Jinja2 syntax", "error")
-            return redirect(url_for("tm.index"))
-
-        # Simpan template yang dihasilkan ke database atau file
-        # Ambil data dari form
-        vendor = request.form.get("vendor")
-        version = request.form.get("version")
-        description = request.form.get("description")
-        template_content = request.form.get("template_content")
-        parameter_content = request.form.get("parameter_content")
-
-        current_app.logger.info(
-            f"Attempting to create a manual template by {current_user.email}"
-        )  # Logging template creation attempt
-
-        # Validasi data vendor tidak boleh kosong
-        if not vendor:
-            flash("Data vendor tidak boleh kosong!", "info")
-            current_app.logger.warning(
-                "Vendor field is empty"
-            )  # Logging missing vendor field
-            return redirect(request.url)
-
-        # Buat nama file dengan format vendor_tanggal
-        gen_filename = generate_random_filename(vendor)
-        template_filename = f"{gen_filename}.j2"
-        parameter_filename = f"{gen_filename}.yml"
-
-        # Tentukan path file
-        template_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, template_filename
-        )
-        parameter_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, parameter_filename
-        )
-
-        # Pastikan newline konsisten dan tidak ada newline tambahan
-        if template_content:
-            template_content = (
-                template_content.replace("\r\n", "\n").replace("\r", "\n").strip()
-            )
-        if parameter_content:
-            parameter_content = (
-                parameter_content.replace("\r\n", "\n").replace("\r", "\n").strip()
-            )
-
-        # Simpan konten template ke dalam file
-        try:
-            with open(template_path, "w", encoding="utf-8") as template_file:
-                template_file.write(template_content)
-            current_app.logger.info(
-                f"Successfully saved template content to file: {template_path}"
-            )  # Logging successful template save
-        except Exception as e:
-            current_app.logger.error(
-                f"Error saving template content to file: {e}"
-            )  # Logging file save error
-            flash("Gagal menyimpan konten template.", "error")
-            return redirect(request.url)
-
-        # Simpan konten parameter ke dalam file
-        try:
-            with open(parameter_path, "w", encoding="utf-8") as parameter_file:
-                parameter_file.write(parameter_content)
-            current_app.logger.info(
-                f"Successfully saved parameter content to file: {parameter_path}"
-            )  # Logging successful parameter save
-        except Exception as e:
-            current_app.logger.error(
-                f"Error saving parameter content to file: {e}"
-            )  # Logging file save error
-            flash("Gagal menyimpan konten parameter.", "error")
-            return redirect(request.url)
-
-        # Simpan data ke dalam database
-        try:
-            new_template = TemplateManager(
-                template_name=template_filename,
-                parameter_name=parameter_filename,
-                vendor=vendor,
-                version=version,
-                description=description,
-                created_by=current_user.email,
-            )
-            db.session.add(new_template)
-            db.session.commit()
-            current_app.logger.info(
-                f"Successfully added new template to database: {template_filename}"
-            )  # Logging successful database save
-        except Exception as e:
-            current_app.logger.error(
-                f"Error saving new template to database: {e}"
-            )  # Logging database save error
-            flash("Gagal menyimpan template ke database.", "error")
-            return redirect(request.url)
-
-            flash("Template generated successfully using AI.", "success")
-            return redirect(url_for("tm.index"))
-    except Exception as e:
-        current_app.logger.error(f"Error generating template with AI: {e}")
-        flash("Error generating template with AI.", "error")
-    return redirect(url_for("tm.index"))
-
-
-@tm_bp.route("/validate_and_fix_template_with_ai", methods=["POST"])
-@login_required
-@required_2fa
-@role_required(
-    roles=["Admin", "User"],
-    permissions=["Manage Templates"],
-    page="Templates Management",
-)
-def validate_and_fix_template_with_ai():
-    user_template = request.json.get("user_template")
-
-    if validate_jinja2(user_template) and validate_yaml(user_template):
-        flash("Template is valid.", "success")
-        return redirect(url_for("tm.index"))
-
-    prompt = f"The following network configuration template has errors. Please fix it: {user_template}"
-
-    try:
-        fixed_template = generate_chatgpt_response(prompt)
-
-        if not fixed_template:
-            flash("Failed to fix template using AI.", "error")
-            return redirect(url_for("tm.index"))
-
-        if not validate_jinja2(fixed_template):
-            flash("Fixed template has invalid Jinja2 syntax", "error")
-            return redirect(url_for("tm.index"))
-
-        # Simpan template yang diperbaiki ke database atau file
-        # (Tambahkan logika untuk menyimpan template yang diperbaiki ke dalam database atau file)
-
-        flash("Template fixed successfully using AI.", "success")
-        return redirect(url_for("tm.index"))
-    except Exception as e:
-        current_app.logger.error(f"Error fixing template with AI: {e}")
-        flash("Error fixing template with AI.", "error")
-        return redirect(url_for("tm.index"))

@@ -1,38 +1,30 @@
 {% extends "/layouts/layout.html" %}
 {% block title %}Update Template{% endblock %}
 {% block content %}
-<!-- Konten Halaman Update Template -->
-
+<!-- Page Content for Updating Template -->
 <div class="card position-relative py-4 px-4">
     <div class="card-header mb-3">
         Update Template
     </div>
-    <!-- Form untuk memperbarui informasi template -->
     <form action="{{ url_for('tm.template_result_update', template_result_id=template.id) }}" method="post">
         <div class="mb-3">
-            <label for="template_name" class="form-label">Nama Template</label>
-            <input type="text" class="form-control" value="{{ template.config_name }}" id="template_name"
-                name="template_name">
+            <label for="template_name" class="form-label">Template Name</label>
+            <input type="text" class="form-control" value="{{ template.config_name }}" id="template_name" name="template_name" required>
         </div>
         <div class="mb-3">
-            <label for="description" class="form-label">Deskripsi</label>
-            <input type="text" class="form-control" value="{{ template.description }}" id="description"
-                name="description">
+            <label for="description" class="form-label">Description</label>
+            <input type="text" class="form-control" value="{{ template.description }}" id="description" name="description">
         </div>
         <div class="mb-3">
-            <label for="template_content" class="form-label">Konten Template</label>
-            <textarea name="template_content" id="template_content" rows="10"
-                class="form-control">{{ template_content }}</textarea>
+            <label for="template_content" class="form-label">Template Content</label>
+            <textarea name="template_content" id="template_content" rows="10" class="form-control" required>{{ template_content }}</textarea>
         </div>
-        <!-- Tombol untuk menyimpan perubahan dan tombol untuk kembali ke halaman utama -->
         <button type="submit" class="btn btn-primary">
-            <i class="fa-solid fa-check"></i>
+            <i class="fas fa-check"></i> Save Changes
         </button>
         <a class="btn btn-secondary" href="{{ url_for('tm.template_results') }}">
-            <i class="fa-solid fa-arrow-left"></i>
+            <i class="fas fa-arrow-left"></i> Back
         </a>
     </form>
 </div>
-
-<!-- Akhir Konten Halaman -->
 {% endblock %}
