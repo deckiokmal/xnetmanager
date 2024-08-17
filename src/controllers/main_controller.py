@@ -7,7 +7,6 @@ from flask import (
     request,
     session,
     current_app,
-    jsonify,
 )
 from flask_login import login_user, logout_user, current_user, login_required
 from src import db, bcrypt
@@ -25,6 +24,28 @@ import base64
 main_bp = Blueprint("main", __name__)
 error_bp = Blueprint("error", __name__)
 
+# Setup logging untuk aplikasi
+logging.basicConfig(level=logging.INFO)
+
+
+@main_bp.before_app_request
+def setup_logging():
+    """
+    Mengatur level logging untuk aplikasi.
+    """
+    current_app.logger.setLevel(logging.INFO)
+    handler = current_app.logger.handlers[0]
+    current_app.logger.addHandler(handler)
+
+
+@error_bp.app_errorhandler(404)
+def page_not_found(error):
+    """
+    Menangani error 404 dan menampilkan halaman 404.
+    """
+    current_app.logger.error(f"Error 404: {error}")
+    return render_template("main/404.html"), 404
+
 
 # Middleware untuk autentikasi dan otorisasi
 @main_bp.before_request
@@ -38,31 +59,21 @@ def before_request_func():
         return redirect(url_for("main.login"))
 
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-
-
-@main_bp.before_app_request
-def setup_logging():
-    current_app.logger.setLevel(logging.INFO)
-    handler = current_app.logger.handlers[0]
-    current_app.logger.addHandler(handler)
-
-
-# Menangani error 404
-@error_bp.app_errorhandler(404)
-def page_not_found(error):
-    return render_template("main/404.html"), 404
-
-
-# Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @main_bp.context_processor
 def inject_user():
+    """
+    Menyediakan first_name dan last_name pengguna yang terotentikasi ke dalam template.
+    """
     if current_user.is_authenticated:
         return dict(
             first_name=current_user.first_name, last_name=current_user.last_name
         )
     return dict(first_name="", last_name="")
+
+
+# --------------------------------------------------------------------------------
+# Main Page Section
+# --------------------------------------------------------------------------------
 
 
 # Main APP starting
@@ -157,6 +168,11 @@ def login():
             flash("Terjadi kesalahan saat login. Silakan coba lagi.", "danger")
 
     return render_template("/main/login.html", form=form)
+
+
+# --------------------------------------------------------------------------------
+# Logout and 2FA Section
+# --------------------------------------------------------------------------------
 
 
 # Log Out

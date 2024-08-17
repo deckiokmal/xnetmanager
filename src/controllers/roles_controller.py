@@ -19,42 +19,57 @@ import logging
 roles_bp = Blueprint("roles", __name__)
 error_bp = Blueprint("error", __name__)
 
-
-# Setup logging
+# Setup logging untuk aplikasi
 logging.basicConfig(level=logging.INFO)
 
 
 @roles_bp.before_app_request
 def setup_logging():
-    """Mengkonfigurasi logging untuk aplikasi."""
+    """
+    Mengatur level logging untuk aplikasi.
+    """
     current_app.logger.setLevel(logging.INFO)
     handler = current_app.logger.handlers[0]
     current_app.logger.addHandler(handler)
 
 
-# Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
-    current_app.logger.error(f"Page not found: {request.path}")
+    """
+    Menangani error 404 dan menampilkan halaman 404.
+    """
+    current_app.logger.error(f"Error 404: {error}")
     return render_template("main/404.html"), 404
 
 
-# middleware untuk autentikasi dan otorisasi
 @roles_bp.before_request
 def before_request_func():
+    """
+    Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
+    Jika tidak, mengembalikan pesan 'Unauthorized access'.
+    """
     if not current_user.is_authenticated:
-        current_app.logger.warning(f"Unauthorized access attempt to: {request.path}")
+        current_app.logger.warning(
+            f"Unauthorized access attempt by {request.remote_addr}"
+        )
         return jsonify({"message": "Unauthorized access"}), 401
 
 
-# Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @roles_bp.context_processor
 def inject_user():
+    """
+    Menyediakan first_name dan last_name pengguna yang terotentikasi ke dalam template.
+    """
     if current_user.is_authenticated:
         return dict(
             first_name=current_user.first_name, last_name=current_user.last_name
         )
     return dict(first_name="", last_name="")
+
+
+# --------------------------------------------------------------------------------
+# Roles Management Section
+# --------------------------------------------------------------------------------
 
 
 # Halaman Roles
@@ -331,6 +346,42 @@ def remove_user_from_role():
     return redirect(url_for("roles.index"))
 
 
+# Menambahkan Permission ke Role
+@roles_bp.route("/add_permission_to_role", methods=["POST"])
+@login_required
+@required_2fa
+@role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
+def add_permission_to_role():
+    """menambahkan permission ke dalam role"""
+    role_id = request.form.get("role_id")
+    permission_id = request.form.get("permission_id")
+
+    role = Role.query.get_or_404(role_id)  # Mengambil role berdasarkan ID
+    permission = Permission.query.get_or_404(
+        permission_id
+    )  # Mengambil permission berdasarkan ID
+
+    if permission not in role.permissions:
+        role.permissions.append(permission)
+        db.session.commit()
+        current_app.logger.info(
+            f"User {current_user.email} berhasil menambahkan permission {permission.name} ke role {role.name}"
+        )
+        flash("Permission berhasil ditambahkan ke role.", "success")
+    else:
+        current_app.logger.warning(
+            f"User {current_user.email} gagal menambahkan permission {permission.name} ke role {role.name}"
+        )
+        flash("Permission sudah ada dalam role ini.", "warning")
+
+    return redirect(url_for("roles.role_update", role_id=role_id))
+
+
+# --------------------------------------------------------------------------------
+# Permissions Management Section
+# --------------------------------------------------------------------------------
+
+
 # Daftar Permissions
 @roles_bp.route("/permissions", methods=["GET"])
 @login_required
@@ -436,35 +487,9 @@ def delete_permission(permission_id):
     return redirect(url_for("roles.list_permissions"))
 
 
-# Menambahkan Permission ke Role
-@roles_bp.route("/add_permission_to_role", methods=["POST"])
-@login_required
-@required_2fa
-@role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
-def add_permission_to_role():
-    """menambahkan permission ke dalam role"""
-    role_id = request.form.get("role_id")
-    permission_id = request.form.get("permission_id")
-
-    role = Role.query.get_or_404(role_id)  # Mengambil role berdasarkan ID
-    permission = Permission.query.get_or_404(
-        permission_id
-    )  # Mengambil permission berdasarkan ID
-
-    if permission not in role.permissions:
-        role.permissions.append(permission)
-        db.session.commit()
-        current_app.logger.info(
-            f"User {current_user.email} berhasil menambahkan permission {permission.name} ke role {role.name}"
-        )
-        flash("Permission berhasil ditambahkan ke role.", "success")
-    else:
-        current_app.logger.warning(
-            f"User {current_user.email} gagal menambahkan permission {permission.name} ke role {role.name}"
-        )
-        flash("Permission sudah ada dalam role ini.", "warning")
-
-    return redirect(url_for("roles.role_update", role_id=role_id))
+# --------------------------------------------------------------------------------
+# API Permission Section
+# --------------------------------------------------------------------------------
 
 
 # api endpoint untuk memberikan seluruh data Permission

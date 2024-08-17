@@ -32,6 +32,9 @@ logging.basicConfig(level=logging.INFO)
 
 @tm_bp.before_app_request
 def setup_logging():
+    """
+    Mengatur level logging untuk aplikasi.
+    """
     current_app.logger.setLevel(logging.INFO)
     handler = current_app.logger.handlers[0]
     current_app.logger.addHandler(handler)
@@ -39,12 +42,19 @@ def setup_logging():
 
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
+    """
+    Menangani error 404 dan menampilkan halaman 404.
+    """
     current_app.logger.error(f"Error 404: {error}")
     return render_template("main/404.html"), 404
 
 
 @tm_bp.before_request
 def before_request_func():
+    """
+    Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
+    Jika tidak, mengembalikan pesan 'Unauthorized access'.
+    """
     if not current_user.is_authenticated:
         current_app.logger.warning(
             f"Unauthorized access attempt by {request.remote_addr}"
@@ -54,6 +64,9 @@ def before_request_func():
 
 @tm_bp.context_processor
 def inject_user():
+    """
+    Menyediakan first_name dan last_name pengguna yang terotentikasi ke dalam template.
+    """
     if current_user.is_authenticated:
         return dict(
             first_name=current_user.first_name, last_name=current_user.last_name
@@ -541,8 +554,7 @@ def template_generator(template_id):
 
         if not config_validated.get("is_valid"):
             error_message = config_validated.get("error_message")
-            current_app.logger.error(f"Template validation failed: {error_message}")
-            flash(f"Template validation failed: {error_message}", "error")
+            current_app.logger.error(f"Template validation failed for: ID {template_id}")
             return jsonify({"is_valid": False, "error_message": error_message})
 
     except Exception as e:

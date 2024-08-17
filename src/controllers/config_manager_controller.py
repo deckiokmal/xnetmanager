@@ -24,7 +24,7 @@ import string
 nm_bp = Blueprint("nm", __name__)
 error_bp = Blueprint("error", __name__)
 
-# Setup logging
+# Setup logging untuk aplikasi
 logging.basicConfig(level=logging.INFO)
 
 
@@ -44,6 +44,7 @@ def page_not_found(error):
     """
     Menangani error 404 dan menampilkan halaman 404.
     """
+    current_app.logger.error(f"Error 404: {error}")
     return render_template("main/404.html"), 404
 
 
@@ -55,6 +56,9 @@ def before_request_func():
     Jika tidak, mengembalikan pesan 'Unauthorized access'.
     """
     if not current_user.is_authenticated:
+        current_app.logger.warning(
+            f"Unauthorized access attempt by {request.remote_addr}"
+        )
         return jsonify({"message": "Unauthorized access"}), 401
 
 
@@ -71,7 +75,11 @@ def inject_user():
     return dict(first_name="", last_name="")
 
 
-# Network Manager App Starting
+# --------------------------------------------------------------------------------
+# Config Management Section
+# --------------------------------------------------------------------------------
+
+
 GEN_TEMPLATE_FOLDER = "xmanager/gen_templates"
 
 
@@ -282,6 +290,11 @@ def push_configs():
                 success = False
 
     return jsonify({"success": success, "results": results})
+
+
+# --------------------------------------------------------------------------------
+# Backup Management Section
+# --------------------------------------------------------------------------------
 
 
 # Endpoint backup konfigurasi menu

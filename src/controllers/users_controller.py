@@ -21,47 +21,57 @@ import logging
 users_bp = Blueprint("users", __name__)
 error_bp = Blueprint("error", __name__)
 
-# Setup logging
+# Setup logging untuk aplikasi
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 @users_bp.before_app_request
 def setup_logging():
-    """Setup logging configuration."""
+    """
+    Mengatur level logging untuk aplikasi.
+    """
     current_app.logger.setLevel(logging.INFO)
     handler = current_app.logger.handlers[0]
     current_app.logger.addHandler(handler)
 
 
-# Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
-    """Menangani halaman yang tidak ditemukan dengan menampilkan halaman 404."""
-    current_app.logger.warning(f"Page not found: {request.path}")  # Logging 404 error
+    """
+    Menangani error 404 dan menampilkan halaman 404.
+    """
+    current_app.logger.error(f"Error 404: {error}")
     return render_template("main/404.html"), 404
 
 
-# Middleware untuk autentikasi dan otorisasi
 @users_bp.before_request
 def before_request_func():
-    """Middleware untuk memastikan pengguna sudah terautentikasi sebelum mengakses halaman."""
+    """
+    Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
+    Jika tidak, mengembalikan pesan 'Unauthorized access'.
+    """
     if not current_user.is_authenticated:
-        current_app.logger.info(
-            f"Unauthorized access attempt: {request.path}"
-        )  # Logging unauthorized access attempt
+        current_app.logger.warning(
+            f"Unauthorized access attempt by {request.remote_addr}"
+        )
         return jsonify({"message": "Unauthorized access"}), 401
 
 
-# Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @users_bp.context_processor
 def inject_user():
-    """Menambahkan first_name dan last_name ke dalam konteks di semua halaman jika pengguna terautentikasi."""
+    """
+    Menyediakan first_name dan last_name pengguna yang terotentikasi ke dalam template.
+    """
     if current_user.is_authenticated:
         return dict(
             first_name=current_user.first_name, last_name=current_user.last_name
         )
     return dict(first_name="", last_name="")
+
+
+# --------------------------------------------------------------------------------
+# Dashboard
+# --------------------------------------------------------------------------------
 
 
 # Menampilkan halaman dashboard setelah user login success.
@@ -98,6 +108,11 @@ def dashboard():
         template_vendor_keys=list(template_vendor_count.keys()),
         template_vendor_values=list(template_vendor_count.values()),
     )
+
+
+# --------------------------------------------------------------------------------
+# User Management Section
+# --------------------------------------------------------------------------------
 
 
 # Users Management Page
@@ -140,7 +155,9 @@ def index():
         # Check if user already exists
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
-            current_app.logger.warning(f"Registration attempt failed: {email} already exists")
+            current_app.logger.warning(
+                f"Registration attempt failed: {email} already exists"
+            )
             flash("Alamat email sudah terdaftar", "error")
             return redirect(url_for("users.index"))
 
@@ -192,7 +209,9 @@ def user_update(user_id):
         # Memeriksa apakah email baru sudah ada di database
         if User.query.filter(User.email == form.email.data, User.id != user.id).first():
             flash("Email already exists. Please choose another email!", "info")
-            current_app.logger.warning(f"Update attempt failed: {form.email.data} already exists.")
+            current_app.logger.warning(
+                f"Update attempt failed: {form.email.data} already exists."
+            )
             return render_template(
                 "/users_management/user_update.html", form=form, user=user
             )
@@ -240,7 +259,9 @@ def user_delete(user_id):
 
     if current_user.id == user_id:
         flash("Anda tidak bisa delete akun anda sendiri.", "warning")
-        current_app.logger.warning(f"User with ID: {user_id} attempted to delete their own account.")
+        current_app.logger.warning(
+            f"User with ID: {user_id} attempted to delete their own account."
+        )
         return redirect(url_for("users.index"))
 
     user = User.query.get(user_id)

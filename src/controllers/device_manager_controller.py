@@ -20,13 +20,15 @@ import logging
 dm_bp = Blueprint("dm", __name__)
 error_bp = Blueprint("error", __name__)
 
-# Setup logging
+# Setup logging untuk aplikasi
 logging.basicConfig(level=logging.INFO)
 
 
 @dm_bp.before_app_request
 def setup_logging():
-    """Mengatur logging untuk aplikasi"""
+    """
+    Mengatur level logging untuk aplikasi.
+    """
     current_app.logger.setLevel(logging.INFO)
     handler = current_app.logger.handlers[0]
     current_app.logger.addHandler(handler)
@@ -34,14 +36,19 @@ def setup_logging():
 
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
-    """Menangani error 404 dan mengarahkan ke halaman 404.html"""
+    """
+    Menangani error 404 dan menampilkan halaman 404.
+    """
     current_app.logger.error(f"Error 404: {error}")
     return render_template("main/404.html"), 404
 
 
 @dm_bp.before_request
 def before_request_func():
-    """Middleware untuk memastikan pengguna sudah terautentikasi sebelum akses"""
+    """
+    Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
+    Jika tidak, mengembalikan pesan 'Unauthorized access'.
+    """
     if not current_user.is_authenticated:
         current_app.logger.warning(
             f"Unauthorized access attempt by {request.remote_addr}"
@@ -51,7 +58,9 @@ def before_request_func():
 
 @dm_bp.context_processor
 def inject_user():
-    """Menambahkan informasi pengguna yang sedang login ke dalam konteks halaman"""
+    """
+    Menyediakan first_name dan last_name pengguna yang terotentikasi ke dalam template.
+    """
     if current_user.is_authenticated:
         return dict(
             first_name=current_user.first_name, last_name=current_user.last_name

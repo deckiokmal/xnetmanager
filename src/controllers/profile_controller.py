@@ -19,54 +19,67 @@ from src.utils.forms_utils import (
     User2FAEnableForm,
 )
 import logging
-from werkzeug.utils import secure_filename
 import os
 from src.utils.mail_utils import (
     send_verification_email,
-    generate_verification_token,
-    verify_token,
 )
-
 
 # Membuat blueprint users
 profile_bp = Blueprint("profile", __name__)
 error_bp = Blueprint("error", __name__)
 
-
-# Setup logging
+# Setup logging untuk aplikasi
 logging.basicConfig(level=logging.INFO)
 
 
 @profile_bp.before_app_request
 def setup_logging():
+    """
+    Mengatur level logging untuk aplikasi.
+    """
     current_app.logger.setLevel(logging.INFO)
     handler = current_app.logger.handlers[0]
     current_app.logger.addHandler(handler)
 
 
-# Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
-    current_app.logger.error(f"Page not found: {request.path}")
+    """
+    Menangani error 404 dan menampilkan halaman 404.
+    """
+    current_app.logger.error(f"Error 404: {error}")
     return render_template("main/404.html"), 404
 
 
-# middleware untuk autentikasi dan otorisasi
 @profile_bp.before_request
 def before_request_func():
+    """
+    Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
+    Jika tidak, mengembalikan pesan 'Unauthorized access'.
+    """
     if not current_user.is_authenticated:
-        current_app.logger.warning(f"Unauthorized access attempt to: {request.path}")
+        current_app.logger.warning(
+            f"Unauthorized access attempt by {request.remote_addr}"
+        )
         return jsonify({"message": "Unauthorized access"}), 401
 
 
 # Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @profile_bp.context_processor
 def inject_user():
+    """
+    Menyediakan first_name dan last_name pengguna yang terotentikasi ke dalam template.
+    """
     if current_user.is_authenticated:
         return dict(
             first_name=current_user.first_name, last_name=current_user.last_name
         )
     return dict(first_name="", last_name="")
+
+
+# --------------------------------------------------------------------------------
+# User Profile Section
+# --------------------------------------------------------------------------------
 
 
 # Users profile
