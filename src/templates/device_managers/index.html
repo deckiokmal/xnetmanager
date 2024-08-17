@@ -1,14 +1,12 @@
 {% extends "/layouts/layout_table.html" %}
 {% block title %}Device Manager{% endblock %}
 
-
 {% block button_group1 %}
 <!-- Tombol untuk membuka modal pembuatan perangkat baru -->
 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createdeviceModal">
     <i class="fas fa-plus"></i>
 </button>
 {% endblock %}
-
 
 {% block table_name %}Daftar Perangkat{% endblock %}
 
@@ -62,22 +60,19 @@
     <td>{{ device.username }}</td>
     <td>
         <div class="d-flex align-items-center">
-            <!-- Menampilkan password dengan masker -->
             <span class="password-display">{{ device.password | mask_password }}</span>
         </div>
     </td>
     <td>{{ device.ssh }}</td>
     <td>
-        <!-- Tombol Detail Perangkat -->
         <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#detailModal{{ device.id }}">
             <i class="fas fa-eye"></i>
         </button>
-        <!-- Tombol Edit Perangkat -->
         <a href="{{ url_for('dm.device_update', device_id=device.id) }}" class="btn btn-success btn-sm">
             <i class="fas fa-edit"></i>
         </a>
-        <!-- Form untuk Menghapus Perangkat -->
         <form action="{{ url_for('dm.device_delete', device_id=device.id) }}" method="post" style="display:inline;">
+            {{ form.csrf_token }} <!-- Adding CSRF token -->
             <button type="submit" class="btn btn-danger btn-sm"
                 onclick="return confirm('Apakah Anda yakin ingin menghapus perangkat ini?');">
                 <i class="fas fa-trash"></i>
@@ -86,15 +81,12 @@
     </td>
 </tr>
 
-<!-- Modal Detail Perangkat -->
 <div class="modal fade" id="detailModal{{ device.id }}" tabindex="-1" aria-labelledby="detailModalLabel{{ device.id }}"
     aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content bg-black text-white">
             <div class="modal-header">
-                <h5 class="modal-title" id="detailModalLabel{{ device.id }}">Detail
-                    Perangkat
-                </h5>
+                <h5 class="modal-title" id="detailModalLabel{{ device.id }}">Detail Perangkat</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
             </div>
             <div class="modal-body">
@@ -125,13 +117,11 @@
 
 {% block pagination %}
 <div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
-    <!-- Link Pagination -->
     {{ pagination.links }}
 </div>
 {% endblock %}
 
 {% block modal_data %}
-<!-- Modal Tambah Perangkat -->
 <div class="modal fade" id="createdeviceModal" tabindex="-1" aria-labelledby="createdeviceModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 600px;">
@@ -142,34 +132,92 @@
             </div>
             <div class="modal-body">
                 <form method="post" action="{{ url_for('dm.device_create') }}">
+                    {{ form.hidden_tag() }} <!-- Adding CSRF token -->
+
                     <div class="mb-3">
-                        <label for="device_name" class="form-label">Nama Perangkat</label>
-                        <input type="text" class="form-control" id="device_name" name="device_name" required>
+                        {{ form.device_name.label(class_="form-label") }}
+                        {{ form.device_name(class_="form-control") }}
+                        {% if form.device_name.errors %}
+                        <div class="text-danger">
+                            {% for error in form.device_name.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
+
                     <div class="mb-3">
-                        <label for="vendor" class="form-label">Vendor</label>
-                        <input type="text" class="form-control" id="vendor" name="vendor" required>
+                        {{ form.vendor.label(class_="form-label") }}
+                        {{ form.vendor(class_="form-control") }}
+                        {% if form.vendor.errors %}
+                        <div class="text-danger">
+                            {% for error in form.vendor.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
+
                     <div class="mb-3">
-                        <label for="ip_address" class="form-label">IP Address</label>
-                        <input type="text" class="form-control" id="ip_address" name="ip_address" required>
+                        {{ form.ip_address.label(class_="form-label") }}
+                        {{ form.ip_address(class_="form-control") }}
+                        {% if form.ip_address.errors %}
+                        <div class="text-danger">
+                            {% for error in form.ip_address.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
+
                     <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
+                        {{ form.username.label(class_="form-label") }}
+                        {{ form.username(class_="form-control") }}
+                        {% if form.username.errors %}
+                        <div class="text-danger">
+                            {% for error in form.username.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
+
                     <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
+                        {{ form.password.label(class_="form-label") }}
+                        {{ form.password(class_="form-control") }}
+                        {% if form.password.errors %}
+                        <div class="text-danger">
+                            {% for error in form.password.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
+
                     <div class="mb-3">
-                        <label for="ssh" class="form-label">Port SSH</label>
-                        <input type="text" class="form-control" id="ssh" name="ssh" required>
+                        {{ form.ssh.label(class_="form-label") }}
+                        {{ form.ssh(class_="form-control") }}
+                        {% if form.ssh.errors %}
+                        <div class="text-danger">
+                            {% for error in form.ssh.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
+
                     <div class="mb-3">
-                        <label for="description" class="form-label">Deskripsi</label>
-                        <input type="text" class="form-control" id="description" name="description">
+                        {{ form.description.label(class_="form-label") }}
+                        {{ form.description(class_="form-control") }}
+                        {% if form.description.errors %}
+                        <div class="text-danger">
+                            {% for error in form.description.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     </div>
+
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-plus"></i>
                     </button>
@@ -178,25 +226,21 @@
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block script_js %}
-<!-- JavaScript untuk mengatur visibilitas password dan penundaan pencarian -->
 <script>
     let timeout = null;
 
-    // Menangani input pada form pencarian dengan penundaan 1 detik
     document.getElementById("searchInput").addEventListener("input", function () {
-        // Batalkan timer yang ada sebelumnya jika ada
         clearTimeout(timeout);
 
-        // Setel timer baru untuk submit form setelah 1 detik
         timeout = setTimeout(function () {
             document.getElementById('searchForm').submit();
-        }, 1000); // 1000 ms = 1 detik
+        }, 1000);
     });
 
-    // Fungsi untuk memfilter baris tabel berdasarkan input pencarian
     document.getElementById("searchInput").addEventListener("input", function () {
         const query = this.value.toLowerCase();
         const rows = document.querySelectorAll("#deviceTable tbody tr");

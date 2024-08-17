@@ -12,7 +12,7 @@ from flask_login import login_required, current_user
 from src import db
 from src.models.xmanager_model import DeviceManager
 from .decorators import login_required, role_required, required_2fa
-from src.utils.ip_validation_utils import is_valid_ip
+from src.utils.forms_utils import DeviceForm, DeviceUpdateForm
 from flask_paginate import Pagination, get_page_args
 import logging
 
@@ -59,6 +59,11 @@ def inject_user():
     return dict(first_name="", last_name="")
 
 
+# -----------------------------------------------------------
+# Devices Manager Section
+# -----------------------------------------------------------
+
+
 @dm_bp.route("/dm", methods=["GET"])
 @login_required
 @required_2fa
@@ -69,6 +74,8 @@ def inject_user():
 )
 def index():
     """Menampilkan halaman utama Device Manager dengan data perangkat dan pagination"""
+    form = DeviceForm(request.form)
+
     search_query = request.args.get("search", "").lower()
 
     page, per_page, offset = get_page_args(
@@ -89,9 +96,7 @@ def index():
     total_devices = devices_query.count()
     devices = devices_query.limit(per_page).offset(offset).all()
 
-    pagination = Pagination(
-        page=page, per_page=per_page, total=total_devices, css_framework="bootstrap4"
-    )
+    pagination = Pagination(page=page, per_page=per_page, total=total_devices)
 
     current_app.logger.info(f"User {current_user.email} accessed Device Manager page.")
 
@@ -103,10 +108,11 @@ def index():
         pagination=pagination,
         search_query=search_query,
         total_devices=total_devices,
+        form=form,
     )
 
 
-@dm_bp.route("/device_create", methods=["POST"])
+@dm_bp.route("/device_create", methods=["GET", "POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -114,46 +120,54 @@ def index():
 )
 def device_create():
     """Menambahkan perangkat baru ke dalam database"""
-    device_name = request.form["device_name"]
-    vendor = request.form["vendor"]
-    ip_address = request.form["ip_address"]
-    username = request.form["username"]
-    password = request.form["password"]
-    ssh = request.form["ssh"]
-    description = request.form["description"]
+    form = DeviceForm(request.form)
 
-    exist_address = DeviceManager.query.filter_by(ip_address=ip_address).first()
-    exist_device = DeviceManager.query.filter_by(device_name=device_name).first()
-    if exist_device or exist_address:
-        flash("Device sudah terdaftar!", "info")
-        current_app.logger.info(
-            f"Duplicate device attempt: {device_name} or {ip_address}"
-        )
-    elif not username or not password or not ssh:
-        flash("Username, password, dan SSH tidak boleh kosong!", "info")
-    elif not is_valid_ip(ip_address):
-        flash("IP Address tidak valid!", "error")
-        current_app.logger.warning(f"Invalid IP attempt: {ip_address}")
-    elif not ssh.isdigit():
-        flash("SSH port harus angka!", "error")
-    else:
-        new_device = DeviceManager(
-            device_name=device_name,
-            vendor=vendor,
-            ip_address=ip_address,
-            username=username,
-            password=password,
-            ssh=ssh,
-            description=description,
-            created_by=current_user.email,
-        )
-        db.session.add(new_device)
-        db.session.commit()
-        flash("Device berhasil ditambah!", "success")
-        current_app.logger.info(
-            f"Device created: {device_name} by {current_user.email}"
-        )
-        return redirect(url_for("dm.index"))
+    if request.method == "POST":
+        if form.validate_on_submit():
+            try:
+                # Accessing .data attribute to get the actual input value
+                exist_address = DeviceManager.query.filter_by(
+                    ip_address=form.ip_address.data
+                ).first()
+                exist_device = DeviceManager.query.filter_by(
+                    device_name=form.device_name.data
+                ).first()
+
+                if exist_device or exist_address:
+                    flash("Device sudah terdaftar!", "info")
+                    current_app.logger.info(
+                        f"Duplicate device attempt: {form.device_name.data} or {form.ip_address.data}"
+                    )
+                else:
+                    new_device = DeviceManager(
+                        device_name=form.device_name.data.strip(),
+                        vendor=form.vendor.data.strip(),
+                        ip_address=form.ip_address.data.strip(),
+                        username=form.username.data.strip(),
+                        password=form.password.data.strip(),
+                        ssh=form.ssh.data.strip(),
+                        description=form.description.data.strip(),
+                        created_by=current_user.email,
+                    )
+                    db.session.add(new_device)
+                    db.session.commit()
+                    flash("Device berhasil ditambah!", "success")
+                    current_app.logger.info(
+                        f"Device created: {form.device_name.data.strip()} by {current_user.email}"
+                    )
+                    return redirect(url_for("dm.index"))
+            except Exception as e:
+                current_app.logger.error(
+                    f"Error creating device {form.device_name.data.strip()}: {str(e)}"
+                )
+                flash("An error occurred while creating the device.", "danger")
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(
+                        f"Error in {getattr(form, field).label.text}: {error}", "danger"
+                    )
+            current_app.logger.warning("Form validation failed during device creation.")
 
     return redirect(url_for("dm.index"))
 
@@ -166,56 +180,66 @@ def device_create():
 )
 def device_update(device_id):
     """Mengupdate informasi perangkat di database"""
-    device = DeviceManager.query.get(device_id)
+    device = DeviceManager.query.get_or_404(device_id)
+
+    # Load existing data into the form
+    form = DeviceUpdateForm(obj=device)
 
     if request.method == "POST":
-        new_device_name = request.form["device_name"]
-        new_vendor = request.form["vendor"]
-        new_ip_address = request.form["ip_address"]
-        new_username = request.form["username"]
-        new_password = request.form["password"]
-        new_ssh = request.form["ssh"]
-        new_description = request.form["description"]
+        if form.validate_on_submit():
+            try:
+                # Check if the password field is not empty
+                if form.password.data:
+                    # Update password if the field is filled
+                    device.password = form.password.data.strip()
+                    current_app.logger.info(
+                        f"Password updated for Device ID {device_id} by {current_user.email}"
+                    )
+                else:
+                    # Keep the existing password if the field is empty
+                    current_app.logger.info(
+                        f"Password unchanged for Device ID {device_id} updated by {current_user.email}"
+                    )
 
-        exist_device = DeviceManager.query.filter(
-            DeviceManager.device_name == new_device_name, DeviceManager.id != device.id
-        ).first()
-        exist_address = DeviceManager.query.filter(
-            DeviceManager.ip_address == new_ip_address, DeviceManager.id != device.id
-        ).first()
-        if exist_device or exist_address:
-            flash(
-                "Device name atau IP Address sudah ada. Silahkan masukkan yang lain!",
-                "error",
-            )
-            current_app.logger.warning(
-                f"Duplicate update attempt for device ID {device_id}"
-            )
-        elif not new_username or not new_password or not new_ssh:
-            flash("Username, password dan SSH tidak boleh kosong.", "info")
-            return render_template("/device_managers/device_update.html", device=device)
-        elif not new_ssh.isdigit():
-            flash("SSH port harus angka!", "error")
-        elif not is_valid_ip(new_ip_address):
-            flash("IP Address tidak valid!", "error")
-            current_app.logger.warning(f"Invalid IP attempt: {new_ip_address}")
+                # Update the other fields, except password
+                device.device_name = form.device_name.data.strip()
+                device.vendor = form.vendor.data.strip()
+                device.ip_address = form.ip_address.data.strip()
+                device.username = form.username.data.strip()
+                device.ssh = form.ssh.data.strip()
+                device.description = form.description.data.strip()
+
+                # Commit all the changes to the database
+                db.session.commit()
+                flash("Device update berhasil.", "success")
+                current_app.logger.info(
+                    f"Device ID {device_id} updated by {current_user.email}"
+                )
+                return redirect(url_for("dm.index"))
+            except Exception as e:
+                current_app.logger.error(
+                    f"Error updating device ID {device_id}: {str(e)}"
+                )
+                flash("An error occurred while updating the device.", "danger")
         else:
-            device.device_name = new_device_name
-            device.vendor = new_vendor
-            device.ip_address = new_ip_address
-            device.username = new_username
-            device.password = new_password
-            device.ssh = new_ssh
-            device.description = new_description
-
-            db.session.commit()
-            flash("Device update berhasil.", "success")
-            current_app.logger.info(
-                f"Device ID {device_id} updated by {current_user.email}"
+            # Flashing individual field errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(
+                        f"Error in {getattr(form, field).label.text}: {error}", "danger"
+                    )
+            current_app.logger.warning(
+                f"Form validation failed during device update for device ID {device_id}."
             )
-            return redirect(url_for("dm.index"))
 
-    return render_template("/device_managers/device_update.html", device=device)
+    # Set a placeholder text to indicate that the password is already set
+    form.password.render_kw = {
+        "placeholder": "Enter new password if you want to change it"
+    }
+
+    return render_template(
+        "/device_managers/device_update.html", form=form, device=device
+    )
 
 
 @dm_bp.route("/device_delete/<int:device_id>", methods=["POST"])
@@ -226,19 +250,24 @@ def device_update(device_id):
 )
 def device_delete(device_id):
     """Menghapus perangkat dari database"""
-    device = DeviceManager.query.get(device_id)
-    if not device:
-        flash("Device tidak ditemukan.", "info")
-        current_app.logger.warning(
-            f"Delete attempt for non-existent device ID {device_id}"
+    try:
+        device = DeviceManager.query.get_or_404(device_id)
+        db.session.delete(device)
+        db.session.commit()
+        flash("Device telah dihapus.", "success")
+        current_app.logger.info(
+            f"Device ID {device_id} deleted by {current_user.email}"
         )
-        return redirect(url_for("dm.index"))
+    except Exception as e:
+        current_app.logger.error(f"Error deleting device ID {device_id}: {str(e)}")
+        flash("An error occurred while deleting the device.", "danger")
 
-    db.session.delete(device)
-    db.session.commit()
-    flash("Device telah dihapus.", "success")
-    current_app.logger.info(f"Device ID {device_id} deleted by {current_user.email}")
     return redirect(url_for("dm.index"))
+
+
+# -----------------------------------------------------------
+# API Devices Section
+# -----------------------------------------------------------
 
 
 @dm_bp.route("/api/get_devices", methods=["GET"])

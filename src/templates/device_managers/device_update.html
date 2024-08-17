@@ -1,71 +1,64 @@
 {% extends "/layouts/layout.html" %}
 {% block title %}Update Device{% endblock %}
 {% block content %}
-<!-- Konten Halaman Update Perangkat -->
-
 <div class="card position-relative py-4 px-4">
     <div class="card-header mb-3">
         Update Device
     </div>
-    <!-- Form untuk memperbarui informasi perangkat -->
     <form action="{{ url_for('dm.device_update', device_id=device.id) }}" method="POST">
+        {{ form.csrf_token }} <!-- Adding CSRF token -->
         <div class="row mb-3">
             <div class="col-md-6">
-                <label for="device_name" class="form-label">Nama Perangkat</label>
-                <input type="text" class="form-control" value="{{ device.device_name }}" id="device_name"
-                    name="device_name">
+                {{ form.device_name.label(class_="form-label") }}
+                {{ form.device_name(class_="form-control") }}
             </div>
             <div class="col-md-6">
-                <label for="vendor" class="form-label">Vendor</label>
-                <input type="text" class="form-control" value="{{ device.vendor }}" id="vendor" name="vendor">
+                {{ form.vendor.label(class_="form-label") }}
+                {{ form.vendor(class_="form-control") }}
             </div>
         </div>
         <div class="row mb-3">
             <div class="col-md-6">
-                <label for="ip_address" class="form-label">IP Address</label>
-                <input type="text" class="form-control" value="{{ device.ip_address }}" id="ip_address"
-                    name="ip_address">
+                {{ form.ip_address.label(class_="form-label") }}
+                {{ form.ip_address(class_="form-control") }}
             </div>
             <div class="col-md-6">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" class="form-control" value="{{ device.username }}" id="username" name="username">
+                {{ form.username.label(class_="form-label") }}
+                {{ form.username(class_="form-control") }}
             </div>
         </div>
         <div class="row mb-3">
             <div class="col-md-6">
-                <label for="password" class="form-label">Password</label>
+                {{ form.password.label(class_="form-label") }}
                 <div class="input-group">
-                    <input type="password" class="form-control" value="{{ device.password }}" id="password"
-                        name="password">
+                    {{ form.password(class_="form-control", id="password") }}
                     <span class="input-group-text">
                         <i class="fa-solid fa-eye" id="togglePassword" style="cursor: pointer;"></i>
                     </span>
                 </div>
+                <small class="form-text text-muted">Leave empty to keep the current password</small>
             </div>
             <div class="col-md-6">
-                <label for="ssh" class="form-label">Port SSH</label>
-                <input type="text" class="form-control" value="{{ device.ssh }}" id="ssh" name="ssh">
+                {{ form.ssh.label(class_="form-label") }}
+                {{ form.ssh(class_="form-control") }}
             </div>
         </div>
         <div class="row mb-3">
             <div class="col-md-12">
-                <label for="description" class="form-label">Deskripsi</label>
-                <input type="text" class="form-control" value="{{ device.description }}" id="description"
-                    name="description">
+                {{ form.description.label(class_="form-label") }}
+                {{ form.description(class_="form-control") }}
             </div>
         </div>
-        <!-- Tombol untuk menyimpan perubahan dan tombol untuk kembali ke halaman utama -->
         <button type="submit" class="btn btn-primary">
-            <i class="fa-solid fa-check"></i>
+            <i class="fa-solid fa-check"></i> Update
         </button>
         <a class="btn btn-secondary" href="{{ url_for('dm.index') }}">
-            <i class="fa-solid fa-arrow-left"></i>
+            <i class="fa-solid fa-arrow-left"></i> Back
         </a>
     </form>
 </div>
 
 <script>
-    // Mengubah tipe input password menjadi text untuk menampilkan password
     document.getElementById('togglePassword').addEventListener('click', function () {
         var passwordField = document.getElementById('password');
         if (passwordField.type === 'password') {
@@ -76,5 +69,4 @@
     });
 </script>
 
-<!-- Akhir Konten Halaman -->
 {% endblock %}
