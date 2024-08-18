@@ -257,7 +257,7 @@ class BackupData(db.Model):
         return f"<BackupData {self.backup_name} v{self.version}>"
 
     @staticmethod
-    def create_backup(backup_name, backup_content_path, user_id):
+    def create_backup(backup_name, description, user_id):
         # Dapatkan versi terakhir dari backup dengan nama yang sama dan user yang sama
         last_backup = (
             BackupData.query.filter_by(backup_name=backup_name, user_id=user_id)
@@ -268,7 +268,7 @@ class BackupData(db.Model):
 
         new_backup = BackupData(
             backup_name=backup_name,
-            backup_content_path=backup_content_path,
+            description=description,
             version=new_version,
             user_id=user_id,
         )

@@ -42,6 +42,7 @@
 <th>Nama Backup</th>
 <th>Versi</th>
 <th>Tanggal Dibuat</th>
+<th>Jenis</th>
 <th>Aksi</th>
 {% endblock %}
 
@@ -53,11 +54,19 @@
     <td>{{ backup.version }}</td>
     <td>{{ backup.created_at }}</td>
     <td>
+        {% if backup.user_id == current_user.id %}
+        Milik Saya
+        {% else %}
+        Dibagikan ke Saya
+        {% endif %}
+    </td>
+    <td>
         <!-- Tombol View Detail Backup -->
         <button class="btn btn-info btn-sm mb-2" onclick="viewBackupDetail({{ backup.id }})">
             <i class="fas fa-eye"></i>
         </button>
 
+        {% if backup.user_id == current_user.id %}
         <!-- Tombol Update Backup -->
         <a href="{{ url_for('backup.backup_update', backup_id=backup.id) }}" class="btn btn-success btn-sm mb-2">
             <i class="fas fa-edit"></i>
@@ -70,13 +79,19 @@
                 <i class="fas fa-trash"></i>
             </button>
         </form>
+
+        <!-- Share Backup Button -->
+        <button class="btn btn-warning btn-sm mb-2" data-bs-toggle="modal" data-bs-target="#shareModal{{ backup.id }}">
+            <i class="fas fa-share-alt"></i> Share
+        </button>
+        {% endif %}
     </td>
 </tr>
 {% endfor %}
 {% endblock %}
 
 {% block modal_data %}
-<!-- Modal for Viewing Backup Details -->
+<!-- Modal Detail Backup -->
 <div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -86,28 +101,94 @@
             </div>
             <div class="modal-body text-black">
                 <p><strong>Nama Backup:</strong> <span id="detailBackupName"></span></p>
-                <p><strong>Path Konten:</strong> <span id="detailBackupPath"></span></p>
+                <p><strong>Description:</strong> <span id="detailBackupDescription"></span></p>
                 <p><strong>Versi:</strong> <span id="detailBackupVersion"></span></p>
                 <p><strong>Tanggal Dibuat:</strong> <span id="detailBackupDate"></span></p>
+                <p><strong>Konten Backup:</strong></p>
+                <pre><code id="detailBackupContent"></code></pre> <!-- Tempatkan konten file disini -->
             </div>
         </div>
     </div>
 </div>
+
+<!-- Modal for Sharing Backup -->
+{% for backup in backups %}
+<div class="modal fade" id="shareModal{{ backup.id }}" tabindex="-1" aria-labelledby="shareModalLabel{{ backup.id }}"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-black" id="shareModalLabel{{ backup.id }}">Share Backup</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="shareBackupForm{{ backup.id }}">
+                    <div class="mb-3">
+                        <label for="userEmail{{ backup.id }}" class="form-label">User Email or Username</label>
+                        <input type="text" class="form-control" id="userEmail{{ backup.id }}" name="user_email"
+                            required>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="shareBackup({{ backup.id }})">
+                        <i class="fas fa-share-alt"></i> Share Backup
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 {% endblock %}
 
 {% block script_js %}
+<!-- # Function to view backup details in a modal -->
 <script>
     function viewBackupDetail(backupId) {
-        fetch(`/backup/${backupId}`)  // Adjust the URL to match your API endpoint
+        fetch(`/backup/${backupId}`)
             .then(response => response.json())
             .then(data => {
-                document.getElementById('detailBackupName').textContent = data.backup_name;
-                document.getElementById('detailBackupPath').textContent = data.backup_content_path;
-                document.getElementById('detailBackupVersion').textContent = data.version;
-                document.getElementById('detailBackupDate').textContent = data.created_at;
+                if (data.success === false) {
+                    alert(data.message);
+                } else {
+                    document.getElementById('detailBackupName').textContent = data.backup_name;
+                    document.getElementById('detailBackupDescription').textContent = data.description;
+                    document.getElementById('detailBackupVersion').textContent = data.version;
+                    document.getElementById('detailBackupDate').textContent = data.created_at;
+                    document.getElementById('detailBackupContent').textContent = data.backup_content;
 
-                const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
-                detailModal.show();
+                    const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+                    detailModal.show();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+</script>
+
+<!-- # Script for handle Sharing  -->
+<script>
+    // Function to handle backup sharing
+    function shareBackup(backupId) {
+        const userEmail = document.getElementById('userEmail' + backupId).value;
+        if (!userEmail) {
+            alert('Please enter a valid user email or username.');
+            return;
+        }
+
+        fetch(`/share_backup/${backupId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user_email: userEmail }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Backup shared successfully!');
+                    location.reload();
+                } else {
+                    alert('Failed to share backup: ' + data.message);
+                }
             })
             .catch(error => console.error('Error:', error));
     }

@@ -15,6 +15,7 @@ from src.models.app_models import (
     DeviceManager,
     BackupData,
     UserBackupShare,
+    User,
 )
 from src.utils.config_manager_utils import ConfigurationManagerUtils
 import os
@@ -97,21 +98,39 @@ def generate_random_filename(filename):
     roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
 )
 def backups():
+    """Menampilkan halaman dengan daftar backup yang dimiliki oleh pengguna saat ini dan yang dibagikan dengan pengguna."""
     try:
         search_query = request.args.get("search", "")
         page, per_page, offset = get_page_args(
             page_parameter="page", per_page_parameter="per_page", per_page=10
         )
 
-        backups_query = BackupData.query.filter_by(user_id=current_user.id)
+        # Filter backups berdasarkan user_id dan pencarian
+        user_backups_query = BackupData.query.filter(
+            BackupData.user_id == current_user.id
+        )
+
+        shared_backups_query = (
+            db.session.query(BackupData)
+            .join(UserBackupShare)
+            .filter(UserBackupShare.user_id == current_user.id)
+        )
+
         if search_query:
-            backups_query = backups_query.filter(
+            user_backups_query = user_backups_query.filter(
+                BackupData.backup_name.ilike(f"%{search_query}%")
+            )
+            shared_backups_query = shared_backups_query.filter(
                 BackupData.backup_name.ilike(f"%{search_query}%")
             )
 
-        total_backups = backups_query.count()
-        backups = backups_query.limit(per_page).offset(offset).all()
+        # Gabungkan hasil query
+        all_backups_query = user_backups_query.union(shared_backups_query)
 
+        total_backups = all_backups_query.count()
+        backups = all_backups_query.limit(per_page).offset(offset).all()
+
+        # Setup pagination
         pagination = Pagination(
             page=page,
             per_page=per_page,
@@ -143,18 +162,52 @@ def backups():
     roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
 )
 def get_backup_detail(backup_id):
+    """Mendapatkan detail backup berdasarkan ID."""
     try:
-        backup = BackupData.query.filter_by(
-            id=backup_id, user_id=current_user.id
+        # Query untuk backup milik user atau yang dibagikan ke user
+        backup = BackupData.query.filter(
+            db.or_(
+                BackupData.id == backup_id,
+                db.and_(
+                    UserBackupShare.backup_id == backup_id,
+                    UserBackupShare.user_id == current_user.id,
+                ),
+            )
         ).first()
+
         if not backup:
             return jsonify({"success": False, "message": "Backup not found."}), 404
 
+        # Cek apakah backup memang dimiliki oleh user atau dibagikan ke user
+        if backup.user_id != current_user.id:
+            shared_backup = UserBackupShare.query.filter_by(
+                backup_id=backup.id, user_id=current_user.id
+            ).first()
+            if not shared_backup:
+                current_app.logger.warning(
+                    f"Unauthorized access attempt by {current_user.email} for backup ID {backup_id}."
+                )
+                return jsonify({"success": False, "message": "Unauthorized access."}), 403
+
+        # Bangun jalur file backup
+        backup_content_path = os.path.join(
+            current_app.static_folder, BACKUP_FOLDER, backup.backup_name
+        )
+
+        # Baca konten file backup
+        try:
+            with open(backup_content_path, "r") as file:
+                backup_content = file.read()
+        except Exception as e:
+            current_app.logger.error(f"Error reading backup file: {e}")
+            return jsonify({"success": False, "message": "Failed to read backup file."}), 500
+
         backup_detail = {
             "backup_name": backup.backup_name,
-            "backup_content_path": backup.backup_content_path,
+            "description": backup.description,
             "version": backup.version,
             "created_at": backup.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "backup_content": backup_content,
         }
         return jsonify(backup_detail)
     except Exception as e:
@@ -189,9 +242,14 @@ def backup_update(backup_id):
                 404,
             )
 
+        backup_content_path = os.path.join(
+            current_app.static_folder, BACKUP_FOLDER, backup.backup_name
+        )
+        backup_content = None
+
         if request.method == "GET":
             try:
-                with open(backup.backup_content_path, "r") as file:
+                with open(backup_content_path, "r") as file:
                     backup_content = file.read()
             except Exception as e:
                 current_app.logger.error(f"Error reading backup file: {e}")
@@ -207,15 +265,23 @@ def backup_update(backup_id):
             data = request.form
 
             new_backup_name = data.get("backup_name", backup.backup_name)
-            new_backup_content = data.get("backup_content")
+            new_backup_content = (
+                data.get("backup_content")
+                .replace("\r\n", "\n")
+                .replace("\r", "\n")
+                .strip()
+            )
 
             if new_backup_name != backup.backup_name:
                 new_backup_name = generate_random_filename(new_backup_name)
                 backup.backup_name = new_backup_name
+                backup_content_path = os.path.join(
+                    current_app.static_folder, BACKUP_FOLDER, new_backup_name
+                )
 
-            if new_backup_content and new_backup_content != backup_content:
+            if new_backup_content:
                 try:
-                    with open(backup.backup_content_path, "w") as file:
+                    with open(backup_content_path, "w") as file:
                         file.write(new_backup_content)
                     current_app.logger.info(
                         f"Backup content updated for {backup.backup_name}."
@@ -236,6 +302,7 @@ def backup_update(backup_id):
             current_app.logger.info(
                 f"Backup ID {backup_id} updated by user {current_user.email}."
             )
+            flash(f"Backup file updated successfull", "success")
             return redirect(url_for("backup.backups"))
 
     except Exception as e:
@@ -326,24 +393,35 @@ def share_backup(backup_id):
             )
 
         data = request.get_json()
-        user_id_to_share = data.get("user_id")
+        user_email_to_share = data.get("user_email")
 
-        if not user_id_to_share:
+        if not user_email_to_share:
             current_app.logger.warning(
-                f"Missing user ID for backup share by {current_user.email}."
+                f"Missing user email for backup share by {current_user.email}."
             )
             return (
                 jsonify(
-                    {"success": False, "message": "User ID to share with is required."}
+                    {
+                        "success": False,
+                        "message": "User email to share with is required.",
+                    }
                 ),
                 400,
             )
 
-        new_share = UserBackupShare(user_id=user_id_to_share, backup_id=backup.id)
+        # Retrieve the user by email
+        user_to_share = User.query.filter_by(email=user_email_to_share).first()
+        if not user_to_share:
+            current_app.logger.warning(
+                f"User with email {user_email_to_share} not found."
+            )
+            return jsonify({"success": False, "message": "User not found."}), 404
+
+        new_share = UserBackupShare(user_id=user_to_share.id, backup_id=backup.id)
         db.session.add(new_share)
         db.session.commit()
         current_app.logger.info(
-            f"Backup ID {backup_id} shared by {current_user.email} with user ID {user_id_to_share}."
+            f"Backup ID {backup_id} shared by {current_user.email} with user ID {user_to_share.id}."
         )
         return jsonify({"success": True, "message": "Backup shared successfully."}), 200
     except Exception as e:
@@ -490,12 +568,11 @@ def backup_config():
                 filename_gen = (
                     f"{device.ip_address}_{device.vendor}_{device.device_name}"
                 )
-                random_filename = generate_random_filename(filename_gen)
-                filename = f"{random_filename}.txt"
-                path_backup = BACKUP_FOLDER
+                filename = f"{filename_gen}.backup"
                 file_path = os.path.join(
-                    current_app.static_folder, path_backup, filename
+                    current_app.static_folder, BACKUP_FOLDER, filename
                 )
+                description = f"Backup file {filename} created by {current_user.email}"
 
                 if backup_data:
                     backup_data = (
@@ -508,8 +585,8 @@ def backup_config():
                 )
 
                 BackupData.create_backup(
-                    backup_name=random_filename,
-                    backup_content_path=file_path,
+                    backup_name=filename,
+                    description=description,
                     user_id=current_user.id,
                 )
 
