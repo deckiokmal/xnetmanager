@@ -7,6 +7,11 @@
     <i class="fas fa-download"></i> Backup Konfigurasi
 </button>
 {% endblock %}
+{% block button_group2 %}
+<a class="btn btn-danger" href="{{ url_for('backup.backups') }}">
+    <i class="fas fa-arrow-left"></i> Back to Templates
+</a>
+{% endblock %}
 
 {% block table_name %}Daftar Perangkat{% endblock %}
 
