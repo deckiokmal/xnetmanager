@@ -194,12 +194,22 @@
                     // Tampilkan hasil backup di modal
                     const backupResultModal = new bootstrap.Modal(document.getElementById("backupResultModal"));
                     document.getElementById("backupResultBody").innerHTML = tableHTML;
+
+                    // Tutup modal backupConfigModal dan tampilkan modal backupResultModal
+                    const backupConfigModal = bootstrap.Modal.getInstance(document.getElementById("backupConfigModal"));
+                    backupConfigModal.hide();
                     backupResultModal.show();
                 })
                 .catch(error => console.error('Error:', error));
         } else {
             alert("Please select a command and at least one device.");
         }
+    });
+
+    // Event klik tombol Close pada backupResultModal
+    document.getElementById("backupResultModal").addEventListener("hidden.bs.modal", function () {
+        // Reload halaman untuk kembali ke keadaan awal
+        location.reload();
     });
 </script>
 {% endblock %}

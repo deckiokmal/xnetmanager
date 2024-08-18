@@ -164,22 +164,21 @@ def backups():
 def get_backup_detail(backup_id):
     """Mendapatkan detail backup berdasarkan ID."""
     try:
-        # Query untuk backup milik user atau yang dibagikan ke user
-        backup = BackupData.query.filter(
-            db.or_(
-                BackupData.id == backup_id,
-                db.and_(
-                    UserBackupShare.backup_id == backup_id,
-                    UserBackupShare.user_id == current_user.id,
-                ),
-            )
-        ).first()
+        # Query to find the backup, owned by the user or shared with the user
+        backup = BackupData.query.filter_by(id=backup_id).first()
 
         if not backup:
+            current_app.logger.warning(f"Backup ID {backup_id} not found.")
             return jsonify({"success": False, "message": "Backup not found."}), 404
 
-        # Cek apakah backup memang dimiliki oleh user atau dibagikan ke user
-        if backup.user_id != current_user.id:
+        # Check if the backup is owned by the current user
+        if backup.user_id == current_user.id:
+            is_owner = True
+            current_app.logger.info(
+                f"User {current_user.email} accessed their own backup ID {backup_id}."
+            )
+        else:
+            # Check if the backup is shared with the current user
             shared_backup = UserBackupShare.query.filter_by(
                 backup_id=backup.id, user_id=current_user.id
             ).first()
@@ -187,27 +186,43 @@ def get_backup_detail(backup_id):
                 current_app.logger.warning(
                     f"Unauthorized access attempt by {current_user.email} for backup ID {backup_id}."
                 )
-                return jsonify({"success": False, "message": "Unauthorized access."}), 403
+                return (
+                    jsonify({"success": False, "message": "Unauthorized access."}),
+                    403,
+                )
+            is_owner = False
+            current_app.logger.info(
+                f"User {current_user.email} accessed shared backup ID {backup_id}."
+            )
 
-        # Bangun jalur file backup
+        # Build the backup file path
         backup_content_path = os.path.join(
             current_app.static_folder, BACKUP_FOLDER, backup.backup_name
         )
 
-        # Baca konten file backup
-        try:
-            with open(backup_content_path, "r") as file:
-                backup_content = file.read()
-        except Exception as e:
-            current_app.logger.error(f"Error reading backup file: {e}")
-            return jsonify({"success": False, "message": "Failed to read backup file."}), 500
+        # Read the backup file content if the user is the owner or has access
+        backup_content = None
+        if is_owner or shared_backup:
+            try:
+                with open(backup_content_path, "r") as file:
+                    backup_content = file.read()
+            except Exception as e:
+                current_app.logger.error(f"Error reading backup file: {e}")
+                return (
+                    jsonify(
+                        {"success": False, "message": "Failed to read backup file."}
+                    ),
+                    500,
+                )
 
         backup_detail = {
             "backup_name": backup.backup_name,
             "description": backup.description,
             "version": backup.version,
             "created_at": backup.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "backup_content": backup_content,
+            "backup_content": (
+                backup_content if backup_content else "Content not available."
+            ),
         }
         return jsonify(backup_detail)
     except Exception as e:
@@ -320,6 +335,7 @@ def backup_update(backup_id):
 )
 def delete_backup(backup_id):
     try:
+        # Fetch the backup entry to ensure it belongs to the current user
         backup = BackupData.query.filter_by(
             id=backup_id, user_id=current_user.id
         ).first()
@@ -335,6 +351,15 @@ def delete_backup(backup_id):
                 404,
             )
 
+        # Delete all shared entries related to this backup
+        shares = UserBackupShare.query.filter_by(backup_id=backup.id).all()
+        for share in shares:
+            db.session.delete(share)
+
+        # Commit the deletion of shared entries
+        db.session.commit()
+
+        # Delete the backup file from the filesystem
         try:
             backup_file_path = os.path.join(
                 current_app.static_folder, BACKUP_FOLDER, backup.backup_name
@@ -355,6 +380,7 @@ def delete_backup(backup_id):
                 500,
             )
 
+        # Delete the backup entry from the database
         db.session.delete(backup)
         db.session.commit()
         current_app.logger.info(

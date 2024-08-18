@@ -1,5 +1,6 @@
-# 2024-08-18 19:39:52 by RouterOS 7.13.3
+# 2024-08-18 23:12:24 by RouterOS 7.13.3
 # software id = 
+#
 /interface ethernet set [ find default-name=ether1 ] auto-negotiation=no disable-running-check=no name=VLAN102-OUTGOING speed=1G-baseT-full
 /interface ethernet set [ find default-name=ether2 ] disable-running-check=no name=VLAN201-DOCKER
 /interface ethernet set [ find default-name=ether3 ] disable-running-check=no name=VLAN202-PRTG
