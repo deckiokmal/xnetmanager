@@ -587,6 +587,7 @@ def template_generator(template_id):
             description=f"{gen_filename} created by {current_user.email}",
             created_by=current_user.email,
             user_id=current_user.id,
+            vendor=vendor,
         )
         db.session.add(new_template_generate)
         db.session.commit()
