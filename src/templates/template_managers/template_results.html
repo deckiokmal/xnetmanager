@@ -45,6 +45,7 @@
 {% block table_header %}
 <th>No</th>
 <th>Nama File</th>
+<th>Vendor</th>
 <th>Deskripsi</th>
 <th>Aksi</th>
 {% endblock %}
@@ -54,6 +55,7 @@
 <tr>
     <th scope="row">{{ loop.index + (pagination.page - 1) * per_page }}</th>
     <td>{{ template.config_name }}</td>
+    <td>{{ template.vendor }}</td>
     <td>{{ template.description }}</td>
     <td>
         <button class="btn btn-info btn-sm mb-2" data-bs-toggle="modal" data-bs-target="#detailModal{{ template.id }}">
@@ -84,6 +86,7 @@
             </div>
             <div class="modal-body text-black">
                 <p><strong>File Name:</strong> {{ template.config_name }}</p>
+                <p><strong>Vendor:</strong> {{ template.vendor }}</p>
                 <p><strong>Description:</strong> {{ template.description }}</p>
                 <p><strong>Created by:</strong> {{ template.created_by }}</p>
                 <p><strong>Template Content:</strong></p>
@@ -124,6 +127,10 @@
                                 <input type="text" class="form-control" id="create_filename" name="filename" required>
                             </div>
                             <div class="mb-3">
+                                <label for="create_vendor" class="form-label">Vendor</label>
+                                <input type="text" class="form-control" id="create_vendor" name="vendor" required>
+                            </div>
+                            <div class="mb-3">
                                 <label for="description" class="form-label">Deskripsi</label>
                                 <input type="text" class="form-control" id="description"
                                     name="configuration_description" required>
@@ -140,6 +147,24 @@
                 </div>
             </div>
         </div>
+
+        <!-- Modal Error Template Generation -->
+        <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content bg-danger text-light">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="errorModalLabel">Error Generating Template</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="errorModalMessage"></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
         {% endblock %}
 
         {% block script_js %}
@@ -152,6 +177,38 @@
                 timeout = setTimeout(function () {
                     document.getElementById('searchForm').submit();
                 }, 1000);
+            });
+        </script>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                document.querySelectorAll('form[action*="configuration_manual_create"]').forEach(function (form) {
+                    form.addEventListener('submit', function (event) {
+                        event.preventDefault();  // Prevent the form from submitting the default way
+
+                        const formData = new FormData(form);
+                        const actionUrl = form.getAttribute('action');
+
+                        fetch(actionUrl, {
+                            method: 'POST',
+                            body: formData
+                        })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.is_valid) {
+                                    var createModal = new bootstrap.Modal(document.getElementById('createModal'));
+                                    createModal.hide();  // Close the modal
+                                    window.location.reload();  // Reload the page if successful
+                                } else {
+                                    // Display the error in a modal
+                                    document.getElementById('errorModalMessage').textContent = data.error_message;
+                                    var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                                    errorModal.show();
+                                }
+                            })
+                            .catch(error => console.error('Error:', error));
+                    });
+                });
             });
         </script>
         {% endblock %}

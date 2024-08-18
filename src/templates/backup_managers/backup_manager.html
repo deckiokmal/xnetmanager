@@ -1,0 +1,200 @@
+{% extends "/layouts/layout_table.html" %}
+{% block title %}Backup Manager{% endblock %}
+
+{% block button_group1 %}
+<!-- Tombol Backup Konfigurasi -->
+<button id="backupConfigBtn" type="button" class="btn btn-primary">
+    <i class="fas fa-download"></i> Backup Konfigurasi
+</button>
+{% endblock %}
+
+{% block table_name %}Daftar Perangkat{% endblock %}
+
+{% block form_filter_row %}
+<form id="perPageForm" action="{{ url_for('backup.backup_manager') }}" method="get">
+    <label class="d-flex align-items-center">
+        <span>Tampilkan</span>
+        <select name="per_page" class="form-select form-select-sm mx-2"
+            onchange="document.getElementById('perPageForm').submit()">
+            <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
+            <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
+            <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
+        </select>
+        <span>entri</span>
+    </label>
+    <input type="hidden" name="search" value="{{ search_query }}">
+</form>
+{% endblock %}
+
+{% block form_search %}
+<!-- Form Pencarian -->
+<form id="searchForm" method="get" action="{{ url_for('backup.backup_manager') }}" class="form-inline d-flex">
+    <input id="searchInput" type="text" name="search" class="form-control form-control-sm me-2"
+        placeholder="Cari device" value="{{ search_query }}">
+    <button class="btn btn-outline-success btn-sm" type="submit">
+        <i class="fas fa-search"></i>
+    </button>
+    <input type="hidden" name="per_page" value="{{ per_page }}">
+</form>
+{% endblock %}
+
+{% block table_header %}
+<th scope="col">
+    <!-- Tombol Select Perangkat -->
+    <button id="selectDevicesBtn" type="button" class="btn btn-primary btn-sm ml-3">
+        <i class="fas fa-cogs"></i> Select
+    </button>
+</th>
+<th scope="col" class="justify-content">No</th>
+<th scope="col">Nama Perangkat</th>
+<th scope="col">Alamat IP</th>
+<th scope="col">Vendor</th>
+{% endblock %}
+
+{% block table_body %}
+{% for device in devices %}
+<tr>
+    <th>
+        <div class="container">
+            <!-- Checklist Buttons -->
+            <div id="checklistButtons{{ loop.index }}" class="checklist-buttons" style="display: none;">
+                <div class="btn-group" role="group" aria-label="Basic checkbox toggle button group">
+                    <input type="checkbox" class="btn-check checklist-buttons" id="btncheck{{ loop.index }}"
+                        data-id="{{ device.ip_address }}" autocomplete="off">
+                    <label class="btn btn-outline-primary" for="btncheck{{ loop.index }}">Select</label>
+                </div>
+            </div>
+        </div>
+    </th>
+    <th scope="row">{{ loop.index + (page - 1) * per_page }}</th>
+    <td>{{ device.device_name }}</td>
+    <td>{{ device.ip_address }}</td>
+    <td>{{ device.vendor }}</td>
+</tr>
+{% endfor %}
+{% endblock %}
+
+{% block modal_data %}
+<!-- Modal untuk memilih command dan melakukan backup -->
+<div class="modal fade" id="backupConfigModal" tabindex="-1" aria-labelledby="backupConfigModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-black text-light">
+            <div class="modal-header">
+                <h5 class="modal-title" id="backupConfigModalLabel">Backup Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="backupConfigForm">
+                    <div class="mb-3">
+                        <label for="commandSelect" class="form-label">Pilih Command</label>
+                        <select id="commandSelect" class="form-select" required>
+                            <option value="" selected disabled>Select a command</option>
+                            <option value="show full-configuration">Fortinet</option>
+                            <option value="show running-config">Cisco</option>
+                            <option value="export compact terse">MikroTik</option>
+                            <!-- Tambahkan vendor lain sesuai kebutuhan -->
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="confirmBackupConfigBtn">Backup
+                        Konfigurasi</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal untuk menampilkan hasil backup -->
+<div class="modal fade" id="backupResultModal" tabindex="-1" aria-labelledby="backupResultModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-black text-light">
+            <div class="modal-header">
+                <h5 class="modal-title" id="backupResultModalLabel">Backup Result</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="backupResultBody"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script_js %}
+<!-- Script untuk menangani aksi pengguna -->
+<script>
+    // Variabel untuk melacak status checklist
+    let isChecklistVisible = false;
+
+    // Event klik tombol Select Device
+    document.getElementById("selectDevicesBtn").addEventListener("click", function () {
+        const checklistButtons = document.getElementsByClassName("checklist-buttons");
+
+        if (!isChecklistVisible) {
+            for (let i = 0; i < checklistButtons.length; i++) {
+                checklistButtons[i].style.display = "block";
+            }
+            isChecklistVisible = true;
+        } else {
+            for (let i = 0; i < checklistButtons.length; i++) {
+                checklistButtons[i].style.display = "none";
+                if (checklistButtons[i].type === "checkbox" && checklistButtons[i].checked) {
+                    checklistButtons[i].checked = false;
+                }
+            }
+            isChecklistVisible = false;
+        }
+    });
+
+    // Event klik tombol Backup Konfigurasi
+    document.getElementById("backupConfigBtn").addEventListener("click", function () {
+        const selectedDevices = [];
+        document.querySelectorAll(".btn-check:checked").forEach(function (checkbox) {
+            selectedDevices.push(checkbox.getAttribute("data-id"));
+        });
+
+        if (selectedDevices.length > 0) {
+            const backupConfigModal = new bootstrap.Modal(document.getElementById("backupConfigModal"));
+            backupConfigModal.show();
+        } else {
+            alert("Please select at least one device.");
+        }
+    });
+
+    // Event klik tombol Confirm Backup Konfigurasi
+    document.getElementById("confirmBackupConfigBtn").addEventListener("click", function () {
+        const selectedCommand = document.getElementById("commandSelect").value;
+        const selectedDevices = [];
+        document.querySelectorAll(".btn-check:checked").forEach(function (checkbox) {
+            selectedDevices.push(checkbox.getAttribute("data-id"));
+        });
+
+        if (selectedCommand && selectedDevices.length > 0) {
+            fetch("/backup_config", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ devices: selectedDevices, command: selectedCommand })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    let tableHTML = '<table class="table table-bordered"><thead><tr><th>Device Name</th><th>Status</th><th>Message</th></tr></thead><tbody>';
+                    data.results.forEach(result => {
+                        tableHTML += `<tr><td>${result.device_name}</td><td>${result.status}</td><td>${result.message}</td></tr>`;
+                    });
+                    tableHTML += '</tbody></table>';
+
+                    // Tampilkan hasil backup di modal
+                    const backupResultModal = new bootstrap.Modal(document.getElementById("backupResultModal"));
+                    document.getElementById("backupResultBody").innerHTML = tableHTML;
+                    backupResultModal.show();
+                })
+                .catch(error => console.error('Error:', error));
+        } else {
+            alert("Please select a command and at least one device.");
+        }
+    });
+</script>
+{% endblock %}

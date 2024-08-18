@@ -199,6 +199,7 @@ class ConfigurationManager(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     config_name = db.Column(db.String(100), nullable=False, unique=True)
+    vendor = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=True)
     created_by = db.Column(db.Text, nullable=True)
 
@@ -243,9 +244,7 @@ class BackupData(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     backup_name = db.Column(db.String(255), nullable=False)
-    backup_content_path = db.Column(
-        db.String(255), nullable=False
-    )  # Menyimpan path ke file backup
+    description = db.Column(db.String(255), nullable=True)
     version = db.Column(db.Integer, nullable=False, default=1)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)

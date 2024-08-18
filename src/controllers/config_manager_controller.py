@@ -4,7 +4,6 @@ from flask import (
     jsonify,
     request,
     current_app,
-    copy_current_request_context,
 )
 from flask_login import login_required, current_user
 from src.models.app_models import DeviceManager, ConfigurationManager
@@ -112,19 +111,23 @@ def index():
         page_parameter="page", per_page_parameter="per_page", per_page=10
     )
 
-    # Query perangkat berdasarkan pencarian atau semua perangkat jika tidak ada pencarian
+    # Query perangkat berdasarkan pencarian dan pemiliknya
+    devices_query = DeviceManager.query.filter(DeviceManager.user_id == current_user.id)
     if search_query:
-        devices_query = DeviceManager.query.filter(
+        devices_query = devices_query.filter(
             DeviceManager.device_name.ilike(f"%{search_query}%")
             | DeviceManager.ip_address.ilike(f"%{search_query}%")
             | DeviceManager.vendor.ilike(f"%{search_query}%")
         )
-    else:
-        devices_query = DeviceManager.query
+
+    # Query file konfigurasi berdasarkan pemiliknya
+    config_query = ConfigurationManager.query.filter(
+        ConfigurationManager.user_id == current_user.id
+    )
 
     total_devices = devices_query.count()
     devices = devices_query.limit(per_page).offset(offset).all()
-    config_file = ConfigurationManager.query.all()
+    config_file = config_query.all()
 
     # Setup pagination
     pagination = Pagination(
@@ -157,7 +160,9 @@ def check_status():
     Memeriksa status setiap perangkat di database.
     Mengembalikan status dalam format JSON untuk setiap perangkat.
     """
-    devices = DeviceManager.query.all()
+    devices = DeviceManager.query.filter(
+        DeviceManager.user_id == current_user.id
+    ).all()  # Filter perangkat berdasarkan pemilik
     device_status = {}
 
     # Mengecek status setiap perangkat
@@ -202,8 +207,11 @@ def push_configs():
     if not config_id:
         return jsonify({"success": False, "message": "No config selected."}), 400
 
-    # Query perangkat dan konfigurasi berdasarkan input
-    devices = DeviceManager.query.filter(DeviceManager.ip_address.in_(device_ips)).all()
+    # Query perangkat dan konfigurasi berdasarkan input dan pemiliknya
+    devices = DeviceManager.query.filter(
+        DeviceManager.ip_address.in_(device_ips),
+        DeviceManager.user_id == current_user.id,
+    ).all()
     if not devices:
         return (
             jsonify(
@@ -212,7 +220,9 @@ def push_configs():
             404,
         )
 
-    config = ConfigurationManager.query.get(config_id)
+    config = ConfigurationManager.query.filter_by(
+        id=config_id, user_id=current_user.id
+    ).first()
     if not config:
         return jsonify({"success": False, "message": "Selected config not found."}), 404
 
