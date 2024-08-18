@@ -88,6 +88,16 @@
     </li>
     {% endif %}
 
+    {% if current_user.has_role('Admin') or current_user.has_role('User') %}
+    <!-- Nav Item - Configuration Management -->
+    <li class="nav-item {{ is_active('/backup_manager') }}">
+        <a class="nav-link" href="/backup_manager">
+            <i class="fas fa-download"></i>
+            <span>Backup Management</span>
+        </a>
+    </li>
+    {% endif %}
+
     <!-- Divider -->
     <hr class="sidebar-divider">
 

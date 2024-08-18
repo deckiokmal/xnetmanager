@@ -20,14 +20,14 @@ from datetime import datetime
 import string
 
 # Membuat blueprint untuk Network Manager (nm_bp) dan Error Handling (error_bp)
-nm_bp = Blueprint("nm", __name__)
+backup_bp = Blueprint("backup", __name__)
 error_bp = Blueprint("error", __name__)
 
 # Setup logging untuk aplikasi
 logging.basicConfig(level=logging.INFO)
 
 
-@nm_bp.before_app_request
+@backup_bp.before_app_request
 def setup_logging():
     """
     Mengatur level logging untuk aplikasi.
@@ -48,7 +48,7 @@ def page_not_found(error):
 
 
 # Middleware untuk autentikasi dan otorisasi sebelum permintaan.
-@nm_bp.before_request
+@backup_bp.before_request
 def before_request_func():
     """
     Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
@@ -62,7 +62,7 @@ def before_request_func():
 
 
 # Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
-@nm_bp.context_processor
+@backup_bp.context_processor
 def inject_user():
     """
     Menyediakan first_name dan last_name pengguna yang terotentikasi ke dalam template.
@@ -75,12 +75,10 @@ def inject_user():
 
 
 # --------------------------------------------------------------------------------
-# Config Management Section
+# Backup Management Section
 # --------------------------------------------------------------------------------
 
-
-GEN_TEMPLATE_FOLDER = "xmanager/gen_templates"
-
+BACKUP_FOLDER = "xmanager/backups"
 
 # Fungsi pembantu untuk menghasilkan nama file acak
 def generate_random_filename(filename):
@@ -93,18 +91,15 @@ def generate_random_filename(filename):
     return filename
 
 
-# Endpoint Network Manager index
-@nm_bp.route("/nm", methods=["GET"])
+# Endpoint backup konfigurasi menu
+@backup_bp.route("/backup_manager", methods=["GET"])
 @login_required
 @required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
 )
-def index():
-    """
-    Menampilkan halaman index Network Manager.
-    Fitur: Pencarian perangkat, pagination, dan pengambilan data konfigurasi.
-    """
+def backup_manager():
+    """Menampilkan halaman Backup Manager dengan daftar perangkat."""
     search_query = request.args.get("search", "")
 
     # Ambil halaman dan jumlah per halaman dari argumen URL
@@ -134,7 +129,7 @@ def index():
     )
 
     return render_template(
-        "config_managers/index.html",
+        "backup_managers/index.html",
         devices=devices,
         config_file=config_file,
         page=page,
@@ -145,61 +140,23 @@ def index():
     )
 
 
-# Endpoint untuk mengecek status perangkat
-@nm_bp.route("/check_status", methods=["POST"])
+# Endpoint untuk backup konfigurasi perangkat
+@backup_bp.route("/backup_config", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
 )
-def check_status():
-    """
-    Memeriksa status setiap perangkat di database.
-    Mengembalikan status dalam format JSON untuk setiap perangkat.
-    """
-    devices = DeviceManager.query.all()
-    device_status = {}
-
-    # Mengecek status setiap perangkat
-    for device in devices:
-        check_device_status = ConfigurationManagerUtils(ip_address=device.ip_address)
-        status_json = check_device_status.check_device_status_threaded()
-
-        try:
-            # Parsing hasil JSON dari status perangkat
-            status_dict = json.loads(status_json)
-            # Set status berdasarkan hasil ping
-            if status_dict["status"] == "success":
-                device_status[device.id] = "success"
-            else:
-                device_status[device.id] = "error"
-        except json.JSONDecodeError as e:
-            logging.error("Error decoding JSON response: %s", e)
-            device_status[device.id] = "error"
-
-    return jsonify(device_status)
-
-
-# Endpoint untuk push konfigurasi ke perangkat
-@nm_bp.route("/push_configs", methods=["POST"])
-@login_required
-@required_2fa
-@role_required(
-    roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
-)
-def push_configs():
-    """
-    Mengirimkan konfigurasi ke perangkat yang dipilih.
-    Fitur: Memvalidasi input, membaca file konfigurasi, dan push konfigurasi secara paralel ke banyak perangkat.
-    """
+def backup_config():
+    """Menerima ID perangkat dan perintah untuk backup."""
     data = request.get_json()
     device_ips = data.get("devices", [])
-    config_id = data.get("config_id")
+    command = data.get("command")
 
     # Validasi input
     if not device_ips:
         return jsonify({"success": False, "message": "No devices selected."}), 400
-    if not config_id:
+    if not command:
         return jsonify({"success": False, "message": "No config selected."}), 400
 
     # Query perangkat dan konfigurasi berdasarkan input
@@ -212,33 +169,11 @@ def push_configs():
             404,
         )
 
-    config = ConfigurationManager.query.get(config_id)
-    if not config:
-        return jsonify({"success": False, "message": "Selected config not found."}), 404
-
-    # Membaca file konfigurasi
-    def read_config(filename):
-        config_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
-        )
-        try:
-            with open(config_path, "r") as file:
-                return file.read()
-        except FileNotFoundError:
-            logging.error("Config file not found: %s", config_path)
-            return None
-        except Exception as e:
-            logging.error("Error reading config file: %s", e)
-            return None
-
-    config_content = read_config(config.config_name)
-    if not config_content:
-        return jsonify({"success": False, "message": "Error reading config."}), 500
-
     results = []
     success = True
 
     # Fungsi untuk mengkonfigurasi perangkat
+    @copy_current_request_context
     def configure_device(device):
         nonlocal success
         try:
@@ -248,16 +183,42 @@ def push_configs():
                 password=device.password,
                 ssh=device.ssh,
             )
-            response_json = config_utils.configure_device(config_content)
+            response_json = config_utils.backup_configuration(command=command)
             response_dict = json.loads(response_json)
-            message = response_dict.get("message", "Konfigurasi sukses")
-            status = response_dict.get("status", "success")
-            return {
-                "device_name": device.device_name,
-                "ip": device.ip_address,
-                "status": status,
-                "message": message,
-            }
+            backup_data = response_dict.get("message")
+
+            # simpan hasil backup ke directory
+            filename_gen = f"{device.ip_address}_{device.vendor}_{device.device_name}"
+            random_filename = generate_random_filename(filename_gen)
+            filename = f"{random_filename}.txt"
+            path_backup = BACKUP_FOLDER
+            file_path = os.path.join(current_app.static_folder, path_backup, filename)
+
+            if backup_data:
+                backup_data = (
+                    backup_data.replace("\r\n", "\n").replace("\r", "\n").strip()
+                )
+            # Simpan konten backup ke dalam file
+            with open(file_path, "w", encoding="utf-8") as backup_file:
+                backup_file.write(backup_data)
+            current_app.logger.info(
+                f"Successfully saved backup content to file: {file_path}"
+            )
+
+            if response_dict.get("status") == "success":
+                return {
+                    "device_name": device.device_name,
+                    "ip": device.ip_address,
+                    "status": "success",
+                    "message": "Backup sukses.",
+                }
+            else:
+                return {
+                    "device_name": device.device_name,
+                    "ip": device.ip_address,
+                    "status": response_dict.get("status", "error"),
+                    "message": response_dict.get("message", "Konfigurasi gagal"),
+                }
         except json.JSONDecodeError as e:
             logging.error("Error decoding JSON response: %s", e)
             return {

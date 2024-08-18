@@ -11,19 +11,25 @@
 {% block table_name %}Daftar Perangkat{% endblock %}
 
 {% block form_filter_row %}
-<form id="perPageForm" action="{{ url_for('nm.backup_manager') }}" method="get">
-    <!-- Form Filter untuk menentukan jumlah entri per halaman -->
-    <select name="per_page" class="form-control form-control-sm" onchange="this.form.submit()">
-        <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
-        <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
-        <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
-    </select>
+<form id="perPageForm" action="{{ url_for('backup.backup_manager') }}" method="get">
+    <label class="d-flex align-items-center">
+        <span>Tampilkan</span>
+        <select name="per_page" aria-controls="dataTable"
+            class="custom-select custom-select-sm form-control form-control-sm mx-2" style="padding-right: 1.75rem;"
+            onchange="document.getElementById('perPageForm').submit()">
+            <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
+            <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
+            <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
+        </select>
+        <span>entri</span>
+    </label>
+    <input type="hidden" name="search" value="{{ search_query }}">
 </form>
 {% endblock %}
 
 {% block form_search %}
 <!-- Form Pencarian -->
-<form id="searchForm" method="get" action="{{ url_for('nm.backup_manager') }}" class="form-inline d-flex">
+<form id="searchForm" method="get" action="{{ url_for('backup.backup_manager') }}" class="form-inline d-flex">
     <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2"
         placeholder="Cari perangkat" value="{{ search_query }}">
     <button class="btn btn-outline-success btn-sm" type="submit">
