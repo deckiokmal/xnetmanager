@@ -595,34 +595,33 @@ def backup_config():
                     response_dict = json.loads(response_json)
                     backup_data = response_dict.get("message")
 
-                    filename_gen = (
-                        f"{device.ip_address}_{device.vendor}_{device.device_name}"
-                    )
-                    filename = f"{filename_gen}.backup"
-                    file_path = os.path.join(
-                        current_app.static_folder, BACKUP_FOLDER, filename
-                    )
-                    description = f"Backup file {filename} created by {user_email}"
+                    if response_dict.get("status") == "success" and backup_data:
+                        filename_gen = (
+                            f"{device.ip_address}_{device.vendor}_{device.device_name}"
+                        )
+                        filename = f"{filename_gen}.backup"
+                        file_path = os.path.join(
+                            current_app.static_folder, BACKUP_FOLDER, filename
+                        )
+                        description = f"Backup file {filename} created by {user_email}"
 
-                    if backup_data:
                         backup_data = (
                             backup_data.replace("\r\n", "\n")
                             .replace("\r", "\n")
                             .strip()
                         )
-                    with open(file_path, "w", encoding="utf-8") as backup_file:
-                        backup_file.write(backup_data)
-                    current_app.logger.info(
-                        f"Successfully saved backup content to file: {file_path}"
-                    )
+                        with open(file_path, "w", encoding="utf-8") as backup_file:
+                            backup_file.write(backup_data)
+                        current_app.logger.info(
+                            f"Successfully saved backup content to file: {file_path}"
+                        )
 
-                    BackupData.create_backup(
-                        backup_name=filename,
-                        description=description,
-                        user_id=user_id,
-                    )
+                        BackupData.create_backup(
+                            backup_name=filename,
+                            description=description,
+                            user_id=user_id,
+                        )
 
-                    if response_dict.get("status") == "success":
                         return {
                             "device_name": device.device_name,
                             "ip": device.ip_address,
@@ -630,6 +629,9 @@ def backup_config():
                             "message": "Backup sukses.",
                         }
                     else:
+                        current_app.logger.error(
+                            f"Backup failed for device {device.ip_address}: {response_dict.get('message', 'Unknown error')}"
+                        )
                         return {
                             "device_name": device.device_name,
                             "ip": device.ip_address,
