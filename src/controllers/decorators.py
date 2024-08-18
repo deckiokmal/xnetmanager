@@ -1,7 +1,7 @@
 from functools import wraps
 from flask import flash, redirect, request, url_for, session
 from flask_login import current_user
-from src.models.users_model import Role
+from src.models.app_models import Role
 
 
 # Decorator untuk user yang belum login

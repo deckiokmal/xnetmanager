@@ -10,8 +10,7 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from src import db, bcrypt
-from src.models.users_model import User, Role
-from src.models.xmanager_model import DeviceManager, TemplateManager
+from src.models.app_models import User, Role, DeviceManager, TemplateManager
 from src.utils.forms_utils import RegisterForm, UserUpdateForm
 from .decorators import login_required, role_required, required_2fa
 from flask_paginate import Pagination, get_page_args

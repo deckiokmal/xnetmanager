@@ -10,7 +10,7 @@ from wtforms.validators import (
     IPAddress,
     Regexp,
 )
-from src.models.users_model import User
+from src.models.app_models import User
 
 
 class RegisterForm(FlaskForm):

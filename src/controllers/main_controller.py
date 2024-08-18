@@ -10,7 +10,7 @@ from flask import (
 )
 from flask_login import login_user, logout_user, current_user, login_required
 from src import db, bcrypt
-from src.models.users_model import User, Role
+from src.models.app_models import User, Role
 from src.utils.forms_utils import RegisterForm, LoginForm, TwoFactorForm
 from src.utils.LoginUtils import LoginUtils
 import logging

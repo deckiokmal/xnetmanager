@@ -101,7 +101,7 @@ def create_app(config_class=None):
     app.register_blueprint(error_bp)
 
     # Set up user loader
-    from .models.users_model import User
+    from .models.app_models import User
 
     login_manager.login_view = "main.login"
 

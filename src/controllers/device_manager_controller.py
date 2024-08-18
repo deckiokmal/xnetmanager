@@ -10,7 +10,7 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from src import db
-from src.models.xmanager_model import DeviceManager
+from src.models.app_models import DeviceManager
 from .decorators import login_required, role_required, required_2fa
 from src.utils.forms_utils import DeviceForm, DeviceUpdateForm
 from flask_paginate import Pagination, get_page_args

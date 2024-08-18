@@ -11,7 +11,7 @@ from flask import (
 from flask_login import login_required, current_user
 from flask_paginate import Pagination, get_page_args
 from src import db
-from src.models.users_model import User, Role, Permission, UserRoles
+from src.models.app_models import User, Role, Permission, UserRoles
 from .decorators import role_required, login_required, required_2fa
 import logging
 

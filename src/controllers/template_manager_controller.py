@@ -10,7 +10,7 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from src import db
-from src.models.xmanager_model import TemplateManager, ConfigurationManager
+from src.models.app_models import TemplateManager, ConfigurationManager
 from src.utils.config_manager_utils import ConfigurationManagerUtils
 from src.utils.openai_utils import validate_generated_template_with_openai
 from werkzeug.utils import secure_filename

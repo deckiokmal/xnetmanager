@@ -7,8 +7,7 @@ from flask import (
     copy_current_request_context,
 )
 from flask_login import login_required, current_user
-from src.models.users_model import User
-from src.models.xmanager_model import DeviceManager, ConfigurationManager
+from src.models.app_models import DeviceManager, ConfigurationManager
 from src.utils.config_manager_utils import ConfigurationManagerUtils
 import os
 from .decorators import login_required, role_required, required_2fa

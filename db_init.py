@@ -1,5 +1,5 @@
 from src import db, create_app
-from src.models.users_model import User, Role, Permission, UserRoles, RolePermissions
+from src.models.app_models import User, Role, Permission, UserRoles, RolePermissions
 
 def initialize():
     app = create_app()
