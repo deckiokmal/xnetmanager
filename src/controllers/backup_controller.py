@@ -549,6 +549,10 @@ def backup_config():
         data = request.get_json()
         device_ips = data.get("devices", [])
         command = data.get("command")
+        user_id = current_user.id  # Capture the user ID
+        user_email = (
+            current_user.email
+        )  # Capture the user email outside the thread context
 
         if not device_ips:
             current_app.logger.warning("No devices selected for backup.")
@@ -559,7 +563,7 @@ def backup_config():
 
         devices = DeviceManager.query.filter(
             DeviceManager.ip_address.in_(device_ips),
-            DeviceManager.user_id == current_user.id,
+            DeviceManager.user_id == user_id,
         ).all()
 
         if not devices:
@@ -577,59 +581,61 @@ def backup_config():
         results = []
         success = True
 
-        @copy_current_request_context
-        def configure_device(device):
+        def configure_device(app, device, user_email):
             nonlocal success
             try:
-                config_utils = ConfigurationManagerUtils(
-                    ip_address=device.ip_address,
-                    username=device.username,
-                    password=device.password,
-                    ssh=device.ssh,
-                )
-                response_json = config_utils.backup_configuration(command=command)
-                response_dict = json.loads(response_json)
-                backup_data = response_dict.get("message")
-
-                filename_gen = (
-                    f"{device.ip_address}_{device.vendor}_{device.device_name}"
-                )
-                filename = f"{filename_gen}.backup"
-                file_path = os.path.join(
-                    current_app.static_folder, BACKUP_FOLDER, filename
-                )
-                description = f"Backup file {filename} created by {current_user.email}"
-
-                if backup_data:
-                    backup_data = (
-                        backup_data.replace("\r\n", "\n").replace("\r", "\n").strip()
+                with app.app_context():
+                    config_utils = ConfigurationManagerUtils(
+                        ip_address=device.ip_address,
+                        username=device.username,
+                        password=device.password,
+                        ssh=device.ssh,
                     )
-                with open(file_path, "w", encoding="utf-8") as backup_file:
-                    backup_file.write(backup_data)
-                current_app.logger.info(
-                    f"Successfully saved backup content to file: {file_path}"
-                )
+                    response_json = config_utils.backup_configuration(command=command)
+                    response_dict = json.loads(response_json)
+                    backup_data = response_dict.get("message")
 
-                BackupData.create_backup(
-                    backup_name=filename,
-                    description=description,
-                    user_id=current_user.id,
-                )
+                    filename_gen = (
+                        f"{device.ip_address}_{device.vendor}_{device.device_name}"
+                    )
+                    filename = f"{filename_gen}.backup"
+                    file_path = os.path.join(
+                        current_app.static_folder, BACKUP_FOLDER, filename
+                    )
+                    description = f"Backup file {filename} created by {user_email}"
 
-                if response_dict.get("status") == "success":
-                    return {
-                        "device_name": device.device_name,
-                        "ip": device.ip_address,
-                        "status": "success",
-                        "message": "Backup sukses.",
-                    }
-                else:
-                    return {
-                        "device_name": device.device_name,
-                        "ip": device.ip_address,
-                        "status": response_dict.get("status", "error"),
-                        "message": response_dict.get("message", "Backup gagal"),
-                    }
+                    if backup_data:
+                        backup_data = (
+                            backup_data.replace("\r\n", "\n")
+                            .replace("\r", "\n")
+                            .strip()
+                        )
+                    with open(file_path, "w", encoding="utf-8") as backup_file:
+                        backup_file.write(backup_data)
+                    current_app.logger.info(
+                        f"Successfully saved backup content to file: {file_path}"
+                    )
+
+                    BackupData.create_backup(
+                        backup_name=filename,
+                        description=description,
+                        user_id=user_id,
+                    )
+
+                    if response_dict.get("status") == "success":
+                        return {
+                            "device_name": device.device_name,
+                            "ip": device.ip_address,
+                            "status": "success",
+                            "message": "Backup sukses.",
+                        }
+                    else:
+                        return {
+                            "device_name": device.device_name,
+                            "ip": device.ip_address,
+                            "status": response_dict.get("status", "error"),
+                            "message": response_dict.get("message", "Backup gagal"),
+                        }
             except json.JSONDecodeError as e:
                 logging.error("Error decoding JSON response: %s", e)
                 return {
@@ -647,10 +653,13 @@ def backup_config():
                     "message": str(e),
                 }
 
+        app = current_app._get_current_object()
+
         max_threads = 10
         with ThreadPoolExecutor(max_threads) as executor:
             futures = {
-                executor.submit(configure_device, device): device for device in devices
+                executor.submit(configure_device, app, device, user_email): device
+                for device in devices
             }
 
             for future in as_completed(futures):
