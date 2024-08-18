@@ -309,3 +309,22 @@ class UserBackupShare(db.Model):
 
     def __repr__(self):
         return f"<UserBackupShare User {self.user_id} -> Backup {self.backup_id}>"
+
+
+class GitBackupVersion(db.Model):
+    __tablename__ = "git_backup_version"
+
+    id = db.Column(db.Integer, primary_key=True)
+    backup_id = db.Column(db.Integer, db.ForeignKey("backup_data.id"), nullable=False)
+    commit_hash = db.Column(db.String(40), nullable=False)  # Hash dari commit Git
+    commit_message = db.Column(db.String(255), nullable=False)
+    committed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    file_path = db.Column(db.String(255), nullable=False)
+
+    # Relasi ke BackupData
+    backup = db.relationship(
+        "BackupData", backref=db.backref("git_versions", lazy=True)
+    )
+
+    def __repr__(self):
+        return f"<GitBackupVersion {self.commit_hash} for Backup {self.backup_id}>"
