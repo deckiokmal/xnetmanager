@@ -93,14 +93,18 @@ def index():
 
     if search_query:
         devices_query = DeviceManager.query.filter(
-            DeviceManager.device_name.ilike(f"%{search_query}%")
-            | DeviceManager.ip_address.ilike(f"%{search_query}%")
-            | DeviceManager.vendor.ilike(f"%{search_query}%")
-            | DeviceManager.description.ilike(f"%{search_query}%")
-            | DeviceManager.created_by.ilike(f"%{search_query}%")
+            DeviceManager.user_id
+            == current_user.id,  # Only fetch devices owned by the current user
+            (
+                DeviceManager.device_name.ilike(f"%{search_query}%")
+                | DeviceManager.ip_address.ilike(f"%{search_query}%")
+                | DeviceManager.vendor.ilike(f"%{search_query}%")
+                | DeviceManager.description.ilike(f"%{search_query}%")
+                | DeviceManager.created_by.ilike(f"%{search_query}%")
+            ),
         )
     else:
-        devices_query = DeviceManager.query
+        devices_query = DeviceManager.query.filter_by(user_id=current_user.id)
 
     total_devices = devices_query.count()
     devices = devices_query.limit(per_page).offset(offset).all()
@@ -157,6 +161,7 @@ def device_create():
                         ssh=form.ssh.data.strip(),
                         description=form.description.data.strip(),
                         created_by=current_user.email,
+                        user_id=current_user.id,
                     )
                     db.session.add(new_device)
                     db.session.commit()
@@ -190,6 +195,11 @@ def device_create():
 def device_update(device_id):
     """Mengupdate informasi perangkat di database"""
     device = DeviceManager.query.get_or_404(device_id)
+
+    # Ensure the current user is the owner of the device
+    if device.user_id != current_user.id:
+        flash("You do not have permission to update this device.", "danger")
+        return redirect(url_for("dm.index"))
 
     # Load existing data into the form
     form = DeviceUpdateForm(obj=device)
@@ -259,8 +269,14 @@ def device_update(device_id):
 )
 def device_delete(device_id):
     """Menghapus perangkat dari database"""
+    device = DeviceManager.query.get_or_404(device_id)
+
+    # Ensure the current user is the owner of the device
+    if device.user_id != current_user.id:
+        flash("You do not have permission to delete this device.", "danger")
+        return redirect(url_for("dm.index"))
+
     try:
-        device = DeviceManager.query.get_or_404(device_id)
         db.session.delete(device)
         db.session.commit()
         flash("Device telah dihapus.", "success")
@@ -286,8 +302,9 @@ def device_delete(device_id):
     roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
 )
 def get_devices():
-    """Mendapatkan data semua perangkat dalam format JSON"""
-    devices = DeviceManager.query.all()
+    """Mendapatkan data semua perangkat dalam format JSON yang dimiliki oleh pengguna saat ini"""
+    devices = DeviceManager.query.filter(DeviceManager.user_id == current_user.id).all()
+
     device_list = [
         {
             "id": device.id,
@@ -301,7 +318,8 @@ def get_devices():
         }
         for device in devices
     ]
-    current_app.logger.info(f"User {current_user.email} retrieved all devices data.")
+
+    current_app.logger.info(f"User {current_user.email} retrieved their devices data.")
     return jsonify({"devices": device_list})
 
 
@@ -312,9 +330,20 @@ def get_devices():
     roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
 )
 def get_device_data(device_id):
-    """Mendapatkan data perangkat berdasarkan ID dalam format JSON"""
+    """Mendapatkan data perangkat berdasarkan ID dalam format JSON jika perangkat tersebut dimiliki oleh pengguna saat ini"""
     try:
         device = DeviceManager.query.get_or_404(device_id)
+
+        # Ensure the current user is the owner of the device
+        if device.user_id != current_user.id:
+            current_app.logger.warning(
+                f"User {current_user.email} attempted to access a device they do not own."
+            )
+            return (
+                jsonify({"error": "You do not have permission to access this device."}),
+                403,
+            )
+
         current_app.logger.info(
             f"User {current_user.email} accessed data for device ID {device_id}"
         )
