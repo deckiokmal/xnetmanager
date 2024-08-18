@@ -258,23 +258,35 @@ class BackupData(db.Model):
 
     @staticmethod
     def create_backup(backup_name, description, user_id):
-        # Dapatkan versi terakhir dari backup dengan nama yang sama dan user yang sama
-        last_backup = (
-            BackupData.query.filter_by(backup_name=backup_name, user_id=user_id)
-            .order_by(BackupData.version.desc())
-            .first()
-        )
-        new_version = last_backup.version + 1 if last_backup else 1
+        try:
+            # Dapatkan versi terakhir dari backup dengan nama yang sama dan user yang sama
+            last_backup = (
+                BackupData.query.filter_by(backup_name=backup_name, user_id=user_id)
+                .order_by(BackupData.version.desc())
+                .first()
+            )
+            new_version = last_backup.version + 1 if last_backup else 1
 
-        new_backup = BackupData(
-            backup_name=backup_name,
-            description=description,
-            version=new_version,
-            user_id=user_id,
-        )
-        db.session.add(new_backup)
-        db.session.commit()
-        return new_backup
+            new_backup = BackupData(
+                backup_name=backup_name,
+                description=description,
+                version=new_version,
+                user_id=user_id,
+            )
+            db.session.add(new_backup)
+            db.session.commit()
+
+            # Log the successful creation of a backup
+            current_app.logger.info(
+                f"Backup {new_backup.backup_name} v{new_backup.version} created successfully."
+            )
+            return new_backup
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(
+                f"Error creating backup {backup_name} for user {user_id}: {e}"
+            )
+            return None
 
 
 class UserBackupShare(db.Model):
