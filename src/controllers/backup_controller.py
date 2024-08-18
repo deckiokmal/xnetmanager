@@ -351,34 +351,43 @@ def delete_backup(backup_id):
                 404,
             )
 
+        # Check if other versions are using the same backup file
+        related_versions = BackupData.query.filter_by(
+            backup_name=backup.backup_name
+        ).all()
+
+        if len(related_versions) == 1:
+            # Only delete the file if this is the last version using it
+            try:
+                backup_file_path = os.path.join(
+                    current_app.static_folder, BACKUP_FOLDER, backup.backup_name
+                )
+                if os.path.exists(backup_file_path):
+                    os.remove(backup_file_path)
+                    current_app.logger.info(
+                        f"Backup file {backup.backup_name} deleted from filesystem."
+                    )
+                else:
+                    current_app.logger.warning(
+                        f"Backup file {backup.backup_name} not found on filesystem."
+                    )
+            except Exception as e:
+                current_app.logger.error(f"Error deleting backup file: {e}")
+                return (
+                    jsonify(
+                        {"success": False, "message": "Failed to delete backup file."}
+                    ),
+                    500,
+                )
+        else:
+            current_app.logger.info(
+                f"Backup file {backup.backup_name} not deleted because other versions are still using it."
+            )
+
         # Delete all shared entries related to this backup
         shares = UserBackupShare.query.filter_by(backup_id=backup.id).all()
         for share in shares:
             db.session.delete(share)
-
-        # Commit the deletion of shared entries
-        db.session.commit()
-
-        # Delete the backup file from the filesystem
-        try:
-            backup_file_path = os.path.join(
-                current_app.static_folder, BACKUP_FOLDER, backup.backup_name
-            )
-            if os.path.exists(backup_file_path):
-                os.remove(backup_file_path)
-                current_app.logger.info(
-                    f"Backup file {backup.backup_name} deleted from filesystem."
-                )
-            else:
-                current_app.logger.warning(
-                    f"Backup file {backup.backup_name} not found on filesystem."
-                )
-        except Exception as e:
-            current_app.logger.error(f"Error deleting backup file: {e}")
-            return (
-                jsonify({"success": False, "message": "Failed to delete backup file."}),
-                500,
-            )
 
         # Delete the backup entry from the database
         db.session.delete(backup)
@@ -386,11 +395,13 @@ def delete_backup(backup_id):
         current_app.logger.info(
             f"Backup ID {backup_id} deleted by user {current_user.email}."
         )
-        flash(f"Backup successfully deleted by {current_user.email}", "success")
+        flash(f"Backup version successfully deleted by {current_user.email}", "success")
     except Exception as e:
         current_app.logger.error(f"Error deleting backup ID {backup_id}: {e}")
         db.session.rollback()
         flash(f"Backup deletion failed by {current_user.email}", "danger")
+        return redirect(url_for("backup.backups"))
+
     return redirect(url_for("backup.backups"))
 
 
