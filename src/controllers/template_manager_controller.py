@@ -13,6 +13,7 @@ from src import db
 from src.models.app_models import TemplateManager, ConfigurationManager
 from src.utils.config_manager_utils import ConfigurationManagerUtils
 from src.utils.openai_utils import validate_generated_template_with_openai
+from src.utils.talita_ai_utils import talita_chat_completion
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
@@ -724,7 +725,7 @@ def configuration_manual_create():
         db.session.rollback()
         current_app.logger.error(f"Error creating configuration file: {e}")
         flash("Failed to create configuration file.", "error")
-        return redirect('tm.index')
+        return redirect("tm.index")
 
 
 @tm_bp.route(
@@ -863,3 +864,63 @@ def template_result_delete(template_id):
         flash("Failed to delete configuration file.", "error")
 
     return redirect(url_for("tm.template_results"))
+
+
+@tm_bp.route("/ask_talita", methods=["GET", "POST"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Templates"],
+    page="Configuration File Management",
+)
+def ask_talita():
+    if request.method == "POST":
+        # Mengambil data dari form modal
+        question = request.form.get("question")
+        user_id = request.form.get("user_id")
+        url = "https://talita.lintasarta.net/api/portal"
+        apikey = "ZTczN2Y0N2E0ZDcxZTIwZjUzN2I5MzA5MDE4MWZmODg="
+
+        # Memanggil fungsi talita_chat_completion
+        response = talita_chat_completion(url, apikey, question, user_id)
+
+        # Mengecek apakah respon berhasil atau gagal
+        if not response.startswith("Gagal"):
+            # Membuat nama file acak
+            random_name = "".join(
+                random.choices(string.ascii_letters + string.digits, k=8)
+            )
+            filename = f"talita_{random_name}.txt"
+            file_path = os.path.join(
+                current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
+            )
+
+            # Menyimpan hasil ke dalam file
+            with open(file_path, "w") as file:
+                file.write(response)
+
+            new_configuration = ConfigurationManager(
+                config_name=filename,
+                vendor="talita",
+                description=filename,
+                created_by=current_user.email,
+                user_id=current_user.id,
+            )
+            db.session.add(new_configuration)
+            db.session.commit()
+
+            # Flash message sukses
+            flash(
+                "Berhasil mendapatkan jawaban dari TALITA dan menyimpan ke dalam file.",
+                "success",
+            )
+        else:
+            # Flash message gagal
+            flash(f"Gagal mendapatkan jawaban dari TALITA: {response}", "danger")
+
+        # Redirect kembali ke halaman yang sama untuk menutup modal dan memperbarui UI
+        return redirect(url_for("tm.template_results"))
+
+    # Jika GET request, tampilkan halaman dengan modal
+    return render_template("tm.template_results")
