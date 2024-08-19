@@ -3,7 +3,10 @@
 
 {% block button_group1 %}
 <button type="button" class="btn btn-secondary ms-2" data-bs-toggle="modal" data-bs-target="#createModal">
-    <i class="fas fa-plus"></i> Create Config File
+    <i class="fas fa-plus"></i> Manual Config with Validated
+</button>
+<button type="button" class="btn btn-secondary ms-2" data-bs-toggle="modal" data-bs-target="#createAiModal">
+    <i class="fas fa-plus"></i> Create Config with AI
 </button>
 {% endblock %}
 {% block button_group2 %}
@@ -153,6 +156,44 @@
             </div>
         </div>
 
+        <!-- Modal Create Configuration with AI -->
+        <div class="modal fade" id="createAiModal" tabindex="-1" aria-labelledby="createAiModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-black" id="createAiModalLabel">Buat File Konfigurasi dengan AI</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-black">
+                        <form method="post" action="{{ url_for('tm.create_configuration_with_ai') }}">
+                            <div class="mb-3">
+                                <label for="create_ai_filename" class="form-label">Nama file</label>
+                                <input type="text" class="form-control" id="create_ai_filename" name="filename"
+                                    required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="create_ai_vendor" class="form-label">Vendor</label>
+                                <input type="text" class="form-control" id="create_ai_vendor" name="vendor" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="create_ai_description" class="form-label">Description</label>
+                                <input type="text" class="form-control" id="create_ai_description" name="description"
+                                    required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="ask_configuration" class="form-label">Permintaan Konfigurasi</label>
+                                <textarea class="form-control" id="ask_configuration" name="ask_configuration" rows="5"
+                                    required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary ms-2"><i class="fas fa-plus"></i> Create
+                                Configuration with AI</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal Error Template Generation -->
         <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
@@ -231,6 +272,38 @@
                                 if (data.is_valid) {
                                     var createModal = new bootstrap.Modal(document.getElementById('createModal'));
                                     createModal.hide();  // Close the modal
+                                    window.location.reload();  // Reload the page if successful
+                                } else {
+                                    // Display the error in a modal
+                                    document.getElementById('errorModalMessage').textContent = data.error_message;
+                                    var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                                    errorModal.show();
+                                }
+                            })
+                            .catch(error => console.error('Error:', error));
+                    });
+                });
+            });
+        </script>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                document.querySelectorAll('form[action*="create_configuration_with_ai"]').forEach(function (form) {
+                    form.addEventListener('submit', function (event) {
+                        event.preventDefault();  // Prevent the form from submitting the default way
+
+                        const formData = new FormData(form);
+                        const actionUrl = form.getAttribute('action');
+
+                        fetch(actionUrl, {
+                            method: 'POST',
+                            body: formData
+                        })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.is_valid) {
+                                    var createAiModal = new bootstrap.Modal(document.getElementById('createAiModal'));
+                                    createAiModal.hide();  // Close the modal
                                     window.location.reload();  // Reload the page if successful
                                 } else {
                                     // Display the error in a modal

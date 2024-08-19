@@ -1,4 +1,5 @@
 import requests
+from flask import flash
 
 
 def talita_chat_completion(url, apikey, question, user_id):
@@ -12,7 +13,7 @@ def talita_chat_completion(url, apikey, question, user_id):
     user_id (str): ID pengguna yang mengajukan pertanyaan.
 
     Returns:
-    str: Jawaban dari TALITA jika permintaan berhasil, atau pesan error jika gagal.
+    str: Jawaban dari TALITA jika permintaan berhasil, atau None jika gagal.
     """
 
     # Header yang ingin ditambahkan
@@ -27,11 +28,33 @@ def talita_chat_completion(url, apikey, question, user_id):
         "user_id": user_id,
     }
 
-    # Mengirimkan permintaan POST
-    response = requests.post(url, headers=headers, json=data)
+    try:
+        # Mengirimkan permintaan POST
+        response = requests.post(url, headers=headers, json=data)
 
-    # Mengecek status kode dari respon
-    if response.status_code == 200:
-        return response.json()["TALITA"]
-    else:
-        return f"Gagal melakukan permintaan: {response.status_code, response.text}"
+        # Mengecek status kode dari respon
+        if response.status_code == 200:
+            return response.json().get("TALITA", "No valid response received.")
+        elif response.status_code == 401:
+            flash("Unauthorized access. Please check your API key.", "danger")
+        elif response.status_code == 404:
+            flash("The requested resource was not found.", "warning")
+        elif response.status_code == 500:
+            flash("Server error on the TALITA API. Please try again later.", "danger")
+        else:
+            flash(
+                f"Failed to get a response from TALITA: {response.status_code}, {response.text}",
+                "danger",
+            )
+
+    except requests.exceptions.ConnectionError:
+        flash(
+            "Failed to connect to the TALITA API. Please check your network connection.",
+            "danger",
+        )
+    except requests.exceptions.Timeout:
+        flash("The request to TALITA API timed out. Please try again later.", "warning")
+    except requests.exceptions.RequestException as e:
+        flash(f"An error occurred while making the request: {str(e)}", "danger")
+
+    return None

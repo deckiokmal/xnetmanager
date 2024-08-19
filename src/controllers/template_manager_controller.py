@@ -12,7 +12,10 @@ from flask_login import login_required, current_user
 from src import db
 from src.models.app_models import TemplateManager, ConfigurationManager
 from src.utils.config_manager_utils import ConfigurationManagerUtils
-from src.utils.openai_utils import validate_generated_template_with_openai
+from src.utils.openai_utils import (
+    validate_generated_template_with_openai,
+    create_configuration_with_openai,
+)
 from src.utils.talita_ai_utils import talita_chat_completion
 from werkzeug.utils import secure_filename
 import os
@@ -689,7 +692,9 @@ def configuration_manual_create():
         current_app.logger.warning("Filename is empty.")
         return redirect(request.url)
 
-    configuration_name = f"{filename}_{vendor}.txt"
+    gen_filename = generate_random_filename(vendor)
+
+    configuration_name = f"{gen_filename}.txt"
     file_path = os.path.join(
         current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration_name
     )
@@ -719,6 +724,71 @@ def configuration_manual_create():
         else:
             error_message = config_validated.get("error_message")
             return jsonify({"is_valid": False, "error_message": error_message})
+
+    except Exception as e:
+        # Rolling back session jika terjadi kesalahan
+        db.session.rollback()
+        current_app.logger.error(f"Error creating configuration file: {e}")
+        flash("Failed to create configuration file.", "error")
+        return redirect("tm.index")
+
+
+@tm_bp.route("/create_configuration_with_ai", methods=["POST"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Templates"],
+    page="Configuration File Management",
+)
+def create_configuration_with_ai():
+    """Membuat file konfigurasi dengan bantuan AI dan menyimpannya ke dalam database."""
+    filename = secure_filename(request.form.get("filename"))
+    vendor = request.form.get("vendor")
+    description = request.form.get("description")
+    ask_configuration = request.form.get("ask_configuration")
+
+    current_app.logger.info(
+        f"Attempting to create an AI-generated configuration file by {current_user.email}"
+    )
+
+    if not filename or not vendor:
+        flash("Filename and vendor cannot be empty!", "info")
+        current_app.logger.warning("Filename is empty.")
+        return redirect(request.url)
+
+    gen_filename = generate_random_filename(vendor)
+
+    configuration_name = f"{gen_filename}.txt"
+    file_path = os.path.join(
+        current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration_name
+    )
+
+    try:
+        # Menghasilkan konfigurasi dengan OpenAI API
+        configuration_content = create_configuration_with_openai(
+            question=ask_configuration, vendor=vendor
+        )
+
+        # Menulis file konfigurasi ke disk dan menyimpan ke database
+        with open(file_path, "w", encoding="utf-8") as configuration_file:
+            configuration_file.write(configuration_content)
+
+        new_configuration = ConfigurationManager(
+            config_name=configuration_name,
+            vendor=vendor,
+            description=description,
+            created_by=current_user.email,
+            user_id=current_user.id,
+        )
+        db.session.add(new_configuration)
+        db.session.commit()
+
+        flash(
+            "Configuration created successfully with AI, please verify the configuration.",
+            "info",
+        )
+        return jsonify({"is_valid": True})  # Respond with JSON indicating success
 
     except Exception as e:
         # Rolling back session jika terjadi kesalahan
@@ -886,7 +956,9 @@ def ask_talita():
         response = talita_chat_completion(url, apikey, question, user_id)
 
         # Mengecek apakah respon berhasil atau gagal
-        if not response.startswith("Gagal"):
+        if response is None:
+            current_app.logger.warning(f"Failed to connect Talita AI")
+        elif not response.startswith("Gagal"):
             # Membuat nama file acak
             random_name = "".join(
                 random.choices(string.ascii_letters + string.digits, k=8)

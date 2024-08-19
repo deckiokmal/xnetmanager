@@ -1,0 +1,8 @@
+/ip route
+add dst-address=0.0.0.0/0 gateway=ISP1-Gateway routing-mark=to_ISP1
+add dst-address=0.0.0.0/0 gateway=ISP2-Gateway routing-mark=to_ISP2
+add dst-address=ISP1-Network gateway=ISP1-Gateway 
+add dst-address=ISP2-Network gateway=ISP2-Gateway 
+/ip firewall mangle
+add action=mark-routing chain=prerouting new-routing-mark=to_ISP1 passthrough=no src-address=User1
+add action=mark-routing chain=prerouting new-routing-mark=to_ISP2 passthrough=no src-address=User2

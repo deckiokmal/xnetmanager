@@ -1,1 +1,1 @@
-/system identity set name="myhostname"
+/system identity set name="NewHostname"

@@ -36,3 +36,25 @@ def validate_generated_template_with_openai(config, vendor):
             "is_valid": False,
             "error_message": "The validation result was unclear. Please check manually.",
         }
+
+
+def create_configuration_with_openai(question, vendor):
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {
+                "role": "system",
+                "content": f"You are an expert in network device configuration and syntax validation, specializing in {vendor} devices. Your responses should only include the configuration without any additional text, explanation, or formatting.",
+            },
+            {
+                "role": "user",
+                "content": f"Please generate the configuration for a {vendor} network device based on the following requirements:\n\n{question}\n\n"
+                "Your response must only contain the configuration commands. Do not include any explanations or additional text.",
+            },
+        ],
+    )
+
+    # Extract the validation result from the response
+    configuration_result = response["choices"][0]["message"]["content"].strip()
+
+    return configuration_result
