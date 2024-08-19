@@ -730,7 +730,7 @@ def configuration_manual_create():
 
     gen_filename = generate_random_filename(vendor)
 
-    configuration_name = f"{gen_filename}.txt"
+    configuration_name = f"{filename}_{gen_filename}.txt"
     file_path = os.path.join(
         current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration_name
     )
@@ -795,7 +795,7 @@ def create_configuration_with_ai():
 
     gen_filename = generate_random_filename(vendor)
 
-    configuration_name = f"{gen_filename}.txt"
+    configuration_name = f"{filename}_{gen_filename}.txt"
     file_path = os.path.join(
         current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration_name
     )

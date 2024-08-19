@@ -1,0 +1,24 @@
+/interface bridge
+add name=bridge-local
+/interface wireless
+set [ find default-name=wlan1 ] band=2ghz-g/n disabled=no distance=indoors mode=ap-bridge ssid=Mikrotik wireless-protocol=802.11 wps-mode=disabled
+/interface wireless security-profiles
+set [ find default=yes ] authentication-types=wpa2-psk mode=dynamic-keys supplicant-identity=Mikrotik wpa2-pre-shared-key=password
+/ip pool
+add name=dhcp ranges=192.168.88.10-192.168.88.254
+/ip dhcp-server
+add address-pool=dhcp disabled=no interface=bridge-local name=dhcp1
+/ip address
+add address=192.168.88.1/24 interface=bridge-local network=192.168.88.0
+/ip dhcp-server network
+add address=192.168.88.0/24 gateway=192.168.88.1 netmask=24
+/ip dns
+set allow-remote-requests=yes servers=8.8.8.8,8.8.4.4
+/tool romon port
+add forbidden=yes readonly=yes secret-enc=4b221502e6761a116ffd999a256fb7e1f5548f0c7496af51a296c1a6f06a4f1b
+/system clock
+set time-zone-name=Asia/Jakarta
+/system identity
+set name=Mikrotik
+/system routerboard settings
+set silent-boot=no
