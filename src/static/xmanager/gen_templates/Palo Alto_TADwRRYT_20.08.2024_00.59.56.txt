@@ -1,0 +1,10 @@
+set rulebase security rules block-traffic rule-type interzone
+set rulebase security rules block-traffic source any
+set rulebase security rules block-traffic destination any
+set rulebase security rules block-traffic source-address 8.8.8.8
+set rulebase security rules block-traffic destination-address any
+set rulebase security rules block-traffic application any
+set rulebase security rules block-traffic service any
+set rulebase security rules block-traffic action deny
+set rulebase security rules block-traffic to any
+set rulebase security rules block-traffic from any

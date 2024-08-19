@@ -23,7 +23,7 @@ from datetime import datetime
 from .decorators import login_required, role_required, required_2fa
 import random
 import string
-from flask_paginate import Pagination
+from flask_paginate import Pagination, get_page_args
 import logging
 
 # Blueprint untuk template manager
@@ -624,42 +624,78 @@ def template_generator(template_id):
     page="Configuration File Management",
 )
 def template_results():
-    page = request.args.get("page", 1, type=int)
-    per_page = request.args.get("per_page", 10, type=int)
-    search_query = request.args.get("search", "")
+    # Logging untuk akses ke endpoint
+    current_app.logger.info(f"{current_user.email} accessed template_results")
 
-    # Filter untuk hanya menampilkan file konfigurasi yang dimiliki oleh pengguna saat ini
-    query = ConfigurationManager.query.filter(
-        ConfigurationManager.user_id == current_user.id
-    )
+    # Validasi input untuk page, per_page, dan search_query
+    try:
+        page = int(request.args.get("page", 1))
+        per_page = int(request.args.get("per_page", 10))
+        if page < 1 or per_page < 1:
+            raise ValueError("Page and per_page must be positive integers.")
+    except ValueError as e:
+        current_app.logger.warning(f"Invalid pagination parameters: {e}")
+        flash("Invalid pagination parameters. Please try again.", "danger")
+        return redirect(url_for("tm.template_results"))
 
+    search_query = request.args.get("search", "").strip().lower()
+
+    # Logging untuk pencarian
     if search_query:
-        query = query.filter(
-            ConfigurationManager.config_name.ilike(f"%{search_query}%")
-            | ConfigurationManager.description.ilike(f"%{search_query}%")
+        current_app.logger.info(
+            f"{current_user.email} performed a search with query: {search_query}"
         )
 
-    total_templates = query.count()
-    all_templates = query.paginate(page=page, per_page=per_page)
+    # Menerapkan filter berdasarkan search query dan user ownership
+    if search_query:
+        query = ConfigurationManager.query.filter(
+            ConfigurationManager.user_id == current_user.id,
+            ConfigurationManager.config_name.ilike(f"%{search_query}%")
+            | ConfigurationManager.vendor.ilike(f"%{search_query}%")
+            | ConfigurationManager.description.ilike(f"%{search_query}%"),
+        )
+    else:
+        query = ConfigurationManager.query.filter_by(user_id=current_user.id)
 
-    pagination = Pagination(
-        page=page, per_page=per_page, total=total_templates, css_framework="bootstrap4"
-    )
+    # Mendapatkan total hasil pencarian
+    total_templates = query.count()
+
+    # Logging jika tidak ada hasil pencarian
+    if total_templates == 0:
+        current_app.logger.info(
+            f"No templates found for user {current_user.email} with query '{search_query}'"
+        )
+        flash("No templates found matching your search criteria.", "info")
+
+    # Paginasi hasil pencarian
+    all_templates = query.limit(per_page).offset((page - 1) * per_page).all()
+    pagination = Pagination(page=page, per_page=per_page, total=total_templates)
 
     template_contents = {}
-    for template in all_templates.items:
+    for template in all_templates:
         template_path = os.path.join(
             current_app.static_folder, GEN_TEMPLATE_FOLDER, template.config_name
         )
-        template_contents[template.id] = read_file(template_path) or "File not found"
+        template_content = read_file(template_path)
+
+        if template_content:
+            template_contents[template.id] = template_content
+        else:
+            template_contents[template.id] = "File not found"
+            current_app.logger.warning(
+                f"Template file not found for {template.config_name} at {template_path}"
+            )
+            flash(f"Template file '{template.config_name}' not found.", "warning")
 
     return render_template(
         "/template_managers/template_results.html",
-        all_templates=all_templates.items,
-        template_contents=template_contents,
+        all_templates=all_templates,
+        page=page,
         per_page=per_page,
-        search_query=search_query,
         pagination=pagination,
+        search_query=search_query,
+        template_contents=template_contents,
+        total_templates=total_templates,
     )
 
 

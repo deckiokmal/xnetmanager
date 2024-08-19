@@ -107,214 +107,213 @@
 {% endblock %}
 
 {% block show_total_data %}
-<div class="dataTables_info" role="status" aria-live="polite">
-    Menampilkan {{ (pagination.page - 1) * pagination.per_page + 1 }} hingga {{ (pagination.page - 1) *
-    pagination.per_page + pagination.per_page if (pagination.page - 1) * pagination.per_page + pagination.per_page <
-        pagination.total else pagination.total }} dari {{ pagination.total }} entri </div>
-        {% endblock %}
+<div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
+    Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if
+    (page - 1)
+    * per_page + per_page < total_templates else total_templates }} dari {{ total_templates }} entri </div>
+</div>
+{% endblock %}
 
-        {% block pagination %}
-        <div class="d-flex justify-content-end pagination-sm">
-            {{ pagination.links }}
-        </div>
-        {% endblock %}
+{% block pagination %}
+<div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
+    {{ pagination.links }}
+</div>
+{% endblock %}
 
-        {% block modal_data %}
-        <!-- Modal Create Template -->
-        <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title text-black" id="createModalLabel">Buat File Konfigurasi</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+{% block modal_data %}
+<!-- Modal Create Template -->
+<div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-black" id="createModalLabel">Buat File Konfigurasi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-black">
+                <form method="post" action="{{ url_for('tm.configuration_manual_create') }}">
+                    <div class="mb-3">
+                        <label for="create_filename" class="form-label">Nama file</label>
+                        <input type="text" class="form-control" id="create_filename" name="filename" required>
                     </div>
-                    <div class="modal-body text-black">
-                        <form method="post" action="{{ url_for('tm.configuration_manual_create') }}">
-                            <div class="mb-3">
-                                <label for="create_filename" class="form-label">Nama file</label>
-                                <input type="text" class="form-control" id="create_filename" name="filename" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="create_vendor" class="form-label">Vendor</label>
-                                <input type="text" class="form-control" id="create_vendor" name="vendor" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="description" class="form-label">Deskripsi</label>
-                                <input type="text" class="form-control" id="description"
-                                    name="configuration_description" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="create_configuration_content" class="form-label">File Konfigurasi</label>
-                                <textarea class="form-control" id="create_configuration_content"
-                                    name="configuration_content" rows="5"></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary ms-2"><i class="fas fa-plus"></i> Create
-                                Configuration</button>
-                        </form>
+                    <div class="mb-3">
+                        <label for="create_vendor" class="form-label">Vendor</label>
+                        <input type="text" class="form-control" id="create_vendor" name="vendor" required>
                     </div>
-                </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Deskripsi</label>
+                        <input type="text" class="form-control" id="description" name="configuration_description"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="create_configuration_content" class="form-label">File Konfigurasi</label>
+                        <textarea class="form-control" id="create_configuration_content" name="configuration_content"
+                            rows="5"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary ms-2"><i class="fas fa-plus"></i> Create
+                        Configuration</button>
+                </form>
             </div>
         </div>
+    </div>
+</div>
 
-        <!-- Modal Create Configuration with AI -->
-        <div class="modal fade" id="createAiModal" tabindex="-1" aria-labelledby="createAiModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title text-black" id="createAiModalLabel">Buat File Konfigurasi dengan AI</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Modal Create Configuration with AI -->
+<div class="modal fade" id="createAiModal" tabindex="-1" aria-labelledby="createAiModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-black" id="createAiModalLabel">Buat File Konfigurasi dengan AI</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-black">
+                <form method="post" action="{{ url_for('tm.create_configuration_with_ai') }}">
+                    <div class="mb-3">
+                        <label for="create_ai_filename" class="form-label">Nama file</label>
+                        <input type="text" class="form-control" id="create_ai_filename" name="filename" required>
                     </div>
-                    <div class="modal-body text-black">
-                        <form method="post" action="{{ url_for('tm.create_configuration_with_ai') }}">
-                            <div class="mb-3">
-                                <label for="create_ai_filename" class="form-label">Nama file</label>
-                                <input type="text" class="form-control" id="create_ai_filename" name="filename"
-                                    required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="create_ai_vendor" class="form-label">Vendor</label>
-                                <input type="text" class="form-control" id="create_ai_vendor" name="vendor" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="create_ai_description" class="form-label">Description</label>
-                                <input type="text" class="form-control" id="create_ai_description" name="description"
-                                    required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="ask_configuration" class="form-label">Permintaan Konfigurasi</label>
-                                <textarea class="form-control" id="ask_configuration" name="ask_configuration" rows="5"
-                                    required></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary ms-2"><i class="fas fa-plus"></i> Create
-                                Configuration with AI</button>
-                        </form>
+                    <div class="mb-3">
+                        <label for="create_ai_vendor" class="form-label">Vendor</label>
+                        <input type="text" class="form-control" id="create_ai_vendor" name="vendor" required>
                     </div>
-                </div>
+                    <div class="mb-3">
+                        <label for="create_ai_description" class="form-label">Description</label>
+                        <input type="text" class="form-control" id="create_ai_description" name="description" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="ask_configuration" class="form-label">Jelaskan Konfigurasi yang anda
+                            inginkan</label>
+                        <textarea class="form-control" id="ask_configuration" name="ask_configuration" rows="5"
+                            required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary ms-2"><i class="fas fa-plus"></i> Create
+                        Configuration with AI</button>
+                </form>
             </div>
         </div>
+    </div>
+</div>
 
-        <!-- Modal Error Template Generation -->
-        <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content bg-danger text-light">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="errorModalLabel">Error Generating Template</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p id="errorModalMessage"></p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                    </div>
-                </div>
+<!-- Modal Error Template Generation -->
+<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-danger text-light">
+            <div class="modal-header">
+                <h5 class="modal-title" id="errorModalLabel">Error Generating Template</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="errorModalMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
+    </div>
+</div>
 
-        <!-- Modal ask talita-->
-        <div class="modal fade" id="askTalitaModal" tabindex="-1" role="dialog" aria-labelledby="askTalitaModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title text-black" id="askTalitaModalLabel">Tanyakan TALITA</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <form method="POST" action="{{ url_for('tm.ask_talita') }}">
-                        <div class="modal-body text-black">
-                            <div class="form-group">
-                                <label for="question">Pertanyaan:</label>
-                                <input type="text" class="form-control" id="question" name="question" required>
-                            </div>
-                            <input type="hidden" name="user_id" value="{{ current_user.id }}">
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                            <button type="submit" class="btn btn-primary">Submit</button>
-                        </div>
-                    </form>
-                </div>
+<!-- Modal ask talita-->
+<div class="modal fade" id="askTalitaModal" tabindex="-1" role="dialog" aria-labelledby="askTalitaModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-black" id="askTalitaModalLabel">Tanyakan TALITA</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
+            <form method="POST" action="{{ url_for('tm.ask_talita') }}">
+                <div class="modal-body text-black">
+                    <div class="form-group">
+                        <label for="question">Pertanyaan:</label>
+                        <input type="text" class="form-control" id="question" name="question" required>
+                    </div>
+                    <input type="hidden" name="user_id" value="{{ current_user.id }}">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </div>
+            </form>
         </div>
-        {% endblock %}
+    </div>
+</div>
+{% endblock %}
 
-        {% block script_js %}
-        <script>
-            let timeout = null;
+{% block script_js %}
+<script>
+    let timeout = null;
 
-            // Handle search input delay
-            document.getElementById("searchInput").addEventListener("input", function () {
-                clearTimeout(timeout);
-                timeout = setTimeout(function () {
-                    document.getElementById('searchForm').submit();
-                }, 1000);
+    // Handle search input delay
+    document.getElementById("searchInput").addEventListener("input", function () {
+        clearTimeout(timeout);
+        timeout = setTimeout(function () {
+            document.getElementById('searchForm').submit();
+        }, 1000);
+    });
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll('form[action*="configuration_manual_create"]').forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();  // Prevent the form from submitting the default way
+
+                const formData = new FormData(form);
+                const actionUrl = form.getAttribute('action');
+
+                fetch(actionUrl, {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.is_valid) {
+                            var createModal = new bootstrap.Modal(document.getElementById('createModal'));
+                            createModal.hide();  // Close the modal
+                            window.location.reload();  // Reload the page if successful
+                        } else {
+                            // Display the error in a modal
+                            document.getElementById('errorModalMessage').textContent = data.error_message;
+                            var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                            errorModal.show();
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
             });
-        </script>
+        });
+    });
+</script>
 
-        <script>
-            document.addEventListener("DOMContentLoaded", function () {
-                document.querySelectorAll('form[action*="configuration_manual_create"]').forEach(function (form) {
-                    form.addEventListener('submit', function (event) {
-                        event.preventDefault();  // Prevent the form from submitting the default way
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll('form[action*="create_configuration_with_ai"]').forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();  // Prevent the form from submitting the default way
 
-                        const formData = new FormData(form);
-                        const actionUrl = form.getAttribute('action');
+                const formData = new FormData(form);
+                const actionUrl = form.getAttribute('action');
 
-                        fetch(actionUrl, {
-                            method: 'POST',
-                            body: formData
-                        })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.is_valid) {
-                                    var createModal = new bootstrap.Modal(document.getElementById('createModal'));
-                                    createModal.hide();  // Close the modal
-                                    window.location.reload();  // Reload the page if successful
-                                } else {
-                                    // Display the error in a modal
-                                    document.getElementById('errorModalMessage').textContent = data.error_message;
-                                    var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-                                    errorModal.show();
-                                }
-                            })
-                            .catch(error => console.error('Error:', error));
-                    });
-                });
+                fetch(actionUrl, {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.is_valid) {
+                            var createAiModal = new bootstrap.Modal(document.getElementById('createAiModal'));
+                            createAiModal.hide();  // Close the modal
+                            window.location.reload();  // Reload the page if successful
+                        } else {
+                            // Display the error in a modal
+                            document.getElementById('errorModalMessage').textContent = data.error_message;
+                            var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                            errorModal.show();
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
             });
-        </script>
-
-        <script>
-            document.addEventListener("DOMContentLoaded", function () {
-                document.querySelectorAll('form[action*="create_configuration_with_ai"]').forEach(function (form) {
-                    form.addEventListener('submit', function (event) {
-                        event.preventDefault();  // Prevent the form from submitting the default way
-
-                        const formData = new FormData(form);
-                        const actionUrl = form.getAttribute('action');
-
-                        fetch(actionUrl, {
-                            method: 'POST',
-                            body: formData
-                        })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.is_valid) {
-                                    var createAiModal = new bootstrap.Modal(document.getElementById('createAiModal'));
-                                    createAiModal.hide();  // Close the modal
-                                    window.location.reload();  // Reload the page if successful
-                                } else {
-                                    // Display the error in a modal
-                                    document.getElementById('errorModalMessage').textContent = data.error_message;
-                                    var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-                                    errorModal.show();
-                                }
-                            })
-                            .catch(error => console.error('Error:', error));
-                    });
-                });
-            });
-        </script>
-        {% endblock %}
+        });
+    });
+</script>
+{% endblock %}
