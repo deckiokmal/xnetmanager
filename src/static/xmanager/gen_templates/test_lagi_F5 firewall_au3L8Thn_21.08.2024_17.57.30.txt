@@ -1,0 +1,2 @@
+modify /sys global-settings hostname testing-decki
+save /sys config

@@ -1,0 +1,1 @@
+Unfortunately, as an Android device is based on a Linux kernel and does not have the concept of a "hostname" that is accessible or changeable via standard user interfaces or commands like a network device such as a router, switch, or server might.
