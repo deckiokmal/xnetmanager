@@ -63,7 +63,7 @@ class Config(object):
     TALISMAN_STRICT_TRANSPORT_SECURITY = True
     TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE = 31536000  # 1 year
     TALISMAN_CONTENT_SECURITY_POLICY = {
-        "default-src": ["'self'"],
+        "default-src": ["'self'", "https://www.youtube.com"],
         "img-src": ["'self'", "data:", "cdn.jsdelivr.net", "via.placeholder.com"],
         "style-src": [
             "'self'",
@@ -108,7 +108,7 @@ class DevelopmentConfig(Config):
     TALISMAN_FORCE_HTTPS = False
     TALISMAN_STRICT_TRANSPORT_SECURITY = False
     TALISMAN_CONTENT_SECURITY_POLICY = {
-        "default-src": ["'self'"],
+        "default-src": ["'self'", "https://www.youtube.com"],
         "img-src": ["'self'", "data:", "cdn.jsdelivr.net", "via.placeholder.com"],
         "style-src": [
             "'self'",
@@ -162,7 +162,7 @@ class ProductionConfig(Config):
     TALISMAN_STRICT_TRANSPORT_SECURITY = True
     TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE = 31536000  # 1 year
     TALISMAN_CONTENT_SECURITY_POLICY = {
-        "default-src": ["'self'"],
+        "default-src": ["'self'", "https://www.youtube.com"],
         "img-src": ["'self'", "data:", "cdn.jsdelivr.net", "via.placeholder.com"],
         "style-src": [
             "'self'",

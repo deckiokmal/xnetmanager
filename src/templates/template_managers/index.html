@@ -2,19 +2,29 @@
 {% block title %}Template Manager{% endblock %}
 
 {% block button_group1 %}
-<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
-    <i class="fas fa-upload"></i> Upload Template
-</button>
+<div class="dropdown">
+    <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        Create New
+    </button>
+    <ul class="dropdown-menu p-2 shadow-lg rounded">
+        <li>
+            <button type="button" class="dropdown-item btn btn-outline-primary mb-2 w-100 text-start"
+                data-bs-toggle="modal" data-bs-target="#uploadModal">
+                <i class="bi bi-cloud-upload"></i> Upload Template
+            </button>
+        </li>
+        <li>
+            <button type="button" class="dropdown-item btn btn-outline-secondary w-100 text-start"
+                data-bs-toggle="modal" data-bs-target="#createModal">
+                <i class="bi bi-file-earmark-plus"></i> Create Template
+            </button>
+        </li>
+    </ul>
+</div>
 {% endblock %}
 
 {% block button_group2 %}
-<button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#createModal">
-    <i class="fas fa-plus"></i> Create Template
-</button>
-{% endblock %}
-
-{% block button_group3 %}
-<a href="{{ url_for('tm.template_results') }}" class="btn btn-warning">
+<a href="{{ url_for('tm.template_results') }}" class="btn btn-light">
     <i class="fas fa-cogs"></i> Manage Configuration File
 </a>
 {% endblock %}

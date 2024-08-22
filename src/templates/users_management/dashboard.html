@@ -3,11 +3,87 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="text-right text-light">Welcome, {{ first_name }} {{ last_name }}!</h5>
+    <h1 class="text-right text-light">Dashboard</h1>
 </div>
 
 <div class="container">
 
+    <!-- Card data dashboard -->
+    <div class="row">
+        <!-- Total Devices -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Total Devices</div>
+                            <div class="h5 mb-0 font-weight-bold text-light-800">{{ total_devices }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-tablet fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Templates -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Templates</div>
+                            <div class="h5 mb-0 font-weight-bold text-light-800">{{ total_templates }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Configuration Files -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Total Configuration Files</div>
+                            <div class="h5 mb-0 font-weight-bold text-light-800">{{ total_configuration_file }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-gear fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Backup Files -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Total Backup Files</div>
+                            <div class="h5 mb-0 font-weight-bold text-light-800">{{ total_backupdata }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-box-archive fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart -->
     <div class="row">
         <!-- Pie Chart for Devices by Vendor -->
         <div class="col-12 col-sm-6 col-lg-6 mb-4">
@@ -32,6 +108,57 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Card Informasi -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-dark py-3">
+                    <h6 class="m-0 font-weight-bold text-light">Panduan Membuat Template</h6>
+                </div>
+                <div class="card-body">
+                    <!-- Embed YouTube Video -->
+                    <div class="embed-responsive embed-responsive-16by9">
+                        <iframe width="560" height="315" src="https://www.youtube.com/embed/NbaPfFTTsVE" frameborder="0"
+                            allowfullscreen></iframe>
+                    </div>
+                    <p>
+                        Template yang digunakan adalah Jinja2, simak video diatas untuk detail templating.
+                        Anda dapat melakukan simulasi pada website <a href="https://j2live.ttl255.com/">J2live.</a>
+                    </p>
+                    <a target="_blank" rel="nofollow" href="https://jinja.palletsprojects.com/en/2.10.x/">Jinja Template
+                        Documentation &rarr;</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-lg mb-4 border-0">
+                <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold">Template Example</h6>
+                    <span class="badge bg-primary text-uppercase small">Example</span>
+                </div>
+                <div class="card-body bg-dark text-light">
+                    <!-- Jinja2 Code Block -->
+                    <h6 class="text-warning">Template (j2):</h6>
+                    <pre class="bg-light text-dark p-3 rounded mb-4"
+                        style="white-space: pre-wrap; word-wrap: break-word;">
+{% raw %}
+config system global
+    set hostname {{ hostname }}
+end
+{% endraw %}
+                    </pre>
+
+                    <!-- YAML Code Block -->
+                    <h6 class="text-warning">Parameter (yaml):</h6>
+                    <pre class="bg-light text-dark p-3 rounded" style="white-space: pre-wrap; word-wrap: break-word;">
+hostname: "yourhostname"
+                    </pre>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 {% endblock %}

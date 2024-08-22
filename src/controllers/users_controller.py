@@ -10,7 +10,14 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from src import db, bcrypt
-from src.models.app_models import User, Role, DeviceManager, TemplateManager
+from src.models.app_models import (
+    User,
+    Role,
+    DeviceManager,
+    TemplateManager,
+    ConfigurationManager,
+    BackupData,
+)
 from src.utils.forms_utils import RegisterForm, UserUpdateForm
 from .decorators import login_required, role_required, required_2fa
 from flask_paginate import Pagination, get_page_args
@@ -79,8 +86,16 @@ def inject_user():
 @required_2fa
 def dashboard():
     # Mengambil semua perangkat dan template konfigurasi dari database
-    devices = DeviceManager.query.all()
+    devices = DeviceManager.query.filter_by(user_id=current_user.id)
     templates = TemplateManager.query.all()
+    configuration_file = ConfigurationManager.query.filter_by(user_id=current_user.id)
+    backupdata = BackupData.query.filter_by(user_id=current_user.id)
+
+    # Menghitung jumlah total
+    total_devices = devices.count()
+    total_templates = len(templates)
+    total_configuration_file = configuration_file.count()
+    total_backupdata = backupdata.count()
 
     # Menghitung jumlah perangkat berdasarkan vendor
     device_vendor_count = {}
@@ -106,6 +121,10 @@ def dashboard():
         device_vendor_values=list(device_vendor_count.values()),
         template_vendor_keys=list(template_vendor_count.keys()),
         template_vendor_values=list(template_vendor_count.values()),
+        total_devices=total_devices,
+        total_templates=total_templates,
+        total_configuration_file=total_configuration_file,
+        total_backupdata=total_backupdata,
     )
 
 

@@ -2,21 +2,34 @@
 {% block title %}Template Results{% endblock %}
 
 {% block button_group1 %}
-<button type="button" class="btn btn-secondary ms-2" data-bs-toggle="modal" data-bs-target="#createModal">
-    <i class="fas fa-plus"></i> Manual Config with Validated
-</button>
-<button type="button" class="btn btn-secondary ms-2" data-bs-toggle="modal" data-bs-target="#createAiModal">
-    <i class="fas fa-plus"></i> Create Config with AI
-</button>
+<div class="dropdown">
+    <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        Create New
+    </button>
+    <ul class="dropdown-menu p-2 shadow-lg rounded">
+        <li>
+            <button type="button" class="dropdown-item btn btn-outline-primary mb-2 w-100 text-start"
+                data-bs-toggle="modal" data-bs-target="#createModal">
+                Manual Config with Validated
+            </button>
+        </li>
+        <li>
+            <button type="button" class="dropdown-item btn btn-outline-secondary w-100 text-start"
+                data-bs-toggle="modal" data-bs-target="#createAiModal">
+                Create Config with AI
+            </button>
+        </li>
+    </ul>
+</div>
 {% endblock %}
 {% block button_group2 %}
 <!-- Tombol untuk membuka modal -->
-<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#askTalitaModal">
+<button type="button" class="btn btn-danger" data-toggle="modal" data-target="#askTalitaModal">
     Ask TALITA
 </button>
 {% endblock %}
 {% block button_group3 %}
-<a class="btn btn-warning" href="{{ url_for('tm.index') }}">
+<a class="btn btn-light" href="{{ url_for('tm.index') }}">
     <i class="fas fa-arrow-left"></i> Back to Templates
 </a>
 {% endblock %}
