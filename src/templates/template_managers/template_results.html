@@ -238,6 +238,10 @@
             <form method="POST" action="{{ url_for('tm.ask_talita') }}">
                 <div class="modal-body text-black">
                     <div class="form-group">
+                        <label for="context">Context:</label>
+                        <input type="text" class="form-control" id="context" name="context" required>
+                    </div>
+                    <div class="form-group">
                         <label for="question">Pertanyaan:</label>
                         <input type="text" class="form-control" id="question" name="question" required>
                     </div>

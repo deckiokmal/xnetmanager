@@ -14,7 +14,7 @@ def validate_generated_template_with_openai(config, vendor):
                 "role": "user",
                 "content": f"Please validate the following configuration for a {vendor} network device:\n\n{config}\n\n"
                 "If the configuration is completely correct and valid, respond with exactly 'VALID'. "
-                "If there are any errors, respond with 'ERROR' and provide a detailed explanation of the issues.",
+                "If there are any errors or incomplete syntax, respond with exactly 'ERROR' and provide a detailed explanation of the issues.",
             },
         ],
     )

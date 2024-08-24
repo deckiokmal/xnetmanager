@@ -1,0 +1,17 @@
+Untuk mengganti hostname pada perangkat Fortinet, Anda dapat menggunakan perintah berikut dalam mode konfigurasi:
+
+```bash
+config system global
+    set hostname "nama-baru-hostname"
+end
+```
+
+Gantilah `"nama-baru-hostname"` dengan nama hostname yang Anda inginkan. Berikut adalah contoh lengkapnya:
+
+```bash
+config system global
+    set hostname "FortiGate-01"
+end
+```
+
+Konfigurasi di atas akan mengubah hostname perangkat Fortinet Anda menjadi "FortiGate-01". Pastikan Anda memiliki hak akses yang cukup untuk melakukan perubahan ini dan pastikan untuk menyimpan konfigurasi setelah melakukan perubahan.

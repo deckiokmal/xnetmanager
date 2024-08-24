@@ -984,12 +984,14 @@ def ask_talita():
     if request.method == "POST":
         # Mengambil data dari form modal
         question = request.form.get("question")
+        context = request.form.get("context")
+        question_with_context = f"{context}\n{question}"
         user_id = request.form.get("user_id")
         url = "https://talita.lintasarta.net/api/portal"
         apikey = "ZTczN2Y0N2E0ZDcxZTIwZjUzN2I5MzA5MDE4MWZmODg="
 
         # Memanggil fungsi talita_chat_completion
-        response = talita_chat_completion(url, apikey, question, user_id)
+        response = talita_chat_completion(url, apikey, question_with_context, user_id)
 
         # Mengecek apakah respon berhasil atau gagal
         if response is None:
