@@ -6,19 +6,19 @@
     <h1 class="text-right text-light">Dashboard</h1>
 </div>
 
-<div class="container">
+<div class="container-fluid">
 
     <!-- Card data dashboard -->
     <div class="row">
         <!-- Total Devices -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100 py-2">
+            <div class="card bg-dark text-light shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
                                 Total Devices</div>
-                            <div class="h5 mb-0 font-weight-bold text-light-800">{{ total_devices }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-light">{{ total_devices }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-tablet fa-2x text-gray-300"></i>
@@ -30,13 +30,13 @@
 
         <!-- Total Templates -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card bg-dark text-light shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
                                 Total Templates</div>
-                            <div class="h5 mb-0 font-weight-bold text-light-800">{{ total_templates }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-light">{{ total_templates }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
@@ -48,13 +48,13 @@
 
         <!-- Total Configuration Files -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-info shadow h-100 py-2">
+            <div class="card bg-dark text-light shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
                                 Total Configuration Files</div>
-                            <div class="h5 mb-0 font-weight-bold text-light-800">{{ total_configuration_file }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-light">{{ total_configuration_file }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-gear fa-2x text-gray-300"></i>
@@ -66,13 +66,13 @@
 
         <!-- Total Backup Files -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card bg-dark text-light shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
                                 Total Backup Files</div>
-                            <div class="h5 mb-0 font-weight-bold text-light-800">{{ total_backupdata }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-light">{{ total_backupdata }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-box-archive fa-2x text-gray-300"></i>
@@ -87,11 +87,11 @@
     <div class="row">
         <!-- Pie Chart for Devices by Vendor -->
         <div class="col-12 col-sm-6 col-lg-6 mb-4">
-            <div class="card bg-dark text-light">
+            <div class="card bg-dark text-light shadow mb-4">
                 <div class="card-header">
-                    Devices by Vendor
+                    <h6 class="m-0 font-weight-bold">Devices by Vendor</h6>
                 </div>
-                <div class="card-body text-center">
+                <div class="card-body">
                     <canvas id="devicePieChart"></canvas>
                 </div>
             </div>
@@ -99,11 +99,11 @@
 
         <!-- Pie Chart for Templates -->
         <div class="col-12 col-sm-6 col-lg-6 mb-4">
-            <div class="card bg-dark text-light">
+            <div class="card bg-dark text-light shadow mb-4">
                 <div class="card-header">
-                    Number of Templates
+                    <h6 class="m-0 font-weight-bold">Templates by Vendor</h6>
                 </div>
-                <div class="card-body text-center">
+                <div class="card-body">
                     <canvas id="templatePieChart"></canvas>
                 </div>
             </div>
@@ -113,36 +113,36 @@
     <!-- Card Informasi -->
     <div class="row">
         <div class="col-md-6">
-            <div class="card shadow mb-4">
-                <div class="card-header bg-dark py-3">
-                    <h6 class="m-0 font-weight-bold text-light">Panduan Membuat Template</h6>
+            <div class="card bg-dark text-light shadow mb-4">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold">Panduan Membuat Template</h6>
                 </div>
                 <div class="card-body">
                     <!-- Embed YouTube Video -->
-                    <div class="embed-responsive embed-responsive-16by9">
+                    <div class="ratio ratio-16x9">
                         <iframe width="560" height="315" src="https://www.youtube.com/embed/NbaPfFTTsVE" frameborder="0"
                             allowfullscreen></iframe>
                     </div>
-                    <p>
-                        Template yang digunakan adalah Jinja2, simak video diatas untuk detail templating.
-                        Anda dapat melakukan simulasi pada website <a target="_blank" rel="nofollow"
+                    <p class="mt-2">
+                        Template yang digunakan adalah Jinja2, simak video di atas untuk detail templating.
+                        Anda dapat melakukan simulasi pada website <a target="_blank" class="text-info" rel="nofollow"
                             href="https://j2live.ttl255.com/">J2live.</a>
                     </p>
-                    <a target="_blank" rel="nofollow" href="https://jinja.palletsprojects.com/en/2.10.x/">Jinja Template
-                        Documentation &rarr;</a>
+                    <a target="_blank" class="text-info" rel="nofollow"
+                        href="https://jinja.palletsprojects.com/en/2.10.x/">Jinja Template Documentation &rarr;</a>
                 </div>
             </div>
         </div>
+
         <div class="col-md-6">
-            <div class="card shadow-lg mb-4 border-0">
-                <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+            <div class="card bg-dark text-light shadow mb-4">
+                <div class="card-header">
                     <h6 class="m-0 font-weight-bold">Template Example</h6>
-                    <span class="badge bg-primary text-uppercase small">Example</span>
                 </div>
-                <div class="card-body bg-dark text-light">
+                <div class="card-body">
                     <!-- Jinja2 Code Block -->
                     <h6 class="text-warning">Template (j2):</h6>
-                    <pre class="bg-light text-dark p-3 rounded mb-4"
+                    <pre class="bg-secondary text-light p-3 rounded mb-4"
                         style="white-space: pre-wrap; word-wrap: break-word;">
 {% raw %}
 config system global
@@ -153,13 +153,13 @@ end
 
                     <!-- YAML Code Block -->
                     <h6 class="text-warning">Parameter (yaml):</h6>
-                    <pre class="bg-light text-dark p-3 rounded" style="white-space: pre-wrap; word-wrap: break-word;">
+                    <pre class="bg-secondary text-light p-3 rounded"
+                        style="white-space: pre-wrap; word-wrap: break-word;">
 hostname: "yourhostname"
                     </pre>
                 </div>
             </div>
         </div>
-
     </div>
 </div>
 {% endblock %}
@@ -191,7 +191,7 @@ hostname: "yourhostname"
         };
 
     // Pie Chart for Devices
-    new Chart(devicePieCtx, {
+    const deviceChart = new Chart(devicePieCtx, {
         type: 'pie',
         data: deviceData,
         options: {
@@ -200,19 +200,27 @@ hostname: "yourhostname"
                 legend: { position: 'top', labels: { color: '#ffffff' } },
                 tooltip: {
                     callbacks: {
-                        label: function (tooltipItem) {
-                            return `${tooltipItem.label}: ${tooltipItem.raw}`;
+                        label: function (context) {
+                            const label = context.label || '';
+                            const value = context.raw || '';
+                            return `${label}: ${value}`;
                         }
                     }
                 }
             }
         }
-    }).canvas.addEventListener('click', function () {
-        window.location.href = "/dm";
+    });
+
+    // Click event for Devices Pie Chart
+    devicePieCtx.canvas.addEventListener('click', function (event) {
+        const points = deviceChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+        if (points.length) {
+            window.location.href = "/dm";
+        }
     });
 
     // Pie Chart for Templates
-    new Chart(templatePieCtx, {
+    const templateChart = new Chart(templatePieCtx, {
         type: 'pie',
         data: templateData,
         options: {
@@ -221,15 +229,23 @@ hostname: "yourhostname"
                 legend: { position: 'top', labels: { color: '#ffffff' } },
                 tooltip: {
                     callbacks: {
-                        label: function (tooltipItem) {
-                            return `${tooltipItem.label}: ${tooltipItem.raw}`;
+                        label: function (context) {
+                            const label = context.label || '';
+                            const value = context.raw || '';
+                            return `${label}: ${value}`;
                         }
                     }
                 }
             }
         }
-    }).canvas.addEventListener('click', function () {
-        window.location.href = "/tm";
+    });
+
+    // Click event for Templates Pie Chart
+    templatePieCtx.canvas.addEventListener('click', function (event) {
+        const points = templateChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+        if (points.length) {
+            window.location.href = "/tm";
+        }
     });
     });
 </script>
