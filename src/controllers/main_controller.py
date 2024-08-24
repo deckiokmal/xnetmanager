@@ -10,8 +10,9 @@ from flask import (
 )
 from flask_login import login_user, logout_user, current_user, login_required
 from src import db, bcrypt
-from src.models.app_models import User, Role
-from src.utils.forms_utils import RegisterForm, LoginForm, TwoFactorForm
+from src.models.app_models import User
+from src.utils.forms_utils import LoginForm, TwoFactorForm
+from .decorators import required_2fa
 from src.utils.LoginUtils import LoginUtils
 import logging
 from datetime import datetime
@@ -55,7 +56,7 @@ def before_request_func():
         return None
 
     if not current_user.is_authenticated:
-        flash("Unauthorized access. Please log in to access this page.", "danger")
+        current_app.logger.info(f"Unauthorize Access, Redirect to Login.")
         return redirect(url_for("main.login"))
 
 
@@ -82,52 +83,18 @@ SETUP_2FA_URL = "main.setup_2fa"
 VERIFY_2FA_URL = "main.verify_2fa"
 
 
-# Register Page
-@main_bp.route("/register", methods=["GET", "POST"])
-def register():
-    form = RegisterForm()
-    if form.validate_on_submit():
-        first_name = form.first_name.data
-        last_name = form.last_name.data
-        email = form.email.data
-        password = form.password.data
-
-        try:
-            existing_user = User.query.filter_by(email=email).first()
-            if existing_user:
-                flash("Alamat email sudah terdaftar", "error")
-                return redirect(url_for("main.register"))
-
-            new_user = User(
-                first_name=first_name,
-                last_name=last_name,
-                email=email,
-                password_hash=password,
-            )
-
-            view_role = Role.query.filter_by(name="View").first()
-            if view_role:
-                new_user.roles.append(view_role)
-
-            db.session.add(new_user)
-            db.session.commit()
-
-            current_app.logger.info(f"User {new_user.email} successfully registered.")
-            login_user(new_user)
-            flash("Pendaftaran berhasil! Anda telah masuk.", "success")
-            return redirect(url_for(HOME_URL))
-        except Exception as e:
-            current_app.logger.error(f"Registration error for {email}: {str(e)}")
-            flash("Terjadi kesalahan saat pendaftaran. Silakan coba lagi.", "danger")
-
-    return render_template("/main/register.html", form=form)
-
-
 # Login Page
 @main_bp.route("/", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for(HOME_URL))
+        # Cek apakah pengguna sudah memverifikasi 2FA
+        if current_user.is_2fa_enabled:
+            if session.get("2fa_verified", False):
+                return redirect(url_for(HOME_URL))
+            else:
+                return redirect(url_for(VERIFY_2FA_URL))
+        else:
+            return redirect(url_for(SETUP_2FA_URL))
 
     form = LoginForm()
     if form.validate_on_submit():
@@ -149,15 +116,17 @@ def login():
 
                 current_app.logger.info(f"User {user.email} logged in.")
 
-                if not user.is_verified:
-                    flash("Silakan verifikasi email Anda untuk akses penuh.", "warning")
-                if user.is_2fa_enabled:
-                    session["pre_2fa"] = True
-                    return redirect(url_for(VERIFY_2FA_URL))
                 LoginUtils.reset_login_attempts(
                     username
                 )  # Reset percobaan login setelah berhasil
-                return redirect(url_for(HOME_URL))
+
+                # Cek apakah pengguna sudah mengaktifkan 2FA
+                if user.is_2fa_enabled:
+                    session["pre_2fa"] = True
+                    return redirect(url_for(VERIFY_2FA_URL))
+                else:
+                    return redirect(url_for(SETUP_2FA_URL))
+
             else:
                 current_app.logger.warning(f"Failed login attempt for {username}.")
                 LoginUtils.increment_login_attempts(
@@ -178,6 +147,7 @@ def login():
 # Log Out
 @main_bp.route("/logout")
 @login_required
+@required_2fa
 def logout():
     try:
         user_email = current_user.email

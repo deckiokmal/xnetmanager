@@ -79,18 +79,23 @@ def role_required(roles, permissions=None, page=""):
 
 
 # Decorator untuk memeriksa apakah pengguna mengaktifkan 2FA atau tidak
+# Decorator to check if the user has activated and verified 2FA
 def required_2fa(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Cek apakah pengguna sudah login
+        # Check if the user is authenticated
         if not current_user.is_authenticated:
             return redirect(url_for("main.login"))
 
-        # Cek apakah 2FA diaktifkan untuk pengguna
+        # Check if 2FA is enabled for the user
         if current_user.is_2fa_enabled:
-            # Cek apakah pengguna sudah memverifikasi 2FA
+            # Check if the user has verified 2FA
             if not session.get("2fa_verified", False):
                 return redirect(url_for("main.verify_2fa"))
+
+        else:
+            # If 2FA is not enabled, redirect to setup 2FA
+            return redirect(url_for("main.setup_2fa"))
 
         return f(*args, **kwargs)
 

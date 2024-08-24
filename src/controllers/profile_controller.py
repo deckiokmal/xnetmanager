@@ -61,7 +61,7 @@ def before_request_func():
         current_app.logger.warning(
             f"Unauthorized access attempt by {request.remote_addr}"
         )
-        return jsonify({"message": "Unauthorized access"}), 401
+        return render_template("main/404.html"), 404
 
 
 # Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.

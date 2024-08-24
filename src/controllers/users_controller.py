@@ -5,7 +5,6 @@ from flask import (
     redirect,
     url_for,
     flash,
-    jsonify,
     current_app,
 )
 from flask_login import login_required, current_user
@@ -60,7 +59,7 @@ def before_request_func():
         current_app.logger.warning(
             f"Unauthorized access attempt by {request.remote_addr}"
         )
-        return jsonify({"message": "Unauthorized access"}), 401
+        return render_template("main/404.html"), 404
 
 
 @users_bp.context_processor
