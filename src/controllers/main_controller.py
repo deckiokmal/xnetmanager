@@ -16,6 +16,7 @@ from .decorators import required_2fa
 from src.utils.LoginUtils import LoginUtils
 import logging
 from datetime import datetime
+import pytz
 import pyotp
 import qrcode
 import io
@@ -105,16 +106,13 @@ def login():
         try:
             user = User.query.filter_by(email=username).first()
             if not user:
-                flash(f"User belum terdaftar!. Silahkan register", "warning")
+                flash(f"Invalid username or password", "warning")
             elif user and bcrypt.check_password_hash(
                 user.password_hash, form.password.data
             ):
                 login_user(user)
 
-                user.last_login = datetime.utcnow()
-                db.session.commit()
-
-                current_app.logger.info(f"User {user.email} logged in.")
+                current_app.logger.info(f"User {user.email} has authenticate.")
 
                 LoginUtils.reset_login_attempts(
                     username
@@ -197,11 +195,18 @@ def setup_2fa():
 @main_bp.route("/verify-2fa", methods=["GET", "POST"])
 @login_required
 def verify_2fa():
+    # Get the time zone object for a specific time zone
+    timezone = pytz.timezone('Asia/Jakarta')
+
+    # Get the current time in the specified time zone
+    current_time = datetime.now(timezone)
+
     form = TwoFactorForm()
     if form.validate_on_submit():
         try:
             if current_user.is_otp_valid(form.otp.data):
                 current_user.is_2fa_enabled = True
+                current_user.last_login = current_time
                 db.session.commit()
                 session.pop("pre_2fa", None)
                 session["2fa_verified"] = True
