@@ -1,30 +1,24 @@
-{% extends "/layouts/base_demo.html" %}
+{% extends "main/base_layouts.html" %}
+{% block title %}Login Page{% endblock %}
 
 {% block content %}
-<form class="mx-auto" method="post" action="{{url_for('main.login')}}">
-    {{ form.csrf_token }}
-    {{ form.hidden_tag() }}
-    {% include '/layouts/flash_msg.html' %}
-    <h4 class="text-center">Login</h4>
-    <div class="mb-3 mt-5">
-        <label for="InputEmail" class="form-label"><strong>Username</strong></label>
-        {{ form.email(class="form-control", placeholder="Enter Email Address...",
-        required=True) }}
-    </div>
-    <div class="mb-3">
-        <label for="InputPassword" class="form-label"><strong>Password</strong></label>
-        {{ form.password(class="form-control", placeholder="Password", required=True) }}
-    </div>
-
-    <button type="submit" class="btn btn-primary mt-4">Login</button>
-
-    <div class="div d-flex flex-wrap justify-content-between">
-        <div class="form-text mt-3">
-            <a href="{{url_for ('main.login')}}">Lupa Password?</a>
+<div class="d-flex justify-content-center align-items-center vh-100">
+    <form class="form-container form-container-dark" method="post" action="{{url_for('main.login')}}">
+        {{ form.csrf_token }}
+        {{ form.hidden_tag() }}
+        {% include '/layouts/flash_msg.html' %}
+        <h4 class="text-center mb-4">Login</h4>
+        <div class="mb-3">
+            <label for="InputEmail" class="form-label"><strong>Username</strong></label>
+            {{ form.email(class="form-control form-control-dark", placeholder="Enter Username...", required=True)
+            }}
         </div>
-        <div class="form-text mt-3">
-            <a href="{{url_for('main.register')}}">Registrasi Akun!</a>
+        <div class="mb-3">
+            <label for="InputPassword" class="form-label"><strong>Password</strong></label>
+            {{ form.password(class="form-control form-control-dark", placeholder="Password", required=True) }}
         </div>
-    </div>
-</form>
+
+        <button type="submit" class="btn btn-primary btn-block mt-4">Login</button>
+    </form>
+</div>
 {% endblock %}
