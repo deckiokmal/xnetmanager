@@ -1,7 +1,6 @@
 from flask import (
     Blueprint,
     render_template,
-    jsonify,
     request,
     redirect,
     url_for,
@@ -83,7 +82,7 @@ def inject_user():
 
 
 # Users profile
-@profile_bp.route("/profile_user", methods=["GET", "POST"])
+@profile_bp.route("/profile", methods=["GET", "POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -92,20 +91,41 @@ def inject_user():
     page="Users Management",
 )
 def index():
-    # Get data current user
-    user_id = current_user.id
-    user = User.query.get(user_id)
-    form = ChangePasswordForm()
-    towfactorform = User2FAEnableForm()
-    form_picture = ProfilePictureForm()
+    try:
+        # Get data current user
+        user_id = current_user.id
+        user = User.query.get(user_id)
 
-    # Set the default value of the form based on the user's 2FA status
-    towfactorform.is_2fa_enabled.data = "True" if user.is_2fa_enabled else "False"
+        if not user:
+            current_app.logger.error(
+                f"User {current_user.email} tried to access profile, but user data was not found."
+            )
+            flash(
+                "Terjadi kesalahan saat mengakses data profil. Silakan coba lagi.",
+                "danger",
+            )
+            return redirect(url_for("main.dashboard"))  # Redirect to a safe page
 
-    current_app.logger.info(f"User {current_user.email} accessed profile page.")
+        form = ChangePasswordForm()
+        towfactorform = User2FAEnableForm()
+        form_picture = ProfilePictureForm()
+
+        # Set the default value of the form based on the user's 2FA status
+        towfactorform.is_2fa_enabled.data = "True" if user.is_2fa_enabled else "False"
+
+        current_app.logger.info(f"User {current_user.email} accessed profile page.")
+    except Exception as e:
+        current_app.logger.error(
+            f"Error occurred while user {current_user.email} accessed profile page: {str(e)}"
+        )
+        flash(
+            "Terjadi kesalahan saat mengakses halaman profil. Silakan coba lagi.",
+            "danger",
+        )
+        return redirect(url_for("main.dashboard"))  # Redirect to a safe page
 
     return render_template(
-        "/users_management/profile_user.html",
+        "/users_management/index_profile.html",
         user=user,
         form=form,
         form_picture=form_picture,
@@ -114,53 +134,61 @@ def index():
 
 
 # Halaman update data user berdasarkan current_user
-@profile_bp.route("/profile_update", methods=["GET", "POST"])
+@profile_bp.route("/profile/settings", methods=["GET", "POST"])
 @login_required
 @required_2fa
-def profile_update():
+def update_profile():
     user = User.query.get_or_404(current_user.id)
     form = ProfileUpdateForm(obj=user)  # Pre-populate form with existing data
 
     if form.validate_on_submit():
         try:
             # Mengupdate data user
-            user.first_name = form.first_name.data
-            user.last_name = form.last_name.data
-            user.email = form.email.data
-            user.phone_number = form.phone_number.data
-            user.profile_picture = form.profile_picture.data
-            user.company = form.company.data
-            user.title = form.title.data
-            user.city = form.city.data
-            user.division = form.division.data
-            user.time_zone = form.time_zone.data
+            user.first_name = form.first_name.data.strip()
+            user.last_name = form.last_name.data.strip()
+            user.email = form.email.data.strip()
+            user.phone_number = form.phone_number.data.strip()
+            user.profile_picture = form.profile_picture.data.strip()
+            user.company = form.company.data.strip()
+            user.title = form.title.data.strip()
+            user.city = form.city.data.strip()
+            user.division = form.division.data.strip()
+            user.time_zone = form.time_zone.data.strip()
 
             # Commit perubahan ke database
             db.session.commit()
 
+            # Logging sukses
             current_app.logger.info(f"User {current_user.email} updated their profile.")
             flash("Profile updated successfully.", "success")
-
-            # Audit trail
-            current_app.logger.info(f"Profile updated for user ID: {user.id}")
-
             return redirect(url_for("profile.index"))
+
         except Exception as e:
             db.session.rollback()
+            # Logging error
             current_app.logger.error(
-                f"Error updating profile for user {user.email}: {e}"
+                f"Error updating profile for user {current_user.email}: {str(e)}"
             )
             flash(
                 "An error occurred while updating your profile. Please try again later.",
                 "danger",
             )
 
+    elif request.method == "POST" and not form.validate():
+        # Logging validasi error
+        for field, errors in form.errors.items():
+            for error in errors:
+                current_app.logger.warning(
+                    f"Validation error on {field} for user {current_user.email}: {error}"
+                )
+                flash(f"Error in {field}: {error}", "danger")
+
     return render_template(
-        "/users_management/profile_update.html", form=form, user=user
+        "/users_management/profile_settings.html", form=form, user=user
     )
 
 
-@profile_bp.route("/change_password", methods=["POST"])
+@profile_bp.route("/change-password", methods=["POST"])
 @login_required
 @required_2fa
 def change_password():
@@ -217,7 +245,7 @@ PROFILE_PICTURE_DIRECTORY = "profile_pictures"
 
 
 # Change profile Pictures
-@profile_bp.route("/upload_profile_picture", methods=["POST"])
+@profile_bp.route("/upload-profile-picture", methods=["POST"])
 @login_required
 @required_2fa
 def upload_profile_picture():

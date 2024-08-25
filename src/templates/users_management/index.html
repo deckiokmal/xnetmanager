@@ -9,7 +9,7 @@
 {% endblock %}
 
 <!-- Data Table Start -->
-{% block table_name %}Daftar Akun{% endblock %}
+{% block table_name %}Users Management{% endblock %}
 
 {% block form_filter_row %}
 <form id="perPageForm" action="{{ url_for('users.index') }}" method="get">
@@ -40,12 +40,12 @@
 {% endblock %}
 
 {% block table_header %}
-<th scope="col" class="text-justify-content">No</th>
-<th scope="col" class="text-justify-content">Email</th>
-<th scope="col" class="text-justify-content">Hash Password</th>
-<th scope="col" class="text-justify-content">Company</th>
-<th scope="col" class="text-justify-content">2FA Verified</th>
-<th scope="col" class="text-justify-content">Aksi</th>
+<th>No</th>
+<th>Email</th>
+<th>Hash Password</th>
+<th>Company</th>
+<th>2FA Verified</th>
+<th>Aksi</th>
 {% endblock %}
 
 {% block table_body %}

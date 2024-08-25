@@ -24,7 +24,7 @@
                         </button>
                         <p>Profile Menu</p>
                         <!-- button edit profile -->
-                        <a href="{{ url_for('profile.profile_update') }}" class="btn btn-outline-success">
+                        <a href="{{ url_for('profile.update_profile') }}" class="btn btn-outline-success">
                                 <i class="fas fa-edit"></i>
                         </a>
                         <!-- button change password -->
@@ -198,7 +198,7 @@
 
 <!-- Modal 2FA aktif/nonaktif -->
 <div class="modal fade" id="enable2FAModal" tabindex="-1" aria-labelledby="enable2FAModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog">
                 <div class="modal-content bg-dark text-light">
                         <div class="modal-header">
                                 <h5 class="modal-title" id="enable2FAModalLabel">Aktifkan/Nonaktifkan 2FA</h5>

@@ -6,6 +6,7 @@ from flask import (
     url_for,
     flash,
     current_app,
+    jsonify,
 )
 from flask_login import login_required, current_user
 from src import db, bcrypt
@@ -135,7 +136,7 @@ def dashboard():
     except Exception as e:
         current_app.logger.error(f"Error loading dashboard: {str(e)}")
         flash("Terjadi kesalahan saat memuat dashboard.", "danger")
-        return redirect(url_for("main.index"))
+        return redirect(url_for("main.login"))
 
 
 # --------------------------------------------------------------------------------
@@ -150,38 +151,64 @@ def dashboard():
 def index():
     """
     Display the main page of the User Management.
-    This page includes a list of devices and supports pagination and searching.
+    This page includes a list of users and supports pagination and searching.
     """
-    form = RegisterForm(request.form)
+    try:
+        form = RegisterForm(request.form)  # Initialize the form for creating new users
 
-    search_query = request.args.get("search", "").lower()
+        search_query = request.args.get("search", "").lower()  # Get the search query
 
-    page, per_page, offset = get_page_args(
-        page_parameter="page", per_page_parameter="per_page", per_page=10
-    )
+        page, per_page, offset = get_page_args(
+            page_parameter="page", per_page_parameter="per_page", per_page=10
+        )
 
-    if search_query:
-        user_query = User.query.filter(User.email.ilike(f"%{search_query}%"))
-    else:
-        user_query = User.query
+        # Filtering users based on search query
+        if search_query:
+            user_query = User.query.filter(User.email.ilike(f"%{search_query}%"))
+            current_app.logger.info(
+                f"Search query '{search_query}' performed by {current_user.email}."
+            )
+        else:
+            user_query = User.query
 
-    total_user = user_query.count()
-    users = user_query.limit(per_page).offset(offset).all()
+        total_user = user_query.count()
+        users = user_query.limit(per_page).offset(offset).all()
 
-    pagination = Pagination(page=page, per_page=per_page, total=total_user)
+        pagination = Pagination(page=page, per_page=per_page, total=total_user)
 
-    current_app.logger.info(f"User management page accessed by {current_user.email}")
+        current_app.logger.info(
+            f"User management page accessed by {current_user.email}"
+        )
 
-    return render_template(
-        "/users_management/index.html",
-        users=users,
-        page=page,
-        per_page=per_page,
-        pagination=pagination,
-        search_query=search_query,
-        total_user=total_user,
-        form=form,
-    )
+        return render_template(
+            "/users_management/index.html",
+            users=users,
+            page=page,
+            per_page=per_page,
+            pagination=pagination,
+            search_query=search_query,
+            total_user=total_user,
+            form=form,
+        )
+
+    except Exception as e:
+        current_app.logger.error(
+            f"An error occurred on the user management page accessed by {current_user.email}: {str(e)}"
+        )
+        flash(
+            "An unexpected error occurred while accessing the user management page. Please try again later.",
+            "danger",
+        )
+        return render_template(
+            "/users_management/index.html",
+            users=[],
+            page=1,
+            per_page=10,
+            pagination=Pagination(page=1, per_page=10, total=0),
+            search_query="",
+            total_user=0,
+            form=form,
+        )
 
 
 @users_bp.route("/create-user", methods=["POST"])
@@ -191,45 +218,36 @@ def index():
 def create_user():
     form = RegisterForm(request.form)
 
-    if request.method == "POST":
+    try:
         if form.validate_on_submit():
-            try:
-                existing_user = User.query.filter_by(
-                    email=form.email.data.strip()
-                ).first()
-                if existing_user:
-                    flash("Alamat email sudah terdaftar", "error")
-                    current_app.logger.warning(
-                        f"Registration attempt failed: {form.email.data.strip()} already exists"
-                    )
-                else:
-                    new_user = User(
-                        first_name=form.first_name.data.strip(),
-                        last_name=form.last_name.data.strip(),
-                        email=form.email.data.strip(),
-                        password_hash=form.password.data.strip(),
-                    )
-
-                    view_role = Role.query.filter_by(name="User").first()
-                    if view_role:
-                        new_user.roles.append(view_role)
-
-                    db.session.add(new_user)
-                    db.session.commit()
-
-                    flash("User berhasil ditambahkan.", "success")
-                    current_app.logger.info(
-                        f"New user created: {form.email.data.strip()}"
-                    )
-                    return redirect(url_for("users.index"))
-            except Exception as e:
-                current_app.logger.error(
-                    f"Error creating user {form.email.data.strip()}: {str(e)}"
+            existing_user = User.query.filter_by(email=form.email.data.strip()).first()
+            if existing_user:
+                flash("Alamat email sudah terdaftar", "warning")
+                current_app.logger.warning(
+                    f"Registration attempt failed: {form.email.data.strip()} already exists"
                 )
-                flash(
-                    "Terjadi kesalahan saat membuat user. Silakan coba lagi.", "danger"
+            else:
+                # Create a new user with provided data
+                new_user = User(
+                    first_name=form.first_name.data.strip(),
+                    last_name=form.last_name.data.strip(),
+                    email=form.email.data.strip(),
+                    password_hash=form.password.data.strip(),
                 )
+
+                # Assign the 'User' role to the new user
+                view_role = Role.query.filter_by(name="User").first()
+                if view_role:
+                    new_user.roles.append(view_role)
+
+                db.session.add(new_user)
+                db.session.commit()
+
+                flash("User berhasil ditambahkan.", "success")
+                current_app.logger.info(f"New user created: {form.email.data.strip()}")
+                return redirect(url_for("users.index"))
         else:
+            # Log and flash form validation errors
             for field, errors in form.errors.items():
                 for error in errors:
                     flash(
@@ -237,6 +255,13 @@ def create_user():
                         "danger",
                     )
             current_app.logger.warning("Form validation failed during user creation.")
+
+    except Exception as e:
+        current_app.logger.error(
+            f"Error creating user {form.email.data.strip()}: {str(e)}"
+        )
+        flash("Terjadi kesalahan saat membuat user. Silakan coba lagi.", "danger")
+        db.session.rollback()  # Rollback the session to maintain data integrity
 
     return redirect(url_for("users.index"))
 
@@ -249,43 +274,72 @@ def update_user(user_id):
     user = User.query.get_or_404(user_id)
     form = UserUpdateForm(obj=user)
 
-    current_app.logger.info(f"Updating user with ID: {user_id}")
+    current_app.logger.info(
+        f"User {current_user.email} is attempting to update user with ID: {user_id}"
+    )
 
-    if form.validate_on_submit():
-        if User.query.filter(User.email == form.email.data, User.id != user.id).first():
-            flash("Email already exists. Please choose another email!", "info")
+    try:
+        if form.validate_on_submit():
+            if User.query.filter(
+                User.email == form.email.data, User.id != user.id
+            ).first():
+                flash(
+                    "Email sudah terdaftar!. silahkan pilih email yang lain.", "warning"
+                )
+                current_app.logger.warning(
+                    f"Update attempt by user {current_user.email} failed: {form.email.data} already exists."
+                )
+                return render_template(
+                    "/users_management/update_user.html", form=form, user=user
+                )
+
+            # Update user details
+            user.first_name = form.first_name.data
+            user.last_name = form.last_name.data
+            user.email = form.email.data
+            user.phone_number = form.phone_number.data
+            user.profile_picture = form.profile_picture.data
+            user.company = form.company.data
+            user.title = form.title.data
+            user.city = form.city.data
+            user.division = form.division.data
+
+            user.is_verified = form.is_verified.data == "True"
+            user.is_2fa_enabled = form.is_2fa_enabled.data == "True"
+            user.is_active = form.is_active.data == "True"
+            user.time_zone = form.time_zone.data
+
+            # Update password if provided
+            if form.password.data:
+                user.password_hash = bcrypt.generate_password_hash(
+                    form.password.data
+                ).decode("utf-8")
+                current_app.logger.info(f"Password updated for user: {user.email}")
+
+            db.session.commit()
+            flash("User updated successfully.", "success")
+            current_app.logger.info(
+                f"User {current_user.email} successfully updated user with ID: {user_id}"
+            )
+            return redirect(url_for("users.index"))
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(
+                        f"Kesalahan pada {getattr(form, field).label.text}: {error}",
+                        "danger",
+                    )
             current_app.logger.warning(
-                f"Update attempt failed: {form.email.data} already exists."
+                f"Form validation failed for user update by {current_user.email}."
             )
-            return render_template(
-                "/users_management/update_user.html", form=form, user=user
-            )
-
-        user.first_name = form.first_name.data
-        user.last_name = form.last_name.data
-        user.email = form.email.data
-        user.phone_number = form.phone_number.data
-        user.profile_picture = form.profile_picture.data
-        user.company = form.company.data
-        user.title = form.title.data
-        user.city = form.city.data
-        user.division = form.division.data
-
-        user.is_verified = form.is_verified.data == "True"
-        user.is_2fa_enabled = form.is_2fa_enabled.data == "True"
-        user.is_active = form.is_active.data == "True"
-        user.time_zone = form.time_zone.data
-
-        if form.password.data:
-            user.password_hash = bcrypt.generate_password_hash(
-                form.password.data
-            ).decode("utf-8")
-            current_app.logger.info(f"Password updated for user: {user.email}")
-
-        db.session.commit()
-        flash("User updated successfully.", "success")
-        current_app.logger.info(f"User updated successfully: {user.email}")
-        return redirect(url_for("users.index"))
+    except Exception as e:
+        current_app.logger.error(
+            f"Error occurred while user {current_user.email} was updating user {user.email}: {str(e)}"
+        )
+        flash(
+            "Terjadi kesalahan saat memperbarui pengguna. Silakan coba lagi.", "danger"
+        )
+        db.session.rollback()  # Rollback the session to maintain data integrity
 
     return render_template("/users_management/update_user.html", form=form, user=user)
 
@@ -295,23 +349,62 @@ def update_user(user_id):
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
 def delete_user(user_id):
-    current_app.logger.info(f"Attempting to delete user with ID: {user_id}")
-
-    if current_user.id == user_id:
-        flash("Anda tidak bisa delete akun anda sendiri.", "warning")
-        current_app.logger.warning(
-            f"User with ID: {user_id} attempted to delete their own account."
+    """
+    Menghapus pengguna berdasarkan ID jika pengguna tersebut bukan akun yang sedang login.
+    Menyediakan logging, feedback pengguna, dan error handling.
+    """
+    try:
+        current_app.logger.info(
+            f"User {current_user.email} is attempting to delete user with ID: {user_id}"
         )
-        return redirect(url_for("users.index"))
 
-    user = User.query.get(user_id)
-    if not user:
-        flash("User tidak ditemukan.", "info")
-        current_app.logger.info(f"User with ID: {user_id} not found for deletion.")
-        return redirect(url_for("users.index"))
+        # Mencegah pengguna menghapus akun mereka sendiri
+        if current_user.id == user_id:
+            flash("Anda tidak bisa delete akun anda sendiri.", "warning")
+            current_app.logger.warning(
+                f"User {current_user.email} attempted to delete their own account with ID: {user_id}"
+            )
+            return redirect(url_for("users.index"))
 
-    db.session.delete(user)
-    db.session.commit()
-    flash("User telah dihapus.", "success")
-    current_app.logger.info(f"User with ID: {user_id} has been deleted successfully.")
+        # Mendapatkan pengguna berdasarkan ID
+        user = User.query.get(user_id)
+        if not user:
+            flash("User tidak ditemukan.", "info")
+            current_app.logger.info(
+                f"User {current_user.email} attempted to delete non-existing user with ID: {user_id}"
+            )
+            return redirect(url_for("users.index"))
+
+        # Melakukan penghapusan pengguna
+        db.session.delete(user)
+        db.session.commit()
+
+        flash("User telah dihapus.", "success")
+        current_app.logger.info(
+            f"User {current_user.email} successfully deleted user with ID: {user_id}"
+        )
+    except Exception as e:
+        current_app.logger.error(
+            f"Error occurred while user {current_user.email} was deleting user with ID {user_id}: {str(e)}"
+        )
+        flash("Terjadi kesalahan saat menghapus pengguna. Silakan coba lagi.", "danger")
+        db.session.rollback()  # Rollback session untuk menjaga integritas data
+
     return redirect(url_for("users.index"))
+
+
+# --------------------------------------------------------------------------------
+# API Users Section
+# --------------------------------------------------------------------------------
+
+
+# api endpoint untuk memberikan seluruh data user
+@users_bp.route("/api/users", methods=["GET"])
+@login_required
+@required_2fa
+@role_required(roles=["Admin"], permissions=["Manage Roles"], page="API Users")
+def api_users():
+    users = User.query.all()  # Mengambil semua pengguna
+    users_list = [{"id": u.id, "name": u.email} for u in users]
+    current_app.logger.warning(f"User {current_user.email} access API Users data.")
+    return jsonify(users_list)

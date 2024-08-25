@@ -1,5 +1,5 @@
 {% extends "/layouts/layout.html" %}
-{% block title %}Role Update{% endblock %}
+{% block title %}Update Role - {{ role.name }} {% endblock %}
 {% block content %}
 <!-- Begin Page Content -->
 
@@ -7,7 +7,7 @@
     <div class="card-header mb-3">
         Role Update
     </div>
-    <form action="{{ url_for('roles.role_update', role_id=role.id) }}" method="POST">
+    <form action="{{ url_for('roles.update_role', role_id=role.id) }}" method="POST">
         <div class="row">
             <div class="col mb-3">
                 <div class="row md-6">

@@ -13,8 +13,8 @@
     <hr class="sidebar-divider my-0">
 
     <!-- Nav Item - Dashboard -->
-    <li class="nav-item {{ is_active('/') }}">
-        <a class="nav-link" href="/">
+    <li class="nav-item {{ is_active('/dashboard') }}">
+        <a class="nav-link" href="/dashboard">
             <i class="fas fa-fw fa-tachometer-alt"></i>
             <span><b>Dashboard</b></span>
         </a>
@@ -29,8 +29,8 @@
     </div>
 
     <!-- Nav Item - Profile -->
-    <li class="nav-item {{ is_active('/profile_user') }}">
-        <a class="nav-link" href="/profile_user">
+    <li class="nav-item {{ is_active('/profile') }}">
+        <a class="nav-link" href="/profile">
             <i class="fas fa-fw fa-id-badge"></i>
             <span>My Profile</span>
         </a>
@@ -46,8 +46,8 @@
     </li>
 
     <!-- Nav Item - Users Role -->
-    <li class="nav-item {{ is_active('/user_role') }}">
-        <a class="nav-link" href="/user_role">
+    <li class="nav-item {{ is_active('/roles-management') }}">
+        <a class="nav-link" href="/roles-management">
             <i class="fas fa-fw fa-user-tag"></i>
             <span>Roles Management</span>
         </a>

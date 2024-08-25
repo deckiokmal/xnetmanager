@@ -1,6 +1,5 @@
 {% extends "/layouts/layout_table.html" %}
-{% block title %}User Role Management{% endblock %}
-
+{% block title %}Roles Management{% endblock %}
 
 {% block button_group1 %}
 <!-- Tombol tambah role -->
@@ -8,22 +7,24 @@
     <i class="fa-solid fa-plus"></i>
 </button>
 {% endblock %}
+
 {% block button_group2 %}
 <!-- Tombol tambah permission -->
 <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#addUserToRoleModal">
     <i class="fa-solid fa-user-plus"></i>
 </button>
 {% endblock %}
+
 {% block button_group3 %}
 <!-- Tombol navigasi ke halaman Permissions -->
-<a href="{{ url_for('roles.list_permissions') }}" class="btn btn-info">
+<a href="{{ url_for('roles.index_permissions') }}" class="btn btn-info">
     <i class="fa-solid fa-shield"></i>
 </a>
 {% endblock %}
 
 
 <!-- Data Table Start -->
-{% block table_name %}Role Management{% endblock %}
+{% block table_name %}Roles Management{% endblock %}
 
 {% block form_filter_row %}
 <form id="perPageForm" action="{{ url_for('roles.index') }}" method="get">
@@ -44,7 +45,7 @@
 
 {% block form_search %}
 <form id="searchForm" method="get" action="{{ url_for('roles.index') }}" class="form-inline d-flex">
-    <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2" placeholder="Cari role"
+    <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2" placeholder="Search..."
         value="{{ search_query }}">
     <button class="btn btn-outline-success btn-sm" type="submit">
         <i class="fa-solid fa-magnifying-glass"></i>
@@ -63,7 +64,7 @@
 {% block table_body %}
 {% for role in roles %}
 <tr>
-    <td>{{ role.id }}</td>
+    <th scope="row">{{ loop.index + (page - 1) * per_page }}</th>
     <td>{{ role.name }}</td>
     <td>
         {% for permission in role.permissions %}
@@ -77,12 +78,12 @@
         </button>
 
         <!-- Tombol untuk Update -->
-        <a href="{{ url_for('roles.role_update', role_id=role.id) }}" class="btn btn-success btn-sm mb-1">
+        <a href="{{ url_for('roles.update_role', role_id=role.id) }}" class="btn btn-success btn-sm mb-1">
             <i class="fa-solid fa-edit"></i>
         </a>
 
         <!-- Tombol untuk Delete -->
-        <form method="post" action="{{ url_for('roles.role_delete', role_id=role.id) }}" class="d-inline"
+        <form method="post" action="{{ url_for('roles.delete_role', role_id=role.id) }}" class="d-inline"
             onsubmit="return confirm('Anda yakin ingin menghapus role ini?');">
             <button type="submit" class="btn btn-danger btn-sm mb-1">
                 <i class="fa-solid fa-trash"></i>
