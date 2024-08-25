@@ -1,16 +1,15 @@
 {% extends "/layouts/layout_table.html" %}
 {% block title %}Users Management{% endblock %}
 
-
 {% block button_group1 %}
 <!-- Tombol untuk membuka modal pembuatan perangkat baru -->
-<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createuserModal">
-    <i class="fas fa-plus"></i>
+<button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createuserModal">
+    Create New
 </button>
 {% endblock %}
 
 <!-- Data Table Start -->
-{% block table_name %}Daftar Akun Engineer{% endblock %}
+{% block table_name %}Daftar Akun{% endblock %}
 
 {% block form_filter_row %}
 <form id="perPageForm" action="{{ url_for('users.index') }}" method="get">
@@ -45,7 +44,7 @@
 <th scope="col" class="text-justify-content">Email</th>
 <th scope="col" class="text-justify-content">Hash Password</th>
 <th scope="col" class="text-justify-content">Company</th>
-<th scope="col" class="text-justify-content">Email Verified</th>
+<th scope="col" class="text-justify-content">2FA Verified</th>
 <th scope="col" class="text-justify-content">Aksi</th>
 {% endblock %}
 
@@ -61,20 +60,21 @@
         </div>
     </td>
     <td>{{ user.company }}</td>
-    <td>{{ user.is_verified }}</td>
+    <td>{{ 'Yes' if user.is_2fa_enabled else 'No' }}</td>
     <td>
         <!-- Tombol Detail Perangkat -->
         <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#detailModal{{ user.id }}">
             <i class="fas fa-eye"></i>
         </button>
         <!-- Tombol Edit Perangkat -->
-        <a href="{{url_for('users.user_update', user_id=user.id)}}" class="btn btn-success btn-sm">
+        <a href="{{url_for('users.update_user', user_id=user.id)}}" class="btn btn-success btn-sm">
             <i class="fas fa-edit"></i>
         </a>
         <!-- Form untuk Menghapus Perangkat -->
-        <form action="{{url_for('users.user_delete', user_id=user.id)}}" method="post" style="display:inline;">
+        <form action="{{url_for('users.delete_user', user_id=user.id)}}" method="post" style="display:inline;">
+            {{ form.csrf_token }} <!-- Adding CSRF token for deletion -->
             <button type="submit" class="btn btn-danger btn-sm"
-                onclick="return confirm('Apakah Anda yakin ingin menghapus perangkat ini?');">
+                onclick="return confirm('Apakah Anda yakin ingin menghapus pengguna ini?');">
                 <i class="fas fa-trash"></i>
             </button>
         </form>
@@ -87,19 +87,22 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-black text-light">
             <div class="modal-header">
-                <h5 class="modal-title" id="detailModalLabel{{ user.id }}">Detail
-                    User
-                </h5>
+                <h5 class="modal-title" id="detailModalLabel{{ user.id }}">Detail User</h5>
                 <button type="button" class="btn-close btn-light" data-bs-dismiss="modal" aria-label="Tutup"></button>
             </div>
             <div class="modal-body">
                 <p><strong>email:</strong> {{ user.email }}</p>
                 <p><strong>Password:</strong> {{ user.password_hash }}</p>
-                <p><strong>Email Verified Status:</strong> {{
-                    user.is_verified }}</p>
-                <p><strong>Role:</strong> {{ user.roles }}</p>
-                <p><strong>Dibuat pada:</strong> {{ user.date_joined }}</p>
-                <p><strong>Terakhir login:</strong> {{ user.last_login }}</p>
+                <p><strong>Email Verified Status:</strong> {{ 'Yes' if user.is_verified else 'No' }}</p>
+                <p><strong>Role:</strong> {{ user.roles|join(', ') }}</p>
+                <p><strong>Dibuat pada:</strong> {{ user.date_joined.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                <p><strong>Terakhir login:</strong>
+                    {% if user.last_login %}
+                    {{ user.last_login.strftime('%Y-%m-%d %H:%M:%S') }}
+                    {% else %}
+                    Never logged in
+                    {% endif %}
+                </p>
             </div>
         </div>
     </div>
@@ -126,25 +129,21 @@
 {% block modal_data %}
 <!-- create user Modal -->
 <div class="modal fade" id="createuserModal" tabindex="-1" aria-labelledby="createuserModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content bg-black text-light">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 400px;">
+        <div class="modal-content bg-black text-white">
             <div class="modal-header">
-                <h5 class="modal-title" id="createuserModalLabel">
-                    Tambah Pengguna Baru
-                </h5>
-                <button type="button" class="btn-close btn-light" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title" id="createuserModalLabel">Tambah Pengguna Baru</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form class="user" role="form" method="post" action="">
+                <form method="post" action="{{ url_for('users.create_user') }}">
                     {{ form.csrf_token }}
 
                     <div class="form-group">
                         {{ form.first_name(placeholder="First Name", class="form-control form-control-user") }}
                         {% if form.first_name.errors %}
                         {% for error in form.first_name.errors %}
-                        <div class="alert alert-danger" role="alert">
-                            {{ error }}
-                        </div>
+                        <div class="invalid-feedback d-block">{{ error }}</div>
                         {% endfor %}
                         {% endif %}
                     </div>
@@ -153,9 +152,7 @@
                         {{ form.last_name(placeholder="Last Name", class="form-control form-control-user") }}
                         {% if form.last_name.errors %}
                         {% for error in form.last_name.errors %}
-                        <div class="alert alert-danger" role="alert">
-                            {{ error }}
-                        </div>
+                        <div class="invalid-feedback d-block">{{ error }}</div>
                         {% endfor %}
                         {% endif %}
                     </div>
@@ -164,9 +161,7 @@
                         {{ form.email(placeholder="Email Address", class="form-control form-control-user") }}
                         {% if form.email.errors %}
                         {% for error in form.email.errors %}
-                        <div class="alert alert-danger" role="alert">
-                            {{ error }}
-                        </div>
+                        <div class="invalid-feedback d-block">{{ error }}</div>
                         {% endfor %}
                         {% endif %}
                     </div>
@@ -175,9 +170,7 @@
                         {{ form.password(placeholder="Password", class="form-control form-control-user") }}
                         {% if form.password.errors %}
                         {% for error in form.password.errors %}
-                        <div class="alert alert-danger" role="alert">
-                            {{ error }}
-                        </div>
+                        <div class="invalid-feedback d-block">{{ error }}</div>
                         {% endfor %}
                         {% endif %}
                     </div>
@@ -187,12 +180,11 @@
                         }}
                         {% if form.confirm_password.errors %}
                         {% for error in form.confirm_password.errors %}
-                        <div class="alert alert-danger" role="alert">
-                            {{ error }}
-                        </div>
+                        <div class="invalid-feedback d-block">{{ error }}</div>
                         {% endfor %}
                         {% endif %}
                     </div>
+
                     <button class="btn btn-primary btn-user btn-block" type="submit">Submit</button>
                 </form>
             </div>
@@ -200,25 +192,19 @@
     </div>
 </div>
 {% endblock %}
-<!-- Data Table End -->
 
 {% block script_js %}
-<!-- JavaScript untuk mengatur visibilitas password dan penundaan pencarian -->
 <script>
     let timeout = null;
 
-    // Menangani input pada form pencarian dengan penundaan 1 detik
     document.getElementById("searchInput").addEventListener("input", function () {
-        // Batalkan timer yang ada sebelumnya jika ada
         clearTimeout(timeout);
 
-        // Setel timer baru untuk submit form setelah 1 detik
         timeout = setTimeout(function () {
             document.getElementById('searchForm').submit();
-        }, 1000); // 1000 ms = 1 detik
+        }, 1000);
     });
 
-    // Fungsi untuk memfilter baris tabel berdasarkan input pencarian
     document.getElementById("searchInput").addEventListener("input", function () {
         const query = this.value.toLowerCase();
         const rows = document.querySelectorAll("#deviceTable tbody tr");

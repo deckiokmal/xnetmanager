@@ -27,7 +27,7 @@ users_bp = Blueprint("users", __name__)
 error_bp = Blueprint("error", __name__)
 
 # Setup logging untuk aplikasi
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
 
 
 @users_bp.before_app_request
@@ -35,9 +35,12 @@ def setup_logging():
     """
     Mengatur level logging untuk aplikasi.
     """
-    current_app.logger.setLevel(logging.INFO)
-    handler = current_app.logger.handlers[0]
-    current_app.logger.addHandler(handler)
+    if not current_app.debug:  # Only add handler when not in debug mode
+        handler = logging.StreamHandler()
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
+        )
+        current_app.logger.addHandler(handler)
 
 
 @error_bp.app_errorhandler(404)
@@ -79,52 +82,60 @@ def inject_user():
 # --------------------------------------------------------------------------------
 
 
-# Menampilkan halaman dashboard setelah user login success.
 @users_bp.route("/dashboard")
 @login_required
 @required_2fa
 def dashboard():
-    # Mengambil semua perangkat dan template konfigurasi dari database
-    devices = DeviceManager.query.filter_by(user_id=current_user.id)
-    templates = TemplateManager.query.all()
-    configuration_file = ConfigurationManager.query.filter_by(user_id=current_user.id)
-    backupdata = BackupData.query.filter_by(user_id=current_user.id)
+    try:
+        # Mengambil semua perangkat dan template konfigurasi dari database
+        devices = DeviceManager.query.filter_by(user_id=current_user.id)
+        templates = TemplateManager.query.all()
+        configuration_file = ConfigurationManager.query.filter_by(
+            user_id=current_user.id
+        )
+        backupdata = BackupData.query.filter_by(user_id=current_user.id)
 
-    # Menghitung jumlah total
-    total_devices = devices.count()
-    total_templates = len(templates)
-    total_configuration_file = configuration_file.count()
-    total_backupdata = backupdata.count()
+        # Menghitung jumlah total
+        total_devices = devices.count()
+        total_templates = len(templates)
+        total_configuration_file = configuration_file.count()
+        total_backupdata = backupdata.count()
 
-    # Menghitung jumlah perangkat berdasarkan vendor
-    device_vendor_count = {}
-    for device in devices:
-        vendor = device.vendor
-        if vendor in device_vendor_count:
-            device_vendor_count[vendor] += 1
-        else:
-            device_vendor_count[vendor] = 1
+        # Menghitung jumlah perangkat berdasarkan vendor
+        device_vendor_count = {}
+        for device in devices:
+            vendor = device.vendor
+            if vendor in device_vendor_count:
+                device_vendor_count[vendor] += 1
+            else:
+                device_vendor_count[vendor] = 1
 
-    # Menghitung jumlah template berdasarkan vendor
-    template_vendor_count = {}
-    for template in templates:
-        vendor = template.vendor
-        if vendor in template_vendor_count:
-            template_vendor_count[vendor] += 1
-        else:
-            template_vendor_count[vendor] = 1
+        # Menghitung jumlah template berdasarkan vendor
+        template_vendor_count = {}
+        for template in templates:
+            vendor = template.vendor
+            if vendor in template_vendor_count:
+                template_vendor_count[vendor] += 1
+            else:
+                template_vendor_count[vendor] = 1
 
-    return render_template(
-        "/users_management/dashboard.html",
-        device_vendor_keys=list(device_vendor_count.keys()),
-        device_vendor_values=list(device_vendor_count.values()),
-        template_vendor_keys=list(template_vendor_count.keys()),
-        template_vendor_values=list(template_vendor_count.values()),
-        total_devices=total_devices,
-        total_templates=total_templates,
-        total_configuration_file=total_configuration_file,
-        total_backupdata=total_backupdata,
-    )
+        current_app.logger.info(f"Dashboard accessed by {current_user.email}")
+
+        return render_template(
+            "/users_management/dashboard.html",
+            device_vendor_keys=list(device_vendor_count.keys()),
+            device_vendor_values=list(device_vendor_count.values()),
+            template_vendor_keys=list(template_vendor_count.keys()),
+            template_vendor_values=list(template_vendor_count.values()),
+            total_devices=total_devices,
+            total_templates=total_templates,
+            total_configuration_file=total_configuration_file,
+            total_backupdata=total_backupdata,
+        )
+    except Exception as e:
+        current_app.logger.error(f"Error loading dashboard: {str(e)}")
+        flash("Terjadi kesalahan saat memuat dashboard.", "danger")
+        return redirect(url_for("main.index"))
 
 
 # --------------------------------------------------------------------------------
@@ -132,72 +143,34 @@ def dashboard():
 # --------------------------------------------------------------------------------
 
 
-# Users Management Page
-@users_bp.route("/users", methods=["GET", "POST"])
+@users_bp.route("/users-management", methods=["GET", "POST"])
 @login_required
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
-# @role_required("Admin", "users")
 def index():
-    # Mendapatkan parameter pencarian dari URL
+    """
+    Display the main page of the User Management.
+    This page includes a list of devices and supports pagination and searching.
+    """
+    form = RegisterForm(request.form)
+
     search_query = request.args.get("search", "").lower()
 
-    # Mendapatkan halaman saat ini dan jumlah entri per halaman
     page, per_page, offset = get_page_args(
         page_parameter="page", per_page_parameter="per_page", per_page=10
     )
 
     if search_query:
-        # Jika ada pencarian, filter perangkat berdasarkan query
         user_query = User.query.filter(User.email.ilike(f"%{search_query}%"))
     else:
-        # Jika tidak ada pencarian, ambil semua perangkat
         user_query = User.query
 
-    # Menghitung total perangkat dan mengambil perangkat untuk halaman saat ini
     total_user = user_query.count()
     users = user_query.limit(per_page).offset(offset).all()
 
-    # Membuat objek pagination
     pagination = Pagination(page=page, per_page=per_page, total=total_user)
 
-    # Modal Form Create users
-    form = RegisterForm()
-    if form.validate_on_submit():
-        first_name = form.first_name.data
-        last_name = form.last_name.data
-        email = form.email.data
-        password = form.password.data
-
-        # Check if user already exists
-        existing_user = User.query.filter_by(email=email).first()
-        if existing_user:
-            current_app.logger.warning(
-                f"Registration attempt failed: {email} already exists"
-            )
-            flash("Alamat email sudah terdaftar", "error")
-            return redirect(url_for("users.index"))
-
-        # Create new user with hashed password
-        new_user = User(
-            first_name=first_name,
-            last_name=last_name,
-            email=email,
-            password_hash=password,
-        )
-
-        # Add the user to the 'View' role
-        view_role = Role.query.filter_by(name="View").first()
-        if view_role:
-            new_user.roles.append(view_role)
-
-        # Add new user to the database
-        db.session.add(new_user)
-        db.session.commit()
-
-        current_app.logger.info(f"New user created: {email}")
-        flash("User berhasil ditambahkan.", "success")
-        return redirect(url_for("users.index"))
+    current_app.logger.info(f"User management page accessed by {current_user.email}")
 
     return render_template(
         "/users_management/index.html",
@@ -211,29 +184,83 @@ def index():
     )
 
 
-# User Update Page
-@users_bp.route("/user_update/<int:user_id>", methods=["GET", "POST"])
+@users_bp.route("/create-user", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
-def user_update(user_id):
+def create_user():
+    form = RegisterForm(request.form)
+
+    if request.method == "POST":
+        if form.validate_on_submit():
+            try:
+                existing_user = User.query.filter_by(
+                    email=form.email.data.strip()
+                ).first()
+                if existing_user:
+                    flash("Alamat email sudah terdaftar", "error")
+                    current_app.logger.warning(
+                        f"Registration attempt failed: {form.email.data.strip()} already exists"
+                    )
+                else:
+                    new_user = User(
+                        first_name=form.first_name.data.strip(),
+                        last_name=form.last_name.data.strip(),
+                        email=form.email.data.strip(),
+                        password_hash=form.password.data.strip(),
+                    )
+
+                    view_role = Role.query.filter_by(name="User").first()
+                    if view_role:
+                        new_user.roles.append(view_role)
+
+                    db.session.add(new_user)
+                    db.session.commit()
+
+                    flash("User berhasil ditambahkan.", "success")
+                    current_app.logger.info(
+                        f"New user created: {form.email.data.strip()}"
+                    )
+                    return redirect(url_for("users.index"))
+            except Exception as e:
+                current_app.logger.error(
+                    f"Error creating user {form.email.data.strip()}: {str(e)}"
+                )
+                flash(
+                    "Terjadi kesalahan saat membuat user. Silakan coba lagi.", "danger"
+                )
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(
+                        f"Kesalahan pada {getattr(form, field).label.text}: {error}",
+                        "danger",
+                    )
+            current_app.logger.warning("Form validation failed during user creation.")
+
+    return redirect(url_for("users.index"))
+
+
+@users_bp.route("/update-user/<user_id>", methods=["GET", "POST"])
+@login_required
+@required_2fa
+@role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
+def update_user(user_id):
     user = User.query.get_or_404(user_id)
     form = UserUpdateForm(obj=user)
 
     current_app.logger.info(f"Updating user with ID: {user_id}")
 
     if form.validate_on_submit():
-        # Memeriksa apakah email baru sudah ada di database
         if User.query.filter(User.email == form.email.data, User.id != user.id).first():
             flash("Email already exists. Please choose another email!", "info")
             current_app.logger.warning(
                 f"Update attempt failed: {form.email.data} already exists."
             )
             return render_template(
-                "/users_management/user_update.html", form=form, user=user
+                "/users_management/update_user.html", form=form, user=user
             )
 
-        # Mengupdate data user
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
         user.email = form.email.data
@@ -244,34 +271,30 @@ def user_update(user_id):
         user.city = form.city.data
         user.division = form.division.data
 
-        # Mengonversi nilai string menjadi boolean
         user.is_verified = form.is_verified.data == "True"
         user.is_2fa_enabled = form.is_2fa_enabled.data == "True"
         user.is_active = form.is_active.data == "True"
         user.time_zone = form.time_zone.data
 
-        # Memperbarui password jika disediakan
         if form.password.data:
             user.password_hash = bcrypt.generate_password_hash(
                 form.password.data
             ).decode("utf-8")
-            current_app.logger.info(f"Password updated for user ID: {user_id}")
+            current_app.logger.info(f"Password updated for user: {user.email}")
 
-        # Commit perubahan ke database
         db.session.commit()
         flash("User updated successfully.", "success")
-        current_app.logger.info(f"User updated successfully: {user_id}")
+        current_app.logger.info(f"User updated successfully: {user.email}")
         return redirect(url_for("users.index"))
 
-    return render_template("/users_management/user_update.html", form=form, user=user)
+    return render_template("/users_management/update_user.html", form=form, user=user)
 
 
-# Delete user
-@users_bp.route("/user_delete/<int:user_id>", methods=["POST"])
+@users_bp.route("/delete-user/<user_id>", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
-def user_delete(user_id):
+def delete_user(user_id):
     current_app.logger.info(f"Attempting to delete user with ID: {user_id}")
 
     if current_user.id == user_id:

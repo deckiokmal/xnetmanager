@@ -81,6 +81,7 @@
     </td>
 </tr>
 
+<!-- Modal Detail Perangkat -->
 <div class="modal fade" id="detailModal{{ device.id }}" tabindex="-1" aria-labelledby="detailModalLabel{{ device.id }}"
     aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -122,13 +123,14 @@
 {% endblock %}
 
 {% block modal_data %}
+<!-- create device Modal -->
 <div class="modal fade" id="createdeviceModal" tabindex="-1" aria-labelledby="createdeviceModalLabel"
     aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 600px;">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 500px;">
         <div class="modal-content bg-black text-white">
             <div class="modal-header">
                 <h5 class="modal-title" id="createdeviceModalLabel">Buat Perangkat Baru</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form method="post" action="{{ url_for('dm.device_create') }}">
