@@ -10,13 +10,13 @@
         <li>
             <button type="button" class="dropdown-item btn btn-outline-primary mb-2 w-100 text-start"
                 data-bs-toggle="modal" data-bs-target="#createModal">
-                Manual Config with Validated
+                Create Config with AI Validated
             </button>
         </li>
         <li>
             <button type="button" class="dropdown-item btn btn-outline-secondary w-100 text-start"
                 data-bs-toggle="modal" data-bs-target="#createAiModal">
-                Create Config with AI
+                Generate Automate Config with AI
             </button>
         </li>
     </ul>
@@ -206,12 +206,12 @@
     </div>
 </div>
 
-<!-- Modal Error Template Generation -->
+<!-- Modal Error Config Generation -->
 <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-danger text-light">
             <div class="modal-header">
-                <h5 class="modal-title" id="errorModalLabel">Error Generating Template</h5>
+                <h5 class="modal-title" id="errorModalLabel">Error Generating Configuration</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -258,7 +258,18 @@
 {% endblock %}
 
 {% block script_js %}
+
 <script>
+    // Function to show the loading overlay
+    function showLoadingOverlay() {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+
+    // Function to hide the loading overlay
+    function hideLoadingOverlay() {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
     let timeout = null;
 
     // Handle search input delay
@@ -268,13 +279,13 @@
             document.getElementById('searchForm').submit();
         }, 1000);
     });
-</script>
 
-<script>
     document.addEventListener("DOMContentLoaded", function () {
         document.querySelectorAll('form[action*="configuration_manual_create"]').forEach(function (form) {
             form.addEventListener('submit', function (event) {
                 event.preventDefault();  // Prevent the form from submitting the default way
+
+                showLoadingOverlay();  // Show the loading overlay
 
                 const formData = new FormData(form);
                 const actionUrl = form.getAttribute('action');
@@ -296,17 +307,20 @@
                             errorModal.show();
                         }
                     })
-                    .catch(error => console.error('Error:', error));
+                    .catch(error => console.error('Error:', error))
+                    .finally(() => {
+                        hideLoadingOverlay();  // Hide the loading overlay once the request is complete
+                    });
             });
         });
     });
-</script>
 
-<script>
     document.addEventListener("DOMContentLoaded", function () {
         document.querySelectorAll('form[action*="create_configuration_with_ai"]').forEach(function (form) {
             form.addEventListener('submit', function (event) {
                 event.preventDefault();  // Prevent the form from submitting the default way
+
+                showLoadingOverlay();  // Show the loading overlay
 
                 const formData = new FormData(form);
                 const actionUrl = form.getAttribute('action');
@@ -328,9 +342,18 @@
                             errorModal.show();
                         }
                     })
-                    .catch(error => console.error('Error:', error));
+                    .catch(error => {
+                        console.error('Error:', error);
+                        document.getElementById('errorModalMessage').textContent = "An unexpected error occurred.";
+                        var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                        errorModal.show();
+                    })
+                    .finally(() => {
+                        hideLoadingOverlay();  // Hide the loading overlay once the request is complete
+                    });
             });
         });
     });
 </script>
+
 {% endblock %}

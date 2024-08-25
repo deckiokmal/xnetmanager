@@ -25,6 +25,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/sb-admin-2.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles-demo.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layouts.css') }}" rel="stylesheet">
 </head>
 
 
@@ -47,6 +48,13 @@
                 <!-- Begin Page Content -->
                 <div class="min-vw-10 content flex-grow-1">
                     <div class="position-relative px-4 mt-0">
+
+                        <!-- Loading overlay -->
+                        <div id="loadingOverlay" class="loading-overlay">
+                            <div class="spinner-border text-light" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
 
                         {% block content %}{% endblock %}
 

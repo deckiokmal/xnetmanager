@@ -802,9 +802,14 @@ def create_configuration_with_ai():
 
     try:
         # Menghasilkan konfigurasi dengan OpenAI API
-        configuration_content = create_configuration_with_openai(
+        configuration_content, error = create_configuration_with_openai(
             question=ask_configuration, vendor=vendor
         )
+
+        if error:
+            # Return the error message in JSON format
+            current_app.logger.error(f"AI configuration error: {error}")
+            return jsonify({"is_valid": False, "error_message": error}), 400
 
         # Menulis file konfigurasi ke disk dan menyimpan ke database
         with open(file_path, "w", encoding="utf-8") as configuration_file:

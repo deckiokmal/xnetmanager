@@ -49,7 +49,8 @@ def create_configuration_with_openai(question, vendor):
             {
                 "role": "user",
                 "content": f"Please generate the configuration for a {vendor} network device based on the following requirements:\n\n{question}\n\n"
-                "Your response must only contain the configuration commands. Do not include any explanations or additional text.",
+                "Your response must only contain the configuration commands. Do not include any explanations or additional text."
+                "If there are any errors or unclear question, respond with exactly 'ERROR' and provide a detailed explanation of the issues.",
             },
         ],
     )
@@ -57,4 +58,26 @@ def create_configuration_with_openai(question, vendor):
     # Extract the validation result from the response
     configuration_result = response["choices"][0]["message"]["content"].strip()
 
-    return configuration_result
+    # Check for ambiguity or unclear responses
+    unclear_indicators = [
+        "unclear",
+        "not sure",
+        "please clarify",
+        "error",
+        "?",
+        "I am not sure",
+        "ambiguous",
+        "confusing",
+        "ERROR",
+    ]
+    if any(
+        indicator.lower() in configuration_result.lower()
+        for indicator in unclear_indicators
+    ):
+        error_message = (
+            "ERROR: The response indicates ambiguity or unclear instructions."
+        )
+        detailed_error_message = configuration_result
+        return error_message, detailed_error_message
+
+    return configuration_result, None

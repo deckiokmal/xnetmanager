@@ -152,22 +152,29 @@
 {% block script_js %}
 <!-- Script untuk menangani aksi pengguna -->
 <script>
-    // Fungsi untuk mengatur penundaan pencarian
+    // Function to show the loading overlay
+    function showLoadingOverlay() {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+
+    // Function to hide the loading overlay
+    function hideLoadingOverlay() {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    // Function for search input with debounce
     let timeout = null;
-
-    // Menangani input pada form pencarian dengan penundaan 1 detik
     document.getElementById("searchInput").addEventListener("input", function () {
-        // Batalkan timer yang ada sebelumnya jika ada
         clearTimeout(timeout);
-
-        // Setel timer baru untuk submit form setelah 1 detik
         timeout = setTimeout(function () {
+            showLoadingOverlay(); // Show overlay before form submission
             document.getElementById('searchForm').submit();
-        }, 1000); // 1000 ms = 1 detik
+        }, 1000);
     });
 
-    // Event klik tombol Check Status
+    // Event for Check Status button
     document.getElementById("checkStatusButton").addEventListener("click", function () {
+        showLoadingOverlay();
         fetch("/check_status", {
             method: "POST",
             headers: {
@@ -180,7 +187,6 @@
                     const statusIndicator = document.getElementById("statusIndicator" + deviceId);
                     statusIndicator.classList.remove("status-indicator-green", "status-indicator-red");
 
-                    // Ubah logika berdasarkan status yang dikembalikan dari server
                     if (data[deviceId] === "success") {
                         statusIndicator.classList.add("status-indicator-green");
                     } else {
@@ -188,81 +194,29 @@
                     }
                 });
             })
-            .catch(error => console.error("Error:", error));
+            .catch(error => console.error("Error:", error))
+            .finally(() => {
+                hideLoadingOverlay(); // Hide overlay after processing
+            });
     });
 
-    // Variabel untuk melacak status apakah checklist sedang ditampilkan atau tidak
     let isChecklistVisible = false;
 
-    // Event klik tombol Select Device
+    // Toggle visibility of checklist buttons
     document.getElementById("selectDevicesBtn").addEventListener("click", function () {
         const checklistButtons = document.getElementsByClassName("checklist-buttons");
-
-        if (!isChecklistVisible) {
-            // Jika checklist tidak ditampilkan, tampilkan checklist
-            for (let i = 0; i < checklistButtons.length; i++) {
-                checklistButtons[i].style.display = "block";
-            }
-            isChecklistVisible = true; // Update status checklist menjadi visible
-        } else {
-            // Jika checklist sedang ditampilkan, sembunyikan dan reset status checked
-            for (let i = 0; i < checklistButtons.length; i++) {
-                checklistButtons[i].style.display = "none";
-
-                // Reset status checkbox jika sedang checked
-                if (checklistButtons[i].type === "checkbox" && checklistButtons[i].checked) {
-                    checklistButtons[i].checked = false;
-                }
-            }
-            isChecklistVisible = false; // Update status checklist menjadi hidden
-        }
-    });
-
-    // Fungsi untuk memfilter baris tabel berdasarkan input pencarian
-    document.getElementById("searchInput").addEventListener("input", function () {
-        const query = this.value.toLowerCase();
-        const rows = document.querySelectorAll("#deviceTable tbody tr");
-
-        rows.forEach(row => {
-            const deviceName = row.cells[2].textContent.toLowerCase();
-            const ipAddress = row.cells[3].textContent.toLowerCase();
-            const vendor = row.cells[4].textContent.toLowerCase();
-
-            if (
-                deviceName.includes(query) ||
-                ipAddress.includes(query) ||
-                vendor.includes(query)
-            ) {
-                row.style.display = "";
-            } else {
-                row.style.display = "none";
+        isChecklistVisible = !isChecklistVisible;
+        Array.from(checklistButtons).forEach(button => {
+            button.style.display = isChecklistVisible ? "block" : "none";
+            if (!isChecklistVisible && button.type === "checkbox" && button.checked) {
+                button.checked = false;
             }
         });
     });
 
-    // Muat ulang halaman dan reset checklist saat modal ditutup
-    document.getElementById("pushConfigResultModal").addEventListener("hidden.bs.modal", function () {
-        // Reset checklist
-        document.querySelectorAll(".btn-check").forEach(function (checkbox) {
-            checkbox.checked = false;
-        });
-
-        // Simpan nilai input pencarian
-        const searchInput = document.getElementById("searchInput");
-        const searchQuery = searchInput.value;
-
-        // Muat ulang halaman untuk mereset input pencarian
-        location.reload();
-        searchInput.value = searchQuery;
-    });
-
-    // Event klik tombol Push Config
+    // Event for Push Config button
     document.getElementById("pushConfigBtn").addEventListener("click", function () {
-        const selectedDevices = [];
-        document.querySelectorAll(".btn-check:checked").forEach(function (checkbox) {
-            selectedDevices.push(checkbox.getAttribute("data-ip"));
-        });
-
+        const selectedDevices = Array.from(document.querySelectorAll(".btn-check:checked")).map(checkbox => checkbox.getAttribute("data-ip"));
         if (selectedDevices.length > 0) {
             const selectConfigModal = new bootstrap.Modal(document.getElementById("selectConfigModal"));
             selectConfigModal.show();
@@ -271,15 +225,13 @@
         }
     });
 
-    // Event klik tombol Confirm Push Config
+    // Event for Confirm Push Config button
     document.getElementById("confirmPushConfigBtn").addEventListener("click", function () {
         const selectedconfig = document.getElementById("configSelect").value;
-        const selectedDevices = [];
-        document.querySelectorAll(".btn-check:checked").forEach(function (checkbox) {
-            selectedDevices.push(checkbox.getAttribute("data-ip"));
-        });
+        const selectedDevices = Array.from(document.querySelectorAll(".btn-check:checked")).map(checkbox => checkbox.getAttribute("data-ip"));
 
         if (selectedconfig && selectedDevices.length > 0) {
+            showLoadingOverlay();
             fetch("/push_configs", {
                 method: "POST",
                 headers: {
@@ -289,32 +241,33 @@
             })
                 .then(response => response.json())
                 .then(data => {
-                    console.log("Response data:", data);  // Debugging log
+                    console.log("Response data:", data);
                     let tableHTML = '<table class="table table-bordered"><thead><tr><th>Device Name</th><th>IP Address</th><th>Status</th><th>Message</th></tr></thead><tbody>';
-
                     data.results.forEach(result => {
                         tableHTML += `<tr><td>${result.device_name}</td><td>${result.ip}</td><td>${result.status}</td><td>${result.message || 'Konfigurasi sukses'}</td></tr>`;
                     });
-
                     tableHTML += '</tbody></table>';
-
                     document.getElementById("pushConfigResultTable").innerHTML = tableHTML;
-
                     const selectConfigModal = bootstrap.Modal.getInstance(document.getElementById("selectConfigModal"));
                     selectConfigModal.hide();
-
                     const pushConfigResultModal = new bootstrap.Modal(document.getElementById("pushConfigResultModal"));
                     pushConfigResultModal.show();
                 })
                 .catch(error => {
                     console.error("Error:", error);
                     alert("Error pushing configurations: " + error.message);
+                })
+                .finally(() => {
+                    hideLoadingOverlay(); // Hide overlay after processing
                 });
         } else {
             alert("Please select a config.");
         }
     });
 
-
+    // Reload the page when the pushConfigResultModal is closed
+    document.getElementById("pushConfigResultModal").addEventListener("hidden.bs.modal", function () {
+        location.reload();
+    });
 </script>
 {% endblock %}

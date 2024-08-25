@@ -239,7 +239,18 @@
         {% endblock %}
 
         {% block script_js %}
+
         <script>
+            // Function to show the loading overlay
+            function showLoadingOverlay() {
+                document.getElementById('loadingOverlay').style.display = 'flex';
+            }
+
+            // Function to hide the loading overlay
+            function hideLoadingOverlay() {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+
             let timeout = null;
 
             // Handle search input delay
@@ -249,13 +260,13 @@
                     document.getElementById('searchForm').submit();
                 }, 1000);
             });
-        </script>
 
-        <script>
             document.addEventListener("DOMContentLoaded", function () {
                 document.querySelectorAll('form[action*="template_generator"]').forEach(function (form) {
                     form.addEventListener('submit', function (event) {
                         event.preventDefault();  // Prevent the form from submitting the default way
+
+                        showLoadingOverlay();  // Show the loading overlay when the form is submitted
 
                         const formData = new FormData(form);
                         const actionUrl = form.getAttribute('action');
@@ -275,7 +286,10 @@
                                     errorModal.show();
                                 }
                             })
-                            .catch(error => console.error('Error:', error));
+                            .catch(error => console.error('Error:', error))
+                            .finally(() => {
+                                hideLoadingOverlay();  // Hide the loading overlay once the request is complete
+                            });
                     });
                 });
             });
