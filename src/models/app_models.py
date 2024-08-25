@@ -18,7 +18,8 @@ class User(UserMixin, db.Model):
     __tablename__ = "users"
 
     # Use the global UUID_TYPE
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    # id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4) # for PostgreSQL
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     first_name = db.Column(db.String(255), nullable=False)
     last_name = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
@@ -114,7 +115,7 @@ class User(UserMixin, db.Model):
 class Role(db.Model):
     __tablename__ = "roles"
 
-    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.String(64), unique=True, nullable=False)
     users = db.relationship("User", secondary="user_roles", back_populates="roles")
     permissions = db.relationship(
@@ -132,7 +133,7 @@ class Role(db.Model):
 
 class Permission(db.Model):
     __tablename__ = "permissions"
-    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.String(50), unique=True, nullable=False)
     description = db.Column(db.String(200))
     roles = db.relationship(
@@ -142,7 +143,7 @@ class Permission(db.Model):
 
 class UserRoles(db.Model):
     __tablename__ = "user_roles"
-    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(
         db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
@@ -153,7 +154,7 @@ class UserRoles(db.Model):
 
 class RolePermissions(db.Model):
     __tablename__ = "role_permissions"
-    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     role_id = db.Column(
         db.String(36), db.ForeignKey("roles.id", ondelete="CASCADE"), index=True
     )
@@ -170,7 +171,7 @@ class RolePermissions(db.Model):
 class DeviceManager(db.Model):
     __tablename__ = "device_manager"
 
-    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     device_name = db.Column(db.String(100), unique=True, nullable=False)
     vendor = db.Column(db.String(100), nullable=False)
     ip_address = db.Column(db.String(20), unique=True, nullable=False)
@@ -194,7 +195,7 @@ class DeviceManager(db.Model):
 class TemplateManager(db.Model):
     __tablename__ = "template_manager"
 
-    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     template_name = db.Column(db.String(100), unique=True, nullable=False)
     parameter_name = db.Column(db.String(100), unique=True, nullable=False)
     vendor = db.Column(db.String(100), nullable=False)
@@ -209,7 +210,7 @@ class TemplateManager(db.Model):
 class ConfigurationManager(db.Model):
     __tablename__ = "configuration_manager"
 
-    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     config_name = db.Column(db.String(100), nullable=False, unique=True)
     vendor = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=True)
@@ -232,7 +233,7 @@ class ConfigurationManager(db.Model):
 class UserConfigurationShare(db.Model):
     __tablename__ = "user_configuration_share"
 
-    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(
         db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
     )
@@ -261,7 +262,7 @@ class UserConfigurationShare(db.Model):
 class BackupData(db.Model):
     __tablename__ = "backup_data"
 
-    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     backup_name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.String(255), nullable=True)
     version = db.Column(db.Integer, nullable=False, default=1)
@@ -313,7 +314,7 @@ class BackupData(db.Model):
 class UserBackupShare(db.Model):
     __tablename__ = "user_backup_share"
 
-    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(
         db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
     )
@@ -339,7 +340,7 @@ class UserBackupShare(db.Model):
 class GitBackupVersion(db.Model):
     __tablename__ = "git_backup_version"
 
-    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     backup_id = db.Column(
         db.String(36), db.ForeignKey("backup_data.id"), nullable=False, index=True
     )
