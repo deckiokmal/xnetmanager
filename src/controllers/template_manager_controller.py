@@ -23,8 +23,9 @@ from datetime import datetime
 from .decorators import login_required, role_required, required_2fa
 import random
 import string
-from flask_paginate import Pagination, get_page_args
+from flask_paginate import Pagination
 import logging
+from src.utils.forms_utils import TemplateForm
 
 # Blueprint untuk template manager
 tm_bp = Blueprint("tm", __name__)
@@ -122,7 +123,7 @@ TEMPLATE_EXTENSIONS = {"j2"}
 PARAMS_EXTENSIONS = {"yml", "yaml"}
 
 
-@tm_bp.route("/tm", methods=["GET"])
+@tm_bp.route("/templates-management", methods=["GET"])
 @login_required
 @required_2fa
 @role_required(
@@ -131,30 +132,61 @@ PARAMS_EXTENSIONS = {"yml", "yaml"}
     page="Templates Management",
 )
 def index():
-    page = request.args.get("page", 1, type=int)
-    per_page = request.args.get("per_page", 10, type=int)
-    search_query = request.args.get("search", "")
+    form = TemplateForm(request.form)
+    try:
+        # Retrieve pagination and search parameters from request
+        page = request.args.get("page", 1, type=int)
+        per_page = request.args.get("per_page", 10, type=int)
+        search_query = request.args.get("search", "")
 
-    query = TemplateManager.query
-    if search_query:
-        query = query.filter(
-            TemplateManager.template_name.ilike(f"%{search_query}%")
-            | TemplateManager.parameter_name.ilike(f"%{search_query}%")
-            | TemplateManager.vendor.ilike(f"%{search_query}%")
-            | TemplateManager.version.ilike(f"%{search_query}%")
+        # Log user access to the template management page
+        current_app.logger.info(
+            f"User {current_user.email} accessed Template Manager page."
         )
 
-    all_templates = query.paginate(page=page, per_page=per_page)
+        # Build the query for fetching templates
+        query = TemplateManager.query
+        if search_query:
+            query = query.filter(
+                TemplateManager.template_name.ilike(f"%{search_query}%")
+                | TemplateManager.parameter_name.ilike(f"%{search_query}%")
+                | TemplateManager.vendor.ilike(f"%{search_query}%")
+                | TemplateManager.version.ilike(f"%{search_query}%")
+            )
+            current_app.logger.info(
+                f"User {current_user.email} searched for '{search_query}' in Template Manager."
+            )
 
+        # Paginate the query results
+        try:
+            all_templates = query.paginate(page=page, per_page=per_page)
+        except ValueError as ve:
+            current_app.logger.error(
+                f"Pagination error in Template Manager page for user {current_user.email}: {str(ve)}"
+            )
+            flash("Invalid page number. Please try again.", "danger")
+            return redirect(url_for("tm.index", page=1, per_page=10))
+
+    except Exception as e:
+        # Handle any unexpected errors that occur during the query or pagination
+        current_app.logger.error(f"Error accessing Template Manager page: {str(e)}")
+        flash(
+            "An error occurred while accessing the templates. Please try again later.",
+            "danger",
+        )
+        all_templates = []  # Set an empty list to avoid breaking the template
+
+    # Render the template management page with the retrieved templates
     return render_template(
         "/template_managers/index.html",
         per_page=per_page,
         search_query=search_query,
         all_templates=all_templates,
+        form=form,
     )
 
 
-@tm_bp.route("/template_upload", methods=["POST"])
+@tm_bp.route("/upload-template", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -162,53 +194,96 @@ def index():
     permissions=["Manage Templates"],
     page="Templates Management",
 )
-def template_upload():
-    """Meng-handle upload file template dan parameter serta menyimpan data ke database."""
-    if "j2" not in request.files or "yaml" not in request.files:
-        flash("No file part", "error")
-        current_app.logger.warning("File part missing in upload request")
-        return redirect(request.url)
+def upload_template():
+    """Handles file uploads for template and parameter files, saving them to the database with enhanced security checks."""
+    try:
+        form = TemplateForm(request.form)
 
-    j2 = request.files["j2"]
-    yaml = request.files["yaml"]
-    vendor = request.form.get("vendor")
-    version = request.form.get("version")
-    description = request.form.get("description")
+        # Validate input vendor and version using WTForms
+        if not form.validate():
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(f"{getattr(form, field).label.text}: {error}", "danger")
+            current_app.logger.warning(
+                f"User {current_user.email} submitted invalid template form data."
+            )
+            return redirect(url_for("tm.index"))
 
-    if not vendor or not version:
-        flash("Vendor and version fields cannot be empty.", "info")
-        return redirect(request.url)
+        # Retrieve files and data from the form
+        j2 = request.files.get("j2")
+        yaml = request.files.get("yaml")
+        vendor = form.vendor.data
+        version = form.version.data
+        description = form.description.data
 
-    if j2.filename and allowed_file(j2.filename, TEMPLATE_EXTENSIONS):
-        template_name = save_uploaded_file(j2, RAW_TEMPLATE_FOLDER)
-    else:
-        flash("Invalid template file type. Allowed: j2.", "error")
-        current_app.logger.warning(f"Invalid template file type: {j2.filename}")
-        return redirect(request.url)
+        # Check if both files are provided and not empty
+        if not j2 or j2.filename == "":
+            flash("Template file is missing.", "error")
+            current_app.logger.warning(
+                f"User {current_user.email} attempted to upload without providing a template file."
+            )
+            return redirect(url_for("tm.index"))
 
-    if yaml.filename and allowed_file(yaml.filename, PARAMS_EXTENSIONS):
-        parameter_name = save_uploaded_file(yaml, RAW_TEMPLATE_FOLDER)
-    else:
-        flash("Invalid parameter file type. Allowed: yml, yaml.", "error")
-        current_app.logger.warning(f"Invalid parameter file type: {yaml.filename}")
-        return redirect(request.url)
+        if not yaml or yaml.filename == "":
+            flash("Parameter file is missing.", "error")
+            current_app.logger.warning(
+                f"User {current_user.email} attempted to upload without providing a parameter file."
+            )
+            return redirect(url_for("tm.index"))
 
-    new_template = TemplateManager(
-        template_name=template_name,
-        parameter_name=parameter_name,
-        vendor=vendor,
-        version=version,
-        description=description,
-        created_by=current_user.email,
-    )
-    db.session.add(new_template)
-    db.session.commit()
-    current_app.logger.info(f"New template saved to database: {template_name}")
-    flash("File successfully uploaded.", "success")
+        # Validate and save template file
+        if j2.filename and allowed_file(j2.filename, TEMPLATE_EXTENSIONS):
+            template_name = secure_filename(j2.filename)
+            template_path = save_uploaded_file(j2, RAW_TEMPLATE_FOLDER)
+        else:
+            flash("Invalid template file type. Allowed: j2.", "error")
+            current_app.logger.warning(
+                f"User {current_user.email} uploaded an invalid template file type: {j2.filename}"
+            )
+            return redirect(url_for("tm.index"))
+
+        # Validate and save parameter file
+        if yaml.filename and allowed_file(yaml.filename, PARAMS_EXTENSIONS):
+            parameter_name = secure_filename(yaml.filename)
+            parameter_path = save_uploaded_file(yaml, RAW_TEMPLATE_FOLDER)
+        else:
+            flash("Invalid parameter file type. Allowed: yml, yaml.", "error")
+            current_app.logger.warning(
+                f"User {current_user.email} uploaded an invalid parameter file type: {yaml.filename}"
+            )
+            return redirect(url_for("tm.index"))
+
+        # Create and save new template data to the database
+        new_template = TemplateManager(
+            template_name=template_name,
+            parameter_name=parameter_name,
+            vendor=vendor,
+            version=version,
+            description=description,
+            created_by=current_user.email,
+        )
+        db.session.add(new_template)
+        db.session.commit()
+        current_app.logger.info(
+            f"User {current_user.email} successfully uploaded new template: {template_name}."
+        )
+        flash("File successfully uploaded.", "success")
+
+    except Exception as e:
+        # Log the error and provide error feedback to the user
+        current_app.logger.error(
+            f"Error uploading template for user {current_user.email}: {str(e)}"
+        )
+        flash(
+            "Terjadi kesalahan saat mengupload file. Silakan coba lagi nanti.",
+            "danger",
+        )
+        db.session.rollback()  # Ensure any changes are rolled back if an error occurs
+
     return redirect(url_for("tm.index"))
 
 
-@tm_bp.route("/template_update/<int:template_id>", methods=["GET", "POST"])
+@tm_bp.route("/template_update/<template_id>", methods=["GET", "POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -355,7 +430,7 @@ def template_update(template_id):
     )
 
 
-@tm_bp.route("/template_delete/<int:template_id>", methods=["POST"])
+@tm_bp.route("/template_delete/<template_id>", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -401,7 +476,7 @@ def template_delete(template_id):
     return redirect(url_for("tm.index"))
 
 
-@tm_bp.route("/template_detail/<int:template_id>", methods=["GET"])
+@tm_bp.route("/template_detail/<template_id>", methods=["GET"])
 @login_required
 @required_2fa
 @role_required(
@@ -516,7 +591,7 @@ def template_manual_create():
         return redirect(request.url)
 
 
-@tm_bp.route("/template_generator/<int:template_id>", methods=["POST"])
+@tm_bp.route("/template_generator/<template_id>", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -839,9 +914,7 @@ def create_configuration_with_ai():
         return redirect("tm.index")
 
 
-@tm_bp.route(
-    "/template_result_update/<int:template_result_id>", methods=["GET", "POST"]
-)
+@tm_bp.route("/template_result_update/<template_result_id>", methods=["GET", "POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -937,7 +1010,7 @@ def template_result_update(template_result_id):
     )
 
 
-@tm_bp.route("/template_result_delete/<int:template_id>", methods=["POST"])
+@tm_bp.route("/template_result_delete/<template_id>", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(

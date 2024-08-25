@@ -1,8 +1,0 @@
-Nama-nama tunnel di SD-WAN FortiGate yang disebutkan dalam konteks adalah sebagai berikut:
-
-1. **DC-MAIN**
-2. **DC-BCKP**
-3. **DR-MAIN**
-4. **DR-BCKP**
-
-Masing-masing tunnel tersebut diatur untuk menerima akses PING, SSH, dan HTTPS serta dimasukkan dalam berbagai zona dan anggota dalam konfigurasi SD-WAN.

@@ -1,3 +1,0 @@
-As an AI, I need specific details about the configuration requirements in order to provide accurate commands. The term "test saja" does not provide enough context for a Fortinet device configuration. 
-
-For example, specify which type of configuration you need: VPN, firewall policy, interface setup, etc. Also, provide details such as IP addresses, interface names, and so on as necessary for the configuration.

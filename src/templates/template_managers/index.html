@@ -1,15 +1,16 @@
 {% extends "/layouts/layout_table.html" %}
-{% block title %}Template Manager{% endblock %}
+{% block title %}Templates Management{% endblock %}
 
 {% block button_group1 %}
 <div class="dropdown">
-    <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+    <button class="btn btn-sm btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown"
+        aria-expanded="false">
         Create New
     </button>
     <ul class="dropdown-menu p-2 shadow-lg rounded">
         <li>
             <button type="button" class="dropdown-item btn btn-outline-primary mb-2 w-100 text-start"
-                data-bs-toggle="modal" data-bs-target="#uploadModal">
+                data-bs-toggle="modal" data-bs-target="#uploadTemplateModal">
                 <i class="bi bi-cloud-upload"></i> Upload Template
             </button>
         </li>
@@ -24,7 +25,7 @@
 {% endblock %}
 
 {% block button_group2 %}
-<a href="{{ url_for('tm.template_results') }}" class="btn btn-light">
+<a href="{{ url_for('tm.template_results') }}" class="btn btn-sm btn-light">
     <i class="fas fa-cogs"></i> Manage Configuration File
 </a>
 {% endblock %}
@@ -137,39 +138,65 @@
         {% endblock %}
 
         {% block modal_data %}
-        <!-- Modal Upload Template -->
-        <div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
+        <!-- Modal for Upload Template -->
+        <div class="modal fade" id="uploadTemplateModal" tabindex="-1" aria-labelledby="uploadTemplateModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content bg-black text-light">
                     <div class="modal-header">
-                        <h5 class="modal-title text-black" id="uploadModalLabel">Upload Template</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h5 class="modal-title" id="uploadTemplateModalLabel">
+                            Upload Template
+                        </h5>
+                        <button type="button" class="btn-close btn-light" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form method="post" enctype="multipart/form-data" action="{{ url_for('tm.template_upload') }}">
+                        <!-- Form pointing to upload_template endpoint -->
+                        <form id="uploadTemplateForm" method="post" action="{{ url_for('tm.upload_template') }}"
+                            enctype="multipart/form-data">
+                            {{ form.csrf_token }}
+
                             <div class="mb-3">
-                                <label for="j2" class="form-label text-black">Template J2</label>
-                                <input type="file" class="form-control" id="j2" name="j2" accept=".j2" required>
+                                <label for="vendor" class="form-label">Vendor</label>
+                                {{ form.vendor(class="form-control", id="vendor") }}
+                                {% if form.vendor.errors %}
+                                {% for error in form.vendor.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
                             </div>
+
                             <div class="mb-3">
-                                <label for="yaml" class="form-label text-black">Parameter YAML</label>
-                                <input type="file" class="form-control" id="yaml" name="yaml" accept=".yml,.yaml"
-                                    required>
+                                <label for="version" class="form-label">Version</label>
+                                {{ form.version(class="form-control", id="version") }}
+                                {% if form.version.errors %}
+                                {% for error in form.version.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
                             </div>
+
                             <div class="mb-3">
-                                <label for="vendor" class="form-label text-black">Vendor</label>
-                                <input type="text" class="form-control" id="vendor" name="vendor" required>
+                                <label for="description" class="form-label">Description</label>
+                                {{ form.description(class="form-control", id="description") }}
+                                {% if form.description.errors %}
+                                {% for error in form.description.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
                             </div>
+
                             <div class="mb-3">
-                                <label for="version" class="form-label text-black">Version</label>
-                                <input type="text" class="form-control" id="version" name="version" required>
+                                <label for="j2" class="form-label">Template File (.j2)</label>
+                                <input type="file" name="j2" id="j2" class="form-control">
                             </div>
+
                             <div class="mb-3">
-                                <label for="description" class="form-label text-black">Description</label>
-                                <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+                                <label for="yaml" class="form-label">Parameter File (.yaml)</label>
+                                <input type="file" name="yaml" id="yaml" class="form-control">
                             </div>
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Upload
-                                Template</button>
+
+                            <button type="submit" class="btn btn-primary">Upload</button>
                         </form>
                     </div>
                 </div>

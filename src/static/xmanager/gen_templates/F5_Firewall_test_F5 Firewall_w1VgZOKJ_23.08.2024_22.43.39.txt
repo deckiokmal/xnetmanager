@@ -1,3 +1,0 @@
-tmsh
-modify /sys global-settings hostname test_saya_hari_ini
-save /sys config

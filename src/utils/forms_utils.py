@@ -1,5 +1,12 @@
 from flask_wtf import FlaskForm
-from wtforms import EmailField, PasswordField, StringField, FileField, SelectField
+from wtforms import (
+    EmailField,
+    PasswordField,
+    StringField,
+    FileField,
+    SelectField,
+    TextAreaField,
+)
 from wtforms.validators import (
     DataRequired,
     Email,
@@ -241,3 +248,26 @@ class DeviceUpdateForm(FlaskForm):
         ],
     )
     description = StringField("Description", validators=[Optional(), Length(max=200)])
+
+
+class TemplateForm(FlaskForm):
+    vendor = StringField(
+        "Vendor",
+        validators=[
+            DataRequired(message="Vendor is required."),
+            Length(max=100, message="Vendor must be less than 100 characters."),
+        ],
+    )
+    version = StringField(
+        "Version",
+        validators=[
+            DataRequired(message="Version is required."),
+            Length(max=10, message="Version must be less than 10 characters."),
+        ],
+    )
+    description = TextAreaField(
+        "Description",
+        validators=[
+            Length(max=100, message="Description must be less than 100 characters.")
+        ],
+    )
