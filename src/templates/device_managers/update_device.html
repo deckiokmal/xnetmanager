@@ -5,7 +5,7 @@
     <div class="card-header mb-3">
         Update Device
     </div>
-    <form action="{{ url_for('dm.device_update', device_id=device.id) }}" method="POST">
+    <form action="{{ url_for('dm.update_device', device_id=device.id) }}" method="POST">
         {{ form.csrf_token }} <!-- Adding CSRF token -->
         <div class="row mb-3">
             <div class="col-md-6">
@@ -52,7 +52,7 @@
         <button type="submit" class="btn btn-primary">
             <i class="fa-solid fa-check"></i> Update
         </button>
-        <a class="btn btn-secondary" href="{{ url_for('dm.index') }}">
+        <a class="btn btn-warning" href="{{ url_for('dm.index') }}">
             <i class="fa-solid fa-arrow-left"></i> Back
         </a>
     </form>

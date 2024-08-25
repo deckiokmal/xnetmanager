@@ -99,75 +99,74 @@ def index():
     Display the main page of the Device Manager.
     This page includes a list of devices and supports pagination and searching.
     """
-    # Create an instance of DeviceForm for handling device-related actions
     form = DeviceForm(request.form)
-
-    # Get the search query from the request parameters, defaulting to an empty string
     search_query = request.args.get("search", "").lower()
-
-    # Setup pagination parameters, defaulting to 10 items per page
     page, per_page, offset = get_page_args(
         page_parameter="page", per_page_parameter="per_page", per_page=10
     )
 
-    # Determine the user's role and adjust the query accordingly
-    if current_user.has_role("Admin"):
-        # If the user has the Admin role, show all devices
-        if search_query:
-            devices_query = DeviceManager.query.filter(
-                # Search across multiple fields using the search query
-                DeviceManager.device_name.ilike(f"%{search_query}%")
-                | DeviceManager.ip_address.ilike(f"%{search_query}%")
-                | DeviceManager.vendor.ilike(f"%{search_query}%")
-                | DeviceManager.description.ilike(f"%{search_query}%")
-                | DeviceManager.created_by.ilike(f"%{search_query}%")
-            )
-        else:
-            # If no search query, retrieve all devices
-            devices_query = DeviceManager.query
-    else:
-        # If the user is not an Admin, filter devices owned by the current user
-        if search_query:
-            devices_query = DeviceManager.query.filter(
-                DeviceManager.user_id
-                == current_user.id,  # Only fetch devices owned by the current user
-                (
+    try:
+        # Determine the user's role and adjust the query accordingly
+        if current_user.has_role("Admin"):
+            if search_query:
+                devices_query = DeviceManager.query.filter(
                     DeviceManager.device_name.ilike(f"%{search_query}%")
                     | DeviceManager.ip_address.ilike(f"%{search_query}%")
                     | DeviceManager.vendor.ilike(f"%{search_query}%")
                     | DeviceManager.description.ilike(f"%{search_query}%")
                     | DeviceManager.created_by.ilike(f"%{search_query}%")
-                ),
-            )
+                )
+            else:
+                devices_query = DeviceManager.query
         else:
-            # If no search query, return all devices owned by the current user
-            devices_query = DeviceManager.query.filter_by(user_id=current_user.id)
+            if search_query:
+                devices_query = DeviceManager.query.filter(
+                    DeviceManager.user_id == current_user.id,
+                    (
+                        DeviceManager.device_name.ilike(f"%{search_query}%")
+                        | DeviceManager.ip_address.ilike(f"%{search_query}%")
+                        | DeviceManager.vendor.ilike(f"%{search_query}%")
+                        | DeviceManager.description.ilike(f"%{search_query}%")
+                        | DeviceManager.created_by.ilike(f"%{search_query}%")
+                    ),
+                )
+            else:
+                devices_query = DeviceManager.query.filter_by(user_id=current_user.id)
 
-    # Count the total number of devices that match the query
-    total_devices = devices_query.count()
-    # Retrieve the devices for the current page
-    devices = devices_query.limit(per_page).offset(offset).all()
+        total_devices = devices_query.count()
+        devices = devices_query.limit(per_page).offset(offset).all()
+        pagination = Pagination(page=page, per_page=per_page, total=total_devices)
 
-    # Setup pagination with the total number of devices and current page settings
-    pagination = Pagination(page=page, per_page=per_page, total=total_devices)
+        current_app.logger.info(
+            f"User {current_user.email} accessed Device Manager page."
+        )
 
-    # Log the user's access to the Device Manager page for auditing purposes
-    current_app.logger.info(f"User {current_user.email} accessed Device Manager page.")
+        return render_template(
+            "/device_managers/index.html",
+            devices=devices,
+            page=page,
+            per_page=per_page,
+            pagination=pagination,
+            search_query=search_query,
+            total_devices=total_devices,
+            form=form,
+        )
 
-    # Render the Device Manager template with the list of devices and pagination info
-    return render_template(
-        "/device_managers/index.html",
-        devices=devices,  # List of devices for the current page
-        page=page,  # Current page number
-        per_page=per_page,  # Number of devices per page
-        pagination=pagination,  # Pagination object for handling page links
-        search_query=search_query,  # The search query entered by the user
-        total_devices=total_devices,  # Total number of devices matching the search
-        form=form,  # Form object for device management actions
-    )
+    except Exception as e:
+        # Handle exceptions and log the error
+        current_app.logger.error(
+            f"Error accessing Device Manager page by user {current_user.email}: {str(e)}"
+        )
+        flash(
+            "An error occurred while accessing the Device Manager. Please try again later.",
+            "danger",
+        )
+        return redirect(
+            url_for("users.dashboard")
+        )  # Redirect to a safe page like dashboard
 
 
-@dm_bp.route("/device_create", methods=["GET", "POST"])
+@dm_bp.route("/create-device", methods=["GET", "POST"])
 @login_required  # Ensure the user is logged in
 @required_2fa  # Require two-factor authentication for added security
 @role_required(
@@ -175,7 +174,7 @@ def index():
     permissions=["Manage Devices"],  # Require 'Manage Devices' permission
     page="Devices Management",  # Indicate the page for role management
 )
-def device_create():
+def create_device():
     """Add a new device to the database"""
     form = DeviceForm(request.form)  # Initialize the device form with request data
 
@@ -225,13 +224,18 @@ def device_create():
                 current_app.logger.error(
                     f"Error creating device {form.device_name.data.strip()}: {str(e)}"
                 )
-                flash("Terjadi kesalahan saat membuat perangkat.", "danger")
+                flash(
+                    "Terjadi kesalahan saat membuat perangkat. Silakan coba lagi.",
+                    "danger",
+                )
+                db.session.rollback()  # Rollback the transaction in case of error
         else:
             # Log each validation error and provide feedback to the user
             for field, errors in form.errors.items():
                 for error in errors:
                     flash(
-                        f"Kesalahan pada {getattr(form, field).label.text}: {error}", "danger"
+                        f"Kesalahan pada {getattr(form, field).label.text}: {error}",
+                        "danger",
                     )
             current_app.logger.warning("Form validation failed during device creation.")
 
@@ -240,7 +244,7 @@ def device_create():
     )  # Redirect to the device management page if not a POST request
 
 
-@dm_bp.route("/device_update/<int:device_id>", methods=["GET", "POST"])
+@dm_bp.route("/update-device/<device_id>", methods=["GET", "POST"])
 @login_required  # Ensure the user is logged in
 @required_2fa  # Require two-factor authentication for security
 @role_required(
@@ -248,7 +252,7 @@ def device_create():
     permissions=["Manage Devices"],  # Require 'Manage Devices' permission
     page="Devices Management",  # Indicate the page for role management
 )
-def device_update(device_id):
+def update_device(device_id):
     """Update device information in the database"""
 
     # Query the device by ID; return 404 if not found
@@ -269,6 +273,23 @@ def device_update(device_id):
     if request.method == "POST":
         if form.validate_on_submit():  # Check if the form is valid
             try:
+                # Check for device name uniqueness
+                existing_device = DeviceManager.query.filter(
+                    DeviceManager.device_name == form.device_name.data.strip(),
+                    DeviceManager.id != device_id,
+                ).first()
+
+                if existing_device:
+                    flash(
+                        "Nama perangkat sudah ada. Silakan pilih nama lain.", "warning"
+                    )
+                    current_app.logger.warning(
+                        f"Duplicate device name attempt for Device ID {device_id} by {current_user.email}"
+                    )
+                    return render_template(
+                        "/device_managers/update_device.html", form=form, device=device
+                    )
+
                 # Update password only if a new one is provided
                 if form.password.data:
                     device.password = form.password.data.strip()
@@ -302,13 +323,18 @@ def device_update(device_id):
                 current_app.logger.error(
                     f"Error updating device ID {device_id}: {str(e)}"
                 )
-                flash("Terjadi kesalahan saat memperbarui perangkat.", "danger")
+                flash(
+                    "Terjadi kesalahan saat memperbarui perangkat. Silakan coba lagi.",
+                    "danger",
+                )
+                db.session.rollback()  # Rollback the transaction in case of error
         else:
             # Handle form validation errors
             for field, errors in form.errors.items():
                 for error in errors:
                     flash(
-                        f"Kesalahan pada {getattr(form, field).label.text}: {error}", "danger"
+                        f"Kesalahan pada {getattr(form, field).label.text}: {error}",
+                        "danger",
                     )
             current_app.logger.warning(
                 f"Form validation failed during device update for device ID {device_id} by {current_user.email}."
@@ -321,17 +347,17 @@ def device_update(device_id):
 
     # Render the device update page with the form
     return render_template(
-        "/device_managers/device_update.html", form=form, device=device
+        "/device_managers/update_device.html", form=form, device=device
     )
 
 
-@dm_bp.route("/device_delete/<int:device_id>", methods=["POST"])
+@dm_bp.route("/delete-device/<device_id>", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(
     roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
 )
-def device_delete(device_id):
+def delete_device(device_id):
     """Menghapus perangkat dari database"""
     device = DeviceManager.query.get_or_404(
         device_id
@@ -373,7 +399,7 @@ def device_delete(device_id):
 # -----------------------------------------------------------
 
 
-@dm_bp.route("/api/get_devices", methods=["GET"])
+@dm_bp.route("/api/get-devices", methods=["GET"])
 @login_required
 @required_2fa
 @role_required(
@@ -401,7 +427,7 @@ def get_devices():
     return jsonify({"devices": device_list})
 
 
-@dm_bp.route("/api/get_device_data/<int:device_id>")
+@dm_bp.route("/api/get-device-data/<device_id>")
 @login_required
 @required_2fa
 @role_required(
