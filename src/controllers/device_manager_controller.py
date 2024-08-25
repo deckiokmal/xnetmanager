@@ -16,56 +16,66 @@ from src.utils.forms_utils import DeviceForm, DeviceUpdateForm
 from flask_paginate import Pagination, get_page_args
 import logging
 
-# Membuat blueprint untuk device manager
+# Create blueprints for the device manager (dm_bp) and error handling (error_bp)
 dm_bp = Blueprint("dm", __name__)
 error_bp = Blueprint("error", __name__)
 
-# Setup logging untuk aplikasi
+# Setup logging configuration for the application
 logging.basicConfig(level=logging.INFO)
 
 
 @dm_bp.before_app_request
 def setup_logging():
     """
-    Mengatur level logging untuk aplikasi.
+    Configure logging for the application.
+    This function ensures that all logs are captured at the INFO level,
+    making it easier to track the flow of the application and debug issues.
     """
     current_app.logger.setLevel(logging.INFO)
-    handler = current_app.logger.handlers[0]
+    handler = current_app.logger.handlers[0]  # Use the first handler
     current_app.logger.addHandler(handler)
 
 
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
     """
-    Menangani error 404 dan menampilkan halaman 404.
+    Handle 404 errors and display a custom 404 error page.
+    Logs the occurrence of a 404 error, which indicates a page was not found.
     """
-    current_app.logger.error(f"Error 404: {error}")
-    return render_template("main/404.html"), 404
+    current_app.logger.error(f"Error 404: {error}")  # Log the error for debugging
+    return render_template("main/404.html"), 404  # Render the custom 404 page
 
 
 @dm_bp.before_request
 def before_request_func():
     """
-    Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
-    Jika tidak, mengembalikan pesan 'Unauthorized access'.
+    Ensure that the user is authenticated before processing any requests.
+    If the user is not authenticated, log the attempt and return a 404 error page.
+    This helps secure the application by preventing unauthorized access.
     """
     if not current_user.is_authenticated:
         current_app.logger.warning(
-            f"Unauthorized access attempt by {request.remote_addr}"
+            f"Unauthorized access attempt by {request.remote_addr}"  # Log the IP address of the unauthorized attempt
         )
-        return render_template("main/404.html"), 404
+        return (
+            render_template("main/404.html"),
+            404,
+        )  # Render the 404 page to obscure the existence of the resource
 
 
 @dm_bp.context_processor
 def inject_user():
     """
-    Menyediakan first_name dan last_name pengguna yang terotentikasi ke dalam template.
+    Provide the authenticated user's first name and last name to the template context.
+    This allows templates to access user information for personalized greetings or other user-specific content.
     """
     if current_user.is_authenticated:
         return dict(
             first_name=current_user.first_name, last_name=current_user.last_name
         )
-    return dict(first_name="", last_name="")
+    return dict(
+        first_name="", last_name=""
+    )  # Return empty strings if the user is not authenticated
 
 
 # -----------------------------------------------------------
@@ -73,72 +83,106 @@ def inject_user():
 # -----------------------------------------------------------
 
 
-@dm_bp.route("/dm", methods=["GET"])
-@login_required
-@required_2fa
+@dm_bp.route("/devices-management", methods=["GET"])
+@login_required  # Ensure the user is logged in
+@required_2fa  # Require two-factor authentication for added security
 @role_required(
-    roles=["Admin", "User", "View"],
-    permissions=["Manage Devices", "View Devices"],
-    page="Devices Management",
+    roles=["Admin", "User", "View"],  # Restrict access based on user roles
+    permissions=[
+        "Manage Devices",
+        "View Devices",
+    ],  # Further restrict access based on permissions
+    page="Devices Management",  # Indicate the page for role management
 )
 def index():
-    """Menampilkan halaman utama Device Manager dengan data perangkat dan pagination"""
+    """
+    Display the main page of the Device Manager.
+    This page includes a list of devices and supports pagination and searching.
+    """
+    # Create an instance of DeviceForm for handling device-related actions
     form = DeviceForm(request.form)
 
+    # Get the search query from the request parameters, defaulting to an empty string
     search_query = request.args.get("search", "").lower()
 
+    # Setup pagination parameters, defaulting to 10 items per page
     page, per_page, offset = get_page_args(
         page_parameter="page", per_page_parameter="per_page", per_page=10
     )
 
-    if search_query:
-        devices_query = DeviceManager.query.filter(
-            DeviceManager.user_id
-            == current_user.id,  # Only fetch devices owned by the current user
-            (
+    # Determine the user's role and adjust the query accordingly
+    if current_user.has_role("Admin"):
+        # If the user has the Admin role, show all devices
+        if search_query:
+            devices_query = DeviceManager.query.filter(
+                # Search across multiple fields using the search query
                 DeviceManager.device_name.ilike(f"%{search_query}%")
                 | DeviceManager.ip_address.ilike(f"%{search_query}%")
                 | DeviceManager.vendor.ilike(f"%{search_query}%")
                 | DeviceManager.description.ilike(f"%{search_query}%")
                 | DeviceManager.created_by.ilike(f"%{search_query}%")
-            ),
-        )
+            )
+        else:
+            # If no search query, retrieve all devices
+            devices_query = DeviceManager.query
     else:
-        devices_query = DeviceManager.query.filter_by(user_id=current_user.id)
+        # If the user is not an Admin, filter devices owned by the current user
+        if search_query:
+            devices_query = DeviceManager.query.filter(
+                DeviceManager.user_id
+                == current_user.id,  # Only fetch devices owned by the current user
+                (
+                    DeviceManager.device_name.ilike(f"%{search_query}%")
+                    | DeviceManager.ip_address.ilike(f"%{search_query}%")
+                    | DeviceManager.vendor.ilike(f"%{search_query}%")
+                    | DeviceManager.description.ilike(f"%{search_query}%")
+                    | DeviceManager.created_by.ilike(f"%{search_query}%")
+                ),
+            )
+        else:
+            # If no search query, return all devices owned by the current user
+            devices_query = DeviceManager.query.filter_by(user_id=current_user.id)
 
+    # Count the total number of devices that match the query
     total_devices = devices_query.count()
+    # Retrieve the devices for the current page
     devices = devices_query.limit(per_page).offset(offset).all()
 
+    # Setup pagination with the total number of devices and current page settings
     pagination = Pagination(page=page, per_page=per_page, total=total_devices)
 
+    # Log the user's access to the Device Manager page for auditing purposes
     current_app.logger.info(f"User {current_user.email} accessed Device Manager page.")
 
+    # Render the Device Manager template with the list of devices and pagination info
     return render_template(
         "/device_managers/index.html",
-        devices=devices,
-        page=page,
-        per_page=per_page,
-        pagination=pagination,
-        search_query=search_query,
-        total_devices=total_devices,
-        form=form,
+        devices=devices,  # List of devices for the current page
+        page=page,  # Current page number
+        per_page=per_page,  # Number of devices per page
+        pagination=pagination,  # Pagination object for handling page links
+        search_query=search_query,  # The search query entered by the user
+        total_devices=total_devices,  # Total number of devices matching the search
+        form=form,  # Form object for device management actions
     )
 
 
 @dm_bp.route("/device_create", methods=["GET", "POST"])
-@login_required
-@required_2fa
+@login_required  # Ensure the user is logged in
+@required_2fa  # Require two-factor authentication for added security
 @role_required(
-    roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
+    roles=["Admin", "User"],  # Restrict access to Admin and User roles
+    permissions=["Manage Devices"],  # Require 'Manage Devices' permission
+    page="Devices Management",  # Indicate the page for role management
 )
 def device_create():
-    """Menambahkan perangkat baru ke dalam database"""
-    form = DeviceForm(request.form)
+    """Add a new device to the database"""
+    form = DeviceForm(request.form)  # Initialize the device form with request data
 
     if request.method == "POST":
         if form.validate_on_submit():
             try:
-                # Accessing .data attribute to get the actual input value
+                # Check if a device with the same IP address or device name already exists
                 exist_address = DeviceManager.query.filter_by(
                     ip_address=form.ip_address.data
                 ).first()
@@ -147,11 +191,13 @@ def device_create():
                 ).first()
 
                 if exist_device or exist_address:
-                    flash("Device sudah terdaftar!", "info")
+                    # Provide feedback to the user if the device already exists
+                    flash("Perangkat sudah terdaftar!", "info")
                     current_app.logger.info(
-                        f"Duplicate device attempt: {form.device_name.data} or {form.ip_address.data}"
+                        f"Duplicate device attempt: {form.device_name.data} or {form.ip_address.data} by {current_user.email}"
                     )
                 else:
+                    # Create a new device with the provided form data
                     new_device = DeviceManager(
                         device_name=form.device_name.data.strip(),
                         vendor=form.vendor.data.strip(),
@@ -163,64 +209,78 @@ def device_create():
                         created_by=current_user.email,
                         user_id=current_user.id,
                     )
-                    db.session.add(new_device)
-                    db.session.commit()
-                    flash("Device berhasil ditambah!", "success")
+                    db.session.add(new_device)  # Add the new device to the session
+                    db.session.commit()  # Commit the transaction to the database
+
+                    # Provide success feedback to the user
+                    flash("Perangkat berhasil ditambahkan!", "success")
                     current_app.logger.info(
-                        f"Device created: {form.device_name.data.strip()} by {current_user.email}"
+                        f"Device created: {form.device_name.data.strip()} with IP {form.ip_address.data.strip()} by {current_user.email}"
                     )
-                    return redirect(url_for("dm.index"))
+                    return redirect(
+                        url_for("dm.index")
+                    )  # Redirect to the device management page
             except Exception as e:
+                # Log the error and provide error feedback to the user
                 current_app.logger.error(
                     f"Error creating device {form.device_name.data.strip()}: {str(e)}"
                 )
-                flash("An error occurred while creating the device.", "danger")
+                flash("Terjadi kesalahan saat membuat perangkat.", "danger")
         else:
+            # Log each validation error and provide feedback to the user
             for field, errors in form.errors.items():
                 for error in errors:
                     flash(
-                        f"Error in {getattr(form, field).label.text}: {error}", "danger"
+                        f"Kesalahan pada {getattr(form, field).label.text}: {error}", "danger"
                     )
             current_app.logger.warning("Form validation failed during device creation.")
 
-    return redirect(url_for("dm.index"))
+    return redirect(
+        url_for("dm.index")
+    )  # Redirect to the device management page if not a POST request
 
 
 @dm_bp.route("/device_update/<int:device_id>", methods=["GET", "POST"])
-@login_required
-@required_2fa
+@login_required  # Ensure the user is logged in
+@required_2fa  # Require two-factor authentication for security
 @role_required(
-    roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
+    roles=["Admin", "User"],  # Restrict access to Admin and User roles
+    permissions=["Manage Devices"],  # Require 'Manage Devices' permission
+    page="Devices Management",  # Indicate the page for role management
 )
 def device_update(device_id):
-    """Mengupdate informasi perangkat di database"""
+    """Update device information in the database"""
+
+    # Query the device by ID; return 404 if not found
     device = DeviceManager.query.get_or_404(device_id)
 
-    # Ensure the current user is the owner of the device
-    if device.user_id != current_user.id:
-        flash("You do not have permission to update this device.", "danger")
+    # Check the user's role for ownership logic
+    if not current_user.has_role("Admin") and device.user_id != current_user.id:
+        # If the user is not Admin and does not own the device, restrict access
+        flash("Anda tidak memiliki izin untuk memperbarui perangkat ini.", "danger")
+        current_app.logger.warning(
+            f"Unauthorized update attempt on Device ID {device_id} by {current_user.email}"
+        )
         return redirect(url_for("dm.index"))
 
-    # Load existing data into the form
+    # Initialize the form with the current device data
     form = DeviceUpdateForm(obj=device)
 
     if request.method == "POST":
-        if form.validate_on_submit():
+        if form.validate_on_submit():  # Check if the form is valid
             try:
-                # Check if the password field is not empty
+                # Update password only if a new one is provided
                 if form.password.data:
-                    # Update password if the field is filled
                     device.password = form.password.data.strip()
                     current_app.logger.info(
                         f"Password updated for Device ID {device_id} by {current_user.email}"
                     )
                 else:
-                    # Keep the existing password if the field is empty
                     current_app.logger.info(
-                        f"Password unchanged for Device ID {device_id} updated by {current_user.email}"
+                        f"No password change for Device ID {device_id} updated by {current_user.email}"
                     )
 
-                # Update the other fields, except password
+                # Update other device fields
                 device.device_name = form.device_name.data.strip()
                 device.vendor = form.vendor.data.strip()
                 device.ip_address = form.ip_address.data.strip()
@@ -228,34 +288,38 @@ def device_update(device_id):
                 device.ssh = form.ssh.data.strip()
                 device.description = form.description.data.strip()
 
-                # Commit all the changes to the database
+                # Save changes to the database
                 db.session.commit()
-                flash("Device update berhasil.", "success")
+                flash("Perangkat berhasil diperbarui!", "success")
                 current_app.logger.info(
-                    f"Device ID {device_id} updated by {current_user.email}"
+                    f"Device ID {device_id} updated successfully by {current_user.email}"
                 )
-                return redirect(url_for("dm.index"))
+                return redirect(
+                    url_for("dm.index")
+                )  # Redirect to the device management page
             except Exception as e:
+                # Log the error and flash a danger message to the user
                 current_app.logger.error(
                     f"Error updating device ID {device_id}: {str(e)}"
                 )
-                flash("An error occurred while updating the device.", "danger")
+                flash("Terjadi kesalahan saat memperbarui perangkat.", "danger")
         else:
-            # Flashing individual field errors
+            # Handle form validation errors
             for field, errors in form.errors.items():
                 for error in errors:
                     flash(
-                        f"Error in {getattr(form, field).label.text}: {error}", "danger"
+                        f"Kesalahan pada {getattr(form, field).label.text}: {error}", "danger"
                     )
             current_app.logger.warning(
-                f"Form validation failed during device update for device ID {device_id}."
+                f"Form validation failed during device update for device ID {device_id} by {current_user.email}."
             )
 
-    # Set a placeholder text to indicate that the password is already set
+    # Provide a placeholder for the password field to guide the user
     form.password.render_kw = {
         "placeholder": "Enter new password if you want to change it"
     }
 
+    # Render the device update page with the form
     return render_template(
         "/device_managers/device_update.html", form=form, device=device
     )
@@ -269,24 +333,38 @@ def device_update(device_id):
 )
 def device_delete(device_id):
     """Menghapus perangkat dari database"""
-    device = DeviceManager.query.get_or_404(device_id)
+    device = DeviceManager.query.get_or_404(
+        device_id
+    )  # Retrieve the device by ID, 404 if not found
 
-    # Ensure the current user is the owner of the device
-    if device.user_id != current_user.id:
-        flash("You do not have permission to delete this device.", "danger")
+    # Check the user's role for ownership logic
+    if not current_user.has_role("Admin") and device.user_id != current_user.id:
+        # If the user is not an Admin and does not own the device, restrict access
+        flash("Anda tidak memiliki izin untuk menghapus perangkat ini.", "danger")
+        current_app.logger.warning(
+            f"Unauthorized delete attempt on Device ID {device_id} by {current_user.email}"
+        )
         return redirect(url_for("dm.index"))
 
     try:
+        # Attempt to delete the device from the database
         db.session.delete(device)
         db.session.commit()
-        flash("Device telah dihapus.", "success")
+        flash(
+            "Device telah dihapus!", "success"
+        )  # Inform the user of successful deletion
         current_app.logger.info(
-            f"Device ID {device_id} deleted by {current_user.email}"
+            f"Device ID {device_id} deleted by {current_user.email}"  # Log the successful deletion
         )
     except Exception as e:
+        # Handle any exceptions that occur during deletion
         current_app.logger.error(f"Error deleting device ID {device_id}: {str(e)}")
-        flash("An error occurred while deleting the device.", "danger")
+        flash(
+            "Terjadi kesalahan saat menghapus perangkat.",
+            "danger",
+        )  # Inform the user of the error
 
+    # Redirect to the device management index page after deletion
     return redirect(url_for("dm.index"))
 
 

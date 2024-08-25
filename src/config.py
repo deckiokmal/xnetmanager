@@ -1,5 +1,7 @@
 from decouple import config, UndefinedValueError
 import logging
+from sqlalchemy.types import String
+from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 
 
 # Validasi variabel lingkungan untuk memastikan semua yang diperlukan tersedia
@@ -23,7 +25,13 @@ DATABASE_URI = config("DATABASE_URL", default="sqlite:///xnetmanager.sqlite")
 if DATABASE_URI.startswith("postgres://"):
     DATABASE_URI = DATABASE_URI.replace("postgres://", "postgresql://", 1)
 
-
+def get_uuid_type(database_uri):
+    """Menentukan tipe UUID berdasarkan URI database."""
+    if database_uri.startswith("sqlite"):
+        return String(36)  # Menggunakan String untuk UUID di SQLite
+    else:
+        return PostgresUUID(as_uuid=True)  # Menggunakan UUID asli di PostgreSQL
+    
 class Config(object):
     """Konfigurasi dasar aplikasi."""
 

@@ -10,7 +10,7 @@ from flask_login import LoginManager
 from dotenv import load_dotenv
 from src.utils.is_active_utils import is_active
 from src.utils.mask_password_utils import mask_password
-from src.config import DevelopmentConfig, TestingConfig, ProductionConfig
+from src.config import DevelopmentConfig, TestingConfig, ProductionConfig, get_uuid_type
 from flask_mail import Mail
 from flask_talisman import Talisman
 import openai
@@ -26,8 +26,13 @@ login_manager = LoginManager()
 csrf = CSRFProtect()
 mail = Mail()
 
+# Global variable for UUID type
+UUID_TYPE = None
+
 
 def create_app(config_class=None):
+    global UUID_TYPE
+
     app = Flask(__name__)
 
     # Membaca konfigurasi dari file .env
@@ -62,6 +67,9 @@ def create_app(config_class=None):
         ],
         content_security_policy=app.config["TALISMAN_CONTENT_SECURITY_POLICY"],
     )
+
+    # Set UUID type based on database type
+    UUID_TYPE = get_uuid_type(app.config["SQLALCHEMY_DATABASE_URI"])
 
     # Konfigurasi logger
     handler = StreamHandler()

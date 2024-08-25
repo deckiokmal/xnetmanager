@@ -5,6 +5,9 @@ from src import bcrypt, db
 from src.config import Config
 from itsdangerous import URLSafeTimedSerializer as Serializer, SignatureExpired
 from flask import current_app
+import uuid
+from src import UUID_TYPE
+
 
 # ------------------------------------------------------------------------
 # User and Roles Management Section
@@ -14,7 +17,8 @@ from flask import current_app
 class User(UserMixin, db.Model):
     __tablename__ = "users"
 
-    id = db.Column(db.Integer, primary_key=True)
+    # Use the global UUID_TYPE
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
     first_name = db.Column(db.String(255), nullable=False)
     last_name = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
@@ -110,7 +114,7 @@ class User(UserMixin, db.Model):
 class Role(db.Model):
     __tablename__ = "roles"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
     name = db.Column(db.String(64), unique=True, nullable=False)
     users = db.relationship("User", secondary="user_roles", back_populates="roles")
     permissions = db.relationship(
@@ -128,7 +132,7 @@ class Role(db.Model):
 
 class Permission(db.Model):
     __tablename__ = "permissions"
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
     name = db.Column(db.String(50), unique=True, nullable=False)
     description = db.Column(db.String(200))
     roles = db.relationship(
@@ -138,17 +142,23 @@ class Permission(db.Model):
 
 class UserRoles(db.Model):
     __tablename__ = "user_roles"
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"))
-    role_id = db.Column(db.Integer, db.ForeignKey("roles.id", ondelete="CASCADE"))
+    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
+    user_id = db.Column(
+        db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    role_id = db.Column(
+        db.String(36), db.ForeignKey("roles.id", ondelete="CASCADE"), index=True
+    )
 
 
 class RolePermissions(db.Model):
     __tablename__ = "role_permissions"
-    id = db.Column(db.Integer, primary_key=True)
-    role_id = db.Column(db.Integer, db.ForeignKey("roles.id", ondelete="CASCADE"))
+    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
+    role_id = db.Column(
+        db.String(36), db.ForeignKey("roles.id", ondelete="CASCADE"), index=True
+    )
     permission_id = db.Column(
-        db.Integer, db.ForeignKey("permissions.id", ondelete="CASCADE")
+        db.String(36), db.ForeignKey("permissions.id", ondelete="CASCADE"), index=True
     )
 
 
@@ -160,7 +170,7 @@ class RolePermissions(db.Model):
 class DeviceManager(db.Model):
     __tablename__ = "device_manager"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
     device_name = db.Column(db.String(100), unique=True, nullable=False)
     vendor = db.Column(db.String(100), nullable=False)
     ip_address = db.Column(db.String(20), unique=True, nullable=False)
@@ -173,7 +183,9 @@ class DeviceManager(db.Model):
     is_active = db.Column(db.Boolean, default=True)
 
     # Relasi ke User
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user_id = db.Column(
+        db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
+    )
 
     def __repr__(self):
         return f"<DeviceManager {self.device_name}>"
@@ -182,7 +194,7 @@ class DeviceManager(db.Model):
 class TemplateManager(db.Model):
     __tablename__ = "template_manager"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
     template_name = db.Column(db.String(100), unique=True, nullable=False)
     parameter_name = db.Column(db.String(100), unique=True, nullable=False)
     vendor = db.Column(db.String(100), nullable=False)
@@ -197,14 +209,16 @@ class TemplateManager(db.Model):
 class ConfigurationManager(db.Model):
     __tablename__ = "configuration_manager"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
     config_name = db.Column(db.String(100), nullable=False, unique=True)
     vendor = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=True)
     created_by = db.Column(db.Text, nullable=True)
 
     # Relasi ke User
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user_id = db.Column(
+        db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
+    )
 
     # Relasi ke UserConfigurationShare untuk sharing konfigurasi
     shared_with = db.relationship(
@@ -218,10 +232,15 @@ class ConfigurationManager(db.Model):
 class UserConfigurationShare(db.Model):
     __tablename__ = "user_configuration_share"
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
+    user_id = db.Column(
+        db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
+    )
     configuration_id = db.Column(
-        db.Integer, db.ForeignKey("configuration_manager.id"), nullable=False
+        db.String(36),
+        db.ForeignKey("configuration_manager.id"),
+        nullable=False,
+        index=True,
     )
 
     user = db.relationship(
@@ -242,12 +261,14 @@ class UserConfigurationShare(db.Model):
 class BackupData(db.Model):
     __tablename__ = "backup_data"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
     backup_name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.String(255), nullable=True)
     version = db.Column(db.Integer, nullable=False, default=1)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user_id = db.Column(
+        db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
+    )
 
     user = db.relationship(
         "User", back_populates="backups", overlaps="shared_backups,backup_shares"
@@ -292,9 +313,13 @@ class BackupData(db.Model):
 class UserBackupShare(db.Model):
     __tablename__ = "user_backup_share"
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    backup_id = db.Column(db.Integer, db.ForeignKey("backup_data.id"), nullable=False)
+    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
+    user_id = db.Column(
+        db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
+    )
+    backup_id = db.Column(
+        db.String(36), db.ForeignKey("backup_data.id"), nullable=False, index=True
+    )
 
     user = db.relationship(
         "User",
@@ -314,8 +339,10 @@ class UserBackupShare(db.Model):
 class GitBackupVersion(db.Model):
     __tablename__ = "git_backup_version"
 
-    id = db.Column(db.Integer, primary_key=True)
-    backup_id = db.Column(db.Integer, db.ForeignKey("backup_data.id"), nullable=False)
+    id = db.Column(db.String(36), primary_key=True, default=uuid.uuid4)
+    backup_id = db.Column(
+        db.String(36), db.ForeignKey("backup_data.id"), nullable=False, index=True
+    )
     commit_hash = db.Column(db.String(40), nullable=False)  # Hash dari commit Git
     commit_message = db.Column(db.String(255), nullable=False)
     committed_at = db.Column(db.DateTime, default=datetime.utcnow)
