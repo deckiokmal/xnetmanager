@@ -25,8 +25,8 @@
 {% endblock %}
 
 {% block button_group2 %}
-<a href="{{ url_for('tm.template_results') }}" class="btn btn-sm btn-light">
-    <i class="fas fa-cogs"></i> Manage Configuration File
+<a href="{{ url_for('tm.index_configuration_file') }}" class="btn btn-sm btn-light">
+    <i class="fas fa-cogs"></i> Configuration File
 </a>
 {% endblock %}
 
@@ -254,7 +254,8 @@
                             <div class="mb-3">
                                 <label for="template_content" class="form-label">Template Content
                                     (Jinja2)</label>
-                                {{ form_manual_create.template_content(class="form-control", id="template_content", rows="5") }}
+                                {{ form_manual_create.template_content(class="form-control", id="template_content",
+                                rows="5") }}
                                 {% if form_manual_create.template_content.errors %}
                                 {% for error in form_manual_create.template_content.errors %}
                                 <div class="text-danger">{{ error }}</div>
@@ -265,7 +266,8 @@
                             <div class="mb-3">
                                 <label for="parameter_content" class="form-label">Parameter Content
                                     (YAML)</label>
-                                {{ form_manual_create.parameter_content(class="form-control", id="parameter_content", rows="5") }}
+                                {{ form_manual_create.parameter_content(class="form-control", id="parameter_content",
+                                rows="5") }}
                                 {% if form_manual_create.parameter_content.errors %}
                                 {% for error in form_manual_create.parameter_content.errors %}
                                 <div class="text-danger">{{ error }}</div>

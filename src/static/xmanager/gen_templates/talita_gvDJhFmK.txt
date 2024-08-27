@@ -1,0 +1,378 @@
+Berikut adalah contoh konfigurasi SD-WAN pada perangkat Fortigate berdasarkan topologi dengan single HUB yang menggunakan IPVPN sebagai koneksi underlay utama. Konfigurasi ini akan mencakup pembuatan interface VPN, pengaturan routing BGP, pengaturan SD-WAN interface, dan kebijakan firewall.
+
+### 1. Konfigurasi HUB DC
+#### Konfigurasi VPN Interface (IPSec)
+```shell
+config vpn ipsec phase1-interface
+    edit "DC-MAIN"
+        set type dynamic
+        set interface "wan1"
+        set ike-version 2
+        set local-gw 172.16.0.1
+        set peertype any
+        set net-device disable
+        set mode-cfg enable
+        set proposal aes256-sha256
+        set add-route disable
+        set dpd on-idle
+        set dhgrp 14
+        set auto-discovery-sender enable
+        set network-overlay enable
+        set network-id 1
+        set ipv4-start-ip 169.251.100.2
+        set ipv4-end-ip 169.251.100.253
+        set ipv4-netmask 255.255.255.0
+        set psksecret S3cr3tKEY-SdWAn!23
+        set dpd-retryinterval 21
+    next
+    edit "DC-BCKP"
+        set type dynamic
+        set interface "wan2"
+        set ike-version 2
+        set local-gw 123.231.0.1
+        set peertype any
+        set net-device disable
+        set mode-cfg enable
+        set proposal aes256-sha256
+        set add-route disable
+        set dpd on-idle
+        set dhgrp 14
+        set auto-discovery-sender enable
+        set network-overlay enable
+        set network-id 2
+        set ipv4-start-ip 169.251.200.2
+        set ipv4-end-ip 169.251.200.253
+        set ipv4-netmask 255.255.255.0
+        set psksecret S3cr3tKEY-SdWAn!23
+        set dpd-retryinterval 21
+    next
+end
+
+config vpn ipsec phase2-interface
+    edit "DC-MAIN"
+        set phase1name "DC-MAIN"
+        set proposal aes256-sha256
+        set dhgrp 14
+        set keepalive enable
+    next
+    edit "DC-BCKP"
+        set phase1name "DC-BCKP"
+        set proposal aes256-sha256
+        set dhgrp 14
+        set keepalive enable
+    next
+end
+```
+
+#### Konfigurasi Interface Tunnel
+```shell
+config system interface
+    edit "DC-MAIN"
+        set vdom "root"
+        set allowaccess ping ssh https
+        set type tunnel
+    next
+    edit "DC-BCKP"
+        set vdom "root"
+        set allowaccess ping ssh https
+        set type tunnel
+    next
+end
+```
+
+#### Konfigurasi SD-WAN Interface
+```shell
+config system sdwan
+    set status enable
+    set load-balance-mode source-dest-ip-based
+    config zone
+        edit "DC"
+        next
+        edit "DR"
+        next
+    end
+    config members
+        edit 1
+            set interface "DC-MAIN"
+            set zone "DC"
+        next
+        edit 2
+            set interface "DC-BCKP"
+            set zone "DC"
+        next
+        edit 3
+            set interface "DR-MAIN"
+            set zone "DR"
+        next
+        edit 4
+            set interface "DR-BCKP"
+            set zone "DR"
+        next
+    end
+    config health-check
+        edit "SLA_TO_DC"
+            set server "1.1.1.1"
+            set interval 1000
+            set update-static-route disable
+            set members 1 2
+            config sla
+                edit 1
+                    set latency-threshold 100
+                    set packetloss-threshold 5
+                next
+            end
+        next
+        edit "SLA_TO_DR"
+            set server "2.2.2.2"
+            set interval 1000
+            set update-static-route disable
+            set members 3 4
+            config sla
+                edit 1
+                    set latency-threshold 100
+                    set packetloss-threshold 5
+                next
+            end
+        next
+        edit "SLA_TO_INET"
+            set server "8.8.8.8"
+            set update-static-route disable
+            set members 2 4
+            config sla
+                edit 1
+                    set latency-threshold 500
+                    set jitter-threshold 50
+                    set packetloss-threshold 5
+                next
+            end
+        next
+    end
+    config service
+        edit 1
+            set name "DC-RULE"
+            set mode load-balance
+            set route-tag 65500100
+            set src "all"
+            config sla
+                edit "SLA_TO_DC"
+                    set id 1
+                next
+            end
+            set priority-members 1 2
+            set priority-zone "DC"
+        next
+        edit 2
+            set name "DR-RULE"
+            set mode load-balance
+            set route-tag 65500100
+            set src "all"
+            config sla
+                edit "SLA_TO_DR"
+                    set id 1
+                next
+            end
+            set priority-members 3 4
+            set priority-zone "DR"
+        next
+        edit 3
+            set name "INET-RULE"
+            set mode load-balance
+            set route-tag 655001234
+            set src "all"
+            config sla
+                edit "SLA_TO_INET"
+                    set id 1
+                next
+            end
+            set priority-members 2 4
+        next
+    end
+end
+```
+
+#### Konfigurasi Policy Firewall
+```shell
+config firewall policy
+    edit 1
+        set name "LAN>DC"
+        set srcintf "lan1"
+        set dstintf "DC"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+    next
+    edit 2
+        set name "DC>LAN"
+        set srcintf "DC"
+        set dstintf "lan1"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+    next
+    edit 3
+        set name "LAN>DR"
+        set srcintf "lan1"
+        set dstintf "DR"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+    next
+    edit 4
+        set name "DR>LAN"
+        set srcintf "DR"
+        set dstintf "lan1"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+    next
+end
+```
+
+#### Konfigurasi Routing BGP
+```shell
+config router prefix-list
+    edit "LAN-SPOKE"
+        config rule
+            edit 1
+                set prefix 192.168.10.0/24
+            next
+        end
+    next
+end
+
+config router community-list
+    edit "65500:100"
+        config rule
+            edit 1
+                set action permit
+                set match "65500:100"
+            next
+        end
+    next
+end
+
+config router route-map
+    edit "IN-FROM-HUB"
+        config rule
+            edit 1
+                set match-community "65500:100"
+                set set-route-tag 65500100
+            next
+            edit 2
+                set match-community "65500:1234"
+                set set-route-tag 655001234
+            next
+        end
+    next
+end
+
+config router route-map
+    edit "OUT-TO-DC"
+        config rule
+            edit 1
+                set match-ip-address "LAN-SPOKE"
+                set set-community "65500:111"
+            next
+        end
+    next
+    edit "OUT-TO-DR"
+        config rule
+            edit 1
+                set match-ip-address "LAN-SPOKE"
+                set set-community "65500:111"
+                set set-aspath "65500 65500 65500"
+            next
+        end
+    next
+end
+```
+
+### 2. Konfigurasi HUB DR
+#### Konfigurasi IP Address Tunnel
+```shell
+config system interface
+    edit "DC-MAIN"
+        set vdom "root"
+        set ip 169.251.101.1 255.255.255.255
+        set allowaccess ping ssh https
+        set type tunnel
+        set remote-ip 169.251.101.254 255.255.255.0
+        set interface "wan1"
+    next
+    edit "DC-BCKP"
+        set vdom "root"
+        set ip 169.251.200.1 255.255.255.255
+        set allowaccess ping ssh https
+        set type tunnel
+        set remote-ip 169.251.201.254 255.255.255.0
+        set interface "wan2"
+    next
+end
+```
+
+#### Konfigurasi Policy Firewall
+```shell
+config firewall policy
+    edit 1
+        set name "HUB-DR > SPOKE"
+        set srcintf "lan1"
+        set dstintf "DR-MAIN" "DR-BCKP"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+    next
+    edit 2
+        set name "SPOKE > HUB-DR"
+        set srcintf "DR-MAIN" "DR-BCKP"
+        set dstintf "lan1"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+    next
+    edit 3
+        set name "SPOKE > INET"
+        set srcintf "DR-MAIN" "DR-BCKP"
+        set dstintf "wan2"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+        set utm-status enable
+        set ssl-ssh-profile "certificate-inspection"
+        set av-profile "default"
+        set ips-sensor "protect_client"
+        set nat enable
+    next
+end
+```
+
+#### Konfigurasi Routing BGP
+```shell
+config router prefix-list
+    edit "LAN-HUB-DR"
+        config rule
+            edit 1
+                set prefix 192.168.0.0/24
+            next
+            edit 2
+                set prefix 2.2.2.2/32
+            next
+        end
+    next
+end
+```
+
+Dengan konfigurasi di atas, Anda telah menyiapkan SD-WAN pada perangkat Fortigate dengan topologi single HUB yang menggunakan IPVPN sebagai koneksi underlay utama. Pastikan untuk menyesuaikan IP address, secret key, dan parameter lainnya sesuai dengan kebutuhan jaringan Anda.

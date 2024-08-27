@@ -815,7 +815,7 @@ def template_generator(template_id):
 # --------------------------------------------------------------------------------
 
 
-@tm_bp.route("/template_results")
+@tm_bp.route("/templates-management/configuration-file")
 @login_required
 @required_2fa
 @role_required(
@@ -823,9 +823,9 @@ def template_generator(template_id):
     permissions=["Manage Templates", "View Templates"],
     page="Configuration File Management",
 )
-def template_results():
+def index_configuration_file():
     # Logging untuk akses ke endpoint
-    current_app.logger.info(f"{current_user.email} accessed template_results")
+    current_app.logger.info(f"{current_user.email} accessed index_configuration_file")
 
     # Validasi input untuk page, per_page, dan search_query
     try:
@@ -834,7 +834,7 @@ def template_results():
         if page < 1 or per_page < 1:
             raise ValueError("Page and per_page must be positive integers.")
     except ValueError as e:
-        return redirect(url_for("tm.template_results"))
+        return redirect(url_for("tm.index_configuration_file"))
 
     search_query = request.args.get("search", "").strip().lower()
 
@@ -886,7 +886,7 @@ def template_results():
             flash(f"Template file '{template.config_name}' not found.", "warning")
 
     return render_template(
-        "/template_managers/template_results.html",
+        "/template_managers/index_configuration_file.html",
         all_templates=all_templates,
         page=page,
         per_page=per_page,
@@ -897,7 +897,7 @@ def template_results():
     )
 
 
-@tm_bp.route("/configuration_manual_create", methods=["POST"])
+@tm_bp.route("/templates-management/create-manual-configuration", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -905,7 +905,7 @@ def template_results():
     permissions=["Manage Templates"],
     page="Configuration File Management",
 )
-def configuration_manual_create():
+def create_manual_configuration():
     """Membuat file konfigurasi manual dan menyimpannya ke dalam database."""
     filename = secure_filename(request.form.get("filename"))
     vendor = request.form.get("vendor")
@@ -967,7 +967,7 @@ def configuration_manual_create():
         return redirect("tm.index")
 
 
-@tm_bp.route("/create_configuration_with_ai", methods=["POST"])
+@tm_bp.route("/templates-management/create-configuration-with-ai", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -1037,7 +1037,10 @@ def create_configuration_with_ai():
         return redirect("tm.index")
 
 
-@tm_bp.route("/template_result_update/<template_result_id>", methods=["GET", "POST"])
+@tm_bp.route(
+    "/templates-management/update-configuration/<template_result_id>",
+    methods=["GET", "POST"],
+)
 @login_required
 @required_2fa
 @role_required(
@@ -1045,7 +1048,7 @@ def create_configuration_with_ai():
     permissions=["Manage Templates"],
     page="Configuration File Management",
 )
-def template_result_update(template_result_id):
+def update_configuration(template_result_id):
     """Meng-handle pembaruan file konfigurasi template yang ada."""
     current_app.logger.info(
         f"Attempting to update configuration file with ID {template_result_id} by {current_user.email}"
@@ -1056,7 +1059,7 @@ def template_result_update(template_result_id):
     # Verifikasi kepemilikan file konfigurasi
     if template.user_id != current_user.id:
         flash("You do not have permission to update this configuration file.", "danger")
-        return redirect(url_for("tm.template_results"))
+        return redirect(url_for("tm.index_configuration_file"))
 
     template_content = read_file(
         os.path.join(
@@ -1066,7 +1069,7 @@ def template_result_update(template_result_id):
 
     if template_content is None:
         flash("Error loading template content.", "error")
-        return redirect(url_for("tm.template_results"))
+        return redirect(url_for("tm.index_configuration_file"))
 
     if request.method == "POST":
         new_template_name = secure_filename(request.form["template_name"])
@@ -1119,7 +1122,7 @@ def template_result_update(template_result_id):
                 f"Successfully updated template data in database: ID {template_result_id}"
             )
             flash("Template update successful.", "success")
-            return redirect(url_for("tm.template_results"))
+            return redirect(url_for("tm.index_configuration_file"))
 
         except Exception as e:
             current_app.logger.error(f"Error updating template: {e}")
@@ -1133,7 +1136,9 @@ def template_result_update(template_result_id):
     )
 
 
-@tm_bp.route("/template_result_delete/<template_id>", methods=["POST"])
+@tm_bp.route(
+    "/templates-management/delete-configuration/<template_id>", methods=["POST"]
+)
 @login_required
 @required_2fa
 @role_required(
@@ -1141,13 +1146,13 @@ def template_result_update(template_result_id):
     permissions=["Manage Templates"],
     page="Configuration File Management",
 )
-def template_result_delete(template_id):
+def delete_configuration(template_id):
     template = ConfigurationManager.query.get_or_404(template_id)
 
     # Verifikasi kepemilikan file konfigurasi
     if template.user_id != current_user.id:
         flash("You do not have permission to delete this configuration file.", "danger")
-        return redirect(url_for("tm.template_results"))
+        return redirect(url_for("tm.index_configuration_file"))
 
     try:
         file_path = os.path.join(
@@ -1170,7 +1175,12 @@ def template_result_delete(template_id):
         current_app.logger.error(f"Error deleting configuration file: {e}")
         flash("Failed to delete configuration file.", "error")
 
-    return redirect(url_for("tm.template_results"))
+    return redirect(url_for("tm.index_configuration_file"))
+
+
+# --------------------------------------------------------------------------------
+# Talita Lintasarta Section
+# --------------------------------------------------------------------------------
 
 
 @tm_bp.route("/ask_talita", methods=["GET", "POST"])
@@ -1231,7 +1241,7 @@ def ask_talita():
             flash(f"Gagal mendapatkan jawaban dari TALITA: {response}", "danger")
 
         # Redirect kembali ke halaman yang sama untuk menutup modal dan memperbarui UI
-        return redirect(url_for("tm.template_results"))
+        return redirect(url_for("tm.index_configuration_file"))
 
     # Jika GET request, tampilkan halaman dengan modal
-    return render_template("tm.template_results")
+    return render_template("tm.index_configuration_file")
