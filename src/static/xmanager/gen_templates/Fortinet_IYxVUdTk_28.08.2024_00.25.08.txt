@@ -1,0 +1,2 @@
+config system global
+set hostname testing_again

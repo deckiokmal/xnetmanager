@@ -15,3 +15,48 @@
     z-index: 1051;
     /* Higher than Bootstrap modals (Bootstrap modal has z-index 1050) */
 }
+
+/* CSS for Modal Background and Text Color */
+.modal-header {
+    background-color: #712cf9;
+    color: #ffffff;
+    padding: 10px 15px;
+    position: relative;
+}
+
+.modal-header::before {
+    content: ""; 
+    display: block;
+    width: 100%;
+    height: 5px;
+    background-color: #ffffff;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.modal-title {
+    font-size: 16px;
+    font-weight: normal;
+    margin: 0;
+    padding: 0;
+}
+
+.modal-body {
+    background-color: #222124;
+    color: #ffffff;
+}
+
+.modal-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+.content-data {
+    background-color: #222124;
+    color: #ffffff;
+}
+
+.form-control {
+    background-color: #0000007b;
+    color: #ffffff;
+}

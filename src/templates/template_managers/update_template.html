@@ -1,0 +1,52 @@
+{% extends "/layouts/layout.html" %}
+{% block title %}Update Template{% endblock %}
+{% block content %}
+<!-- Page Content for Updating Template -->
+<div class="card position-relative py-4 px-4">
+    <div class="card-header mb-3">
+        Update Template
+    </div>
+    <form action="{{ url_for('tm.update_template', template_id=template.id) }}" method="post">
+        {{ form.hidden_tag() }}
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                {{ form.template_name.label(class="form-label") }}
+                {{ form.template_name(class="form-control bg-dark text-white", id="template_name") }}
+            </div>
+            <div class="col-md-6">
+                {{ form.parameter_name.label(class="form-label") }}
+                {{ form.parameter_name(class="form-control bg-dark text-white", id="parameter_name") }}
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                {{ form.vendor.label(class="form-label") }}
+                {{ form.vendor(class="form-control bg-dark text-white", id="vendor") }}
+            </div>
+            <div class="col-md-6">
+                {{ form.version.label(class="form-label") }}
+                {{ form.version(class="form-control bg-dark text-white", id="version") }}
+            </div>
+        </div>
+        <div class="mb-3">
+            {{ form.description.label(class="form-label") }}
+            {{ form.description(class="form-control bg-dark text-white", id="description") }}
+        </div>
+        <div class="mb-3">
+            {{ form.template_content.label(class="form-label") }}
+            {{ form.template_content(class="form-control bg-dark text-white", id="template_content", rows="5") }}
+        </div>
+        <div class="mb-3">
+            {{ form.parameter_content.label(class="form-label") }}
+            {{ form.parameter_content(class="form-control bg-dark text-white", id="parameter_content", rows="5") }}
+        </div>
+        <button type="submit" class="btn btn-success">
+            <i class="fa-solid fa-check"></i> Save Changes
+        </button>
+        <a class="btn btn-warning" href="{{ url_for('tm.index') }}">
+            <i class="fas fa-arrow-left"></i> Back
+        </a>
+    </form>
+</div>
+{% endblock %}

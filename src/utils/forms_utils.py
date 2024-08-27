@@ -17,7 +17,7 @@ from wtforms.validators import (
     IPAddress,
     Regexp,
 )
-from src.models.app_models import User
+from src.models.app_models import User, TemplateManager
 
 
 class RegisterForm(FlaskForm):
@@ -270,4 +270,76 @@ class TemplateForm(FlaskForm):
         validators=[
             Length(max=100, message="Description must be less than 100 characters.")
         ],
+    )
+
+
+class TemplateUpdateForm(FlaskForm):
+    template_name = StringField(
+        "Nama Template",
+        validators=[
+            DataRequired(message="Nama template harus diisi."),
+            Length(
+                max=100, message="Nama template tidak boleh lebih dari 100 karakter."
+            ),
+        ],
+    )
+    parameter_name = StringField(
+        "Nama Parameter",
+        validators=[
+            DataRequired(message="Nama parameter harus diisi."),
+            Length(
+                max=100, message="Nama parameter tidak boleh lebih dari 100 karakter."
+            ),
+        ],
+    )
+    vendor = StringField(
+        "Vendor",
+        validators=[
+            DataRequired(message="Vendor harus dipilih."),
+            Length(max=50, message="Nama vendor tidak boleh lebih dari 50 karakter."),
+        ],
+    )
+    version = StringField(
+        "Versi",
+        validators=[
+            DataRequired(message="Versi harus diisi."),
+            Length(max=20, message="Versi tidak boleh lebih dari 20 karakter."),
+        ],
+    )
+    description = TextAreaField(
+        "Deskripsi",
+        validators=[
+            Length(max=500, message="Deskripsi tidak boleh lebih dari 500 karakter.")
+        ],
+    )
+    template_content = TextAreaField(
+        "Konten Template",
+        validators=[DataRequired(message="Konten template harus diisi.")],
+    )
+    parameter_content = TextAreaField(
+        "Konten Parameter",
+        validators=[DataRequired(message="Konten parameter harus diisi.")],
+    )
+
+
+class ManualTemplateForm(FlaskForm):
+    vendor = StringField(
+        "Vendor",
+        validators=[
+            DataRequired(message="Vendor tidak boleh kosong."),
+            Length(max=100),
+        ],
+    )
+    version = StringField(
+        "Version",
+        validators=[DataRequired(message="Versi tidak boleh kosong."), Length(max=10)],
+    )
+    description = StringField("Description", validators=[Length(max=100)])
+    template_content = TextAreaField(
+        "Template Content",
+        validators=[DataRequired(message="Konten template tidak boleh kosong.")],
+    )
+    parameter_content = TextAreaField(
+        "Parameter Content",
+        validators=[DataRequired(message="Konten parameter tidak boleh kosong.")],
     )

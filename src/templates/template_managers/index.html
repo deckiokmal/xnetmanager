@@ -16,7 +16,7 @@
         </li>
         <li>
             <button type="button" class="dropdown-item btn btn-outline-secondary w-100 text-start"
-                data-bs-toggle="modal" data-bs-target="#createModal">
+                data-bs-toggle="modal" data-bs-target="#createManualTemplateModal">
                 <i class="bi bi-file-earmark-plus"></i> Create Template
             </button>
         </li>
@@ -79,13 +79,14 @@
     <td>{{ template.version }}</td>
     <td>{{ template.description }}</td>
     <td>
-        <button class="btn btn-info btn-sm mb-2" data-bs-toggle="modal" data-bs-target="#detailModal{{ template.id }}">
+        <button class="btn btn-info btn-sm mb-2" data-template-id="{{ template.id }}"
+            onclick="showTemplateDetails(this)">
             <i class="fas fa-eye"></i>
         </button>
-        <a href="{{ url_for('tm.template_update', template_id=template.id) }}" class="btn btn-success btn-sm mb-2">
+        <a href="{{ url_for('tm.update_template', template_id=template.id) }}" class="btn btn-success btn-sm mb-2">
             <i class="fas fa-edit"></i>
         </a>
-        <form action="{{ url_for('tm.template_delete', template_id=template.id) }}" method="post" class="d-inline">
+        <form action="{{ url_for('tm.delete_template', template_id=template.id) }}" method="post" class="d-inline">
             <button type="submit" class="btn btn-danger btn-sm mb-2"
                 onclick="return confirm('Are you sure you want to delete this template?');">
                 <i class="fas fa-trash"></i>
@@ -99,27 +100,6 @@
         </form>
     </td>
 </tr>
-
-<!-- Modal Detail Template -->
-<div class="modal fade" id="detailModal{{ template.id }}" tabindex="-1"
-    aria-labelledby="detailModalLabel{{ template.id }}" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title text-black" id="detailModalLabel{{ template.id }}">Template Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-black">
-                <p><strong>Template File Name:</strong> {{ template.template_name }}</p>
-                <p><strong>Parameter File Name:</strong> {{ template.parameter_name }}</p>
-                <p><strong>Vendor:</strong> {{ template.vendor }}</p>
-                <p><strong>Version:</strong> {{ template.version }}</p>
-                <p><strong>Description:</strong> {{ template.description }}</p>
-                <p><strong>Created by:</strong> {{ template.created_by }}</p>
-            </div>
-        </div>
-    </div>
-</div>
 {% endfor %}
 {% endblock %}
 
@@ -138,17 +118,41 @@
         {% endblock %}
 
         {% block modal_data %}
+        <!-- Modal for Template Details -->
+        <div class="modal fade" id="templateDetailModal" tabindex="-1" aria-labelledby="templateDetailModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="templateDetailModalLabel">Template Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Template File Name:</strong> <span id="template_name"></span></p>
+                        <p><strong>Parameter File Name:</strong> <span id="parameter_name"></span></p>
+                        <p><strong>Vendor:</strong> <span id="vendor"></span></p>
+                        <p><strong>Version:</strong> <span id="version"></span></p>
+                        <p><strong>Description:</strong> <span id="description"></span></p>
+                        <p><strong>Created by:</strong> <span id="created_by"></span></p>
+                        <p><strong>Template Content:</strong></p>
+                        <pre id="template_content" class="content-data"></pre>
+                        <p><strong>Parameter Content:</strong></p>
+                        <pre id="parameter_content" class="content-data"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal for Upload Template -->
         <div class="modal fade" id="uploadTemplateModal" tabindex="-1" aria-labelledby="uploadTemplateModalLabel"
             aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content bg-black text-light">
+            <div class="modal-dialog modal-dialog-scrollable">
+                <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="uploadTemplateModalLabel">
                             Upload Template
                         </h5>
-                        <button type="button" class="btn-close btn-light" data-bs-dismiss="modal"
-                            aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <!-- Form pointing to upload_template endpoint -->
@@ -203,47 +207,79 @@
             </div>
         </div>
 
-        <!-- Modal Create Template -->
-        <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
+        <!-- Modal for Manual Template Creation -->
+        <div class="modal fade" id="createManualTemplateModal" tabindex="-1"
+            aria-labelledby="createManualTemplateModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-scrollable">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title text-black" id="createModalLabel">Create Template</h5>
+                        <h6 class="modal-title" id="createManualTemplateModalLabel">Create Manual Template
+                        </h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form method="post" action="{{ url_for('tm.template_manual_create') }}">
+                        <form id="manualTemplateForm" method="post" action="{{ url_for('tm.create_template_manual') }}">
+                            {{ form_manual_create.csrf_token }}
+
                             <div class="mb-3">
-                                <label for="create_vendor" class="form-label text-black">Vendor</label>
-                                <input type="text" class="form-control" id="create_vendor" name="vendor" required>
+                                <label for="vendor" class="form-label">Vendor</label>
+                                {{ form_manual_create.vendor(class="form-control", id="vendor") }}
+                                {% if form_manual_create.vendor.errors %}
+                                {% for error in form_manual_create.vendor.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
                             </div>
+
                             <div class="mb-3">
-                                <label for="create_version" class="form-label text-black">Version</label>
-                                <input type="text" class="form-control" id="create_version" name="version" required>
+                                <label for="version" class="form-label">Version</label>
+                                {{ form_manual_create.version(class="form-control", id="version") }}
+                                {% if form_manual_create.version.errors %}
+                                {% for error in form_manual_create.version.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
                             </div>
+
                             <div class="mb-3">
-                                <label for="description" class="form-label text-black">Description</label>
-                                <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+                                <label for="description" class="form-label">Description</label>
+                                {{ form_manual_create.description(class="form-control", id="description") }}
+                                {% if form_manual_create.description.errors %}
+                                {% for error in form_manual_create.description.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
                             </div>
+
                             <div class="mb-3">
-                                <label for="create_template_content" class="form-label text-black">Template Content
+                                <label for="template_content" class="form-label">Template Content
                                     (Jinja2)</label>
-                                <textarea class="form-control" id="create_template_content" name="template_content"
-                                    rows="5"></textarea>
+                                {{ form_manual_create.template_content(class="form-control", id="template_content", rows="5") }}
+                                {% if form_manual_create.template_content.errors %}
+                                {% for error in form_manual_create.template_content.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
                             </div>
+
                             <div class="mb-3">
-                                <label for="create_parameter_content" class="form-label text-black">Parameter Content
+                                <label for="parameter_content" class="form-label">Parameter Content
                                     (YAML)</label>
-                                <textarea class="form-control" id="create_parameter_content" name="parameter_content"
-                                    rows="5"></textarea>
+                                {{ form_manual_create.parameter_content(class="form-control", id="parameter_content", rows="5") }}
+                                {% if form_manual_create.parameter_content.errors %}
+                                {% for error in form_manual_create.parameter_content.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
                             </div>
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Create
-                                Template</button>
+
+                            <button type="submit" class="btn btn-primary">Create Template</button>
                         </form>
                     </div>
                 </div>
             </div>
         </div>
+
 
         <!-- Modal Error Template Generation -->
         <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
@@ -320,6 +356,32 @@
                     });
                 });
             });
+
+            // Handle template detail
+            function showTemplateDetails(button) {
+                const templateId = button.getAttribute("data-template-id");
+
+                fetch(`/template_detail/${templateId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert(data.error);
+                        } else {
+                            document.getElementById("template_name").innerText = data.template_name;
+                            document.getElementById("parameter_name").innerText = data.parameter_name;
+                            document.getElementById("vendor").innerText = data.vendor;
+                            document.getElementById("version").innerText = data.version;
+                            document.getElementById("description").innerText = data.description;
+                            document.getElementById("created_by").innerText = data.created_by;
+                            document.getElementById("template_content").innerText = data.template_content;
+                            document.getElementById("parameter_content").innerText = data.parameter_content;
+
+                            var detailModal = new bootstrap.Modal(document.getElementById("templateDetailModal"));
+                            detailModal.show();
+                        }
+                    })
+                    .catch(error => console.error('Error fetching template details:', error));
+            }
         </script>
 
         {% endblock %}
