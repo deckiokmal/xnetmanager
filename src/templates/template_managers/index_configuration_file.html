@@ -134,7 +134,7 @@
 {% endblock %}
 
 {% block modal_data %}
-<!-- Modal Create Template -->
+<!-- Modal Create Manual Configuration with AI Validation -->
 <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
@@ -143,24 +143,45 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form method="post" action="{{ url_for('tm.create_manual_configuration') }}">
+                <form id="createManualConfigForm" method="post"
+                    action="{{ url_for('tm.create_manual_configuration') }}">
+                    {{ formManualConfiguration.csrf_token }}
                     <div class="mb-3">
                         <label for="create_filename" class="form-label">Nama file</label>
-                        <input type="text" class="form-control" id="create_filename" name="filename" required>
+                        {{ formManualConfiguration.filename(class="form-control", id="create_filename") }}
+                        {% if formManualConfiguration.filename.errors %}
+                        {% for error in formManualConfiguration.filename.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        {% endif %}
                     </div>
                     <div class="mb-3">
                         <label for="create_vendor" class="form-label">Vendor</label>
-                        <input type="text" class="form-control" id="create_vendor" name="vendor" required>
+                        {{ formManualConfiguration.vendor(class="form-control", id="create_vendor") }}
+                        {% if formManualConfiguration.vendor.errors %}
+                        {% for error in formManualConfiguration.vendor.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        {% endif %}
                     </div>
                     <div class="mb-3">
                         <label for="description" class="form-label">Deskripsi</label>
-                        <input type="text" class="form-control" id="description" name="configuration_description"
-                            required>
+                        {{ formManualConfiguration.configuration_description(class="form-control", id="description") }}
+                        {% if formManualConfiguration.configuration_description.errors %}
+                        {% for error in formManualConfiguration.configuration_description.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        {% endif %}
                     </div>
                     <div class="mb-3">
                         <label for="create_configuration_content" class="form-label">File Konfigurasi</label>
-                        <textarea class="form-control" id="create_configuration_content" name="configuration_content"
-                            rows="5"></textarea>
+                        {{ formManualConfiguration.configuration_content(class="form-control",
+                        id="create_configuration_content", rows="5") }}
+                        {% if formManualConfiguration.configuration_content.errors %}
+                        {% for error in formManualConfiguration.configuration_content.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        {% endif %}
                     </div>
                     <button type="submit" class="btn btn-sm btn-primary ms-2"><i class="fas fa-plus"></i> Create
                         Configuration</button>
@@ -179,43 +200,49 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form method="post" action="{{ url_for('tm.create_configuration_with_ai') }}">
+                <form id="createAiConfigForm" method="post" action="{{ url_for('tm.create_configuration_with_ai') }}">
+                    {{ formAIconfiguration.csrf_token }}
                     <div class="mb-3">
                         <label for="create_ai_filename" class="form-label">Nama file</label>
-                        <input type="text" class="form-control" id="create_ai_filename" name="filename" required>
+                        {{ formAIconfiguration.filename(class="form-control", id="create_ai_filename") }}
+                        {% if formAIconfiguration.filename.errors %}
+                        {% for error in formAIconfiguration.filename.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        {% endif %}
                     </div>
                     <div class="mb-3">
                         <label for="create_ai_vendor" class="form-label">Vendor</label>
-                        <input type="text" class="form-control" id="create_ai_vendor" name="vendor" required>
+                        {{ formAIconfiguration.vendor(class="form-control", id="create_ai_vendor") }}
+                        {% if formAIconfiguration.vendor.errors %}
+                        {% for error in formAIconfiguration.vendor.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        {% endif %}
                     </div>
                     <div class="mb-3">
                         <label for="create_ai_description" class="form-label">Description</label>
-                        <input type="text" class="form-control" id="create_ai_description" name="description" required>
+                        {{ formAIconfiguration.description(class="form-control", id="create_ai_description") }}
+                        {% if formAIconfiguration.description.errors %}
+                        {% for error in formAIconfiguration.description.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        {% endif %}
                     </div>
                     <div class="mb-3">
                         <label for="ask_configuration" class="form-label">Jelaskan Konfigurasi yang anda
                             inginkan</label>
-                        <textarea class="form-control" id="ask_configuration" name="ask_configuration" rows="5"
-                            required></textarea>
+                        {{ formAIconfiguration.ask_configuration(class="form-control", id="ask_configuration", rows="5")
+                        }}
+                        {% if formAIconfiguration.ask_configuration.errors %}
+                        {% for error in formAIconfiguration.ask_configuration.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        {% endif %}
                     </div>
                     <button type="submit" class="btn btn-sm btn-primary ms-2"><i class="fas fa-plus"></i> Create
                         Configuration with AI</button>
                 </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Error Config Generation -->
-<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="errorModalLabel">Error Generating Configuration</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p id="errorModalMessage"></p>
             </div>
         </div>
     </div>
@@ -252,6 +279,21 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Error Config Generation -->
+<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="errorModalLabel">Error Generating Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="errorModalMessage"></p>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block script_js %}
@@ -277,78 +319,83 @@
         }, 1000);
     });
 
+    // Handle manual configuration with AI validation
     document.addEventListener("DOMContentLoaded", function () {
-        document.querySelectorAll('form[action*="create_manual_configuration"]').forEach(function (form) {
-            form.addEventListener('submit', function (event) {
-                event.preventDefault();  // Prevent the form from submitting the default way
+        // Handle Create Manual Configuration Form Submission
+        document.getElementById("createManualConfigForm").addEventListener('submit', function (event) {
+            event.preventDefault();  // Prevent the form from submitting the default way
 
-                showLoadingOverlay();  // Show the loading overlay
+            const createModal = bootstrap.Modal.getInstance(document.getElementById('createModal'));
+            createModal.hide();  // Close the modal
+            showLoadingOverlay();  // Show the loading overlay
 
-                const formData = new FormData(form);
-                const actionUrl = form.getAttribute('action');
+            const formData = new FormData(this);
+            const actionUrl = this.getAttribute('action');
 
-                fetch(actionUrl, {
-                    method: 'POST',
-                    body: formData
+            fetch(actionUrl, {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoadingOverlay();  // Hide the loading overlay
+
+                    if (data.is_valid) {
+                        window.location.reload();  // Reload the page to show flash message
+                    } else {
+                        // Display the error in a modal
+                        document.getElementById('errorModalMessage').textContent = data.error_message;
+                        var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                        errorModal.show();
+                    }
                 })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.is_valid) {
-                            var createModal = new bootstrap.Modal(document.getElementById('createModal'));
-                            createModal.hide();  // Close the modal
-                            window.location.reload();  // Reload the page if successful
-                        } else {
-                            // Display the error in a modal
-                            document.getElementById('errorModalMessage').textContent = data.error_message;
-                            var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-                            errorModal.show();
-                        }
-                    })
-                    .catch(error => console.error('Error:', error))
-                    .finally(() => {
-                        hideLoadingOverlay();  // Hide the loading overlay once the request is complete
-                    });
-            });
+                .catch(error => {
+                    console.error('Error:', error);
+                    hideLoadingOverlay();  // Hide the loading overlay
+                    document.getElementById('errorModalMessage').textContent = "An unexpected error occurred.";
+                    var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                    errorModal.show();
+                });
         });
     });
 
+    // Handle Automate configuration with AI
     document.addEventListener("DOMContentLoaded", function () {
-        document.querySelectorAll('form[action*="create_configuration_with_ai"]').forEach(function (form) {
-            form.addEventListener('submit', function (event) {
-                event.preventDefault();  // Prevent the form from submitting the default way
+        // Handle Create AI Configuration Form Submission
+        document.getElementById("createAiConfigForm").addEventListener('submit', function (event) {
+            event.preventDefault();  // Prevent the form from submitting the default way
 
-                showLoadingOverlay();  // Show the loading overlay
+            const createAiModal = bootstrap.Modal.getInstance(document.getElementById('createAiModal'));
+            createAiModal.hide();  // Close the modal
+            showLoadingOverlay();  // Show the loading overlay
 
-                const formData = new FormData(form);
-                const actionUrl = form.getAttribute('action');
+            const formData = new FormData(this);
+            const actionUrl = this.getAttribute('action');
 
-                fetch(actionUrl, {
-                    method: 'POST',
-                    body: formData
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.is_valid) {
-                            var createAiModal = new bootstrap.Modal(document.getElementById('createAiModal'));
-                            createAiModal.hide();  // Close the modal
-                            window.location.reload();  // Reload the page if successful
-                        } else {
-                            // Display the error in a modal
-                            document.getElementById('errorModalMessage').textContent = data.error_message;
-                            var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-                            errorModal.show();
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        document.getElementById('errorModalMessage').textContent = "An unexpected error occurred.";
+            fetch(actionUrl, {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoadingOverlay();  // Hide the loading overlay
+
+                    if (data.is_valid) {
+                        window.location.reload();  // Reload the page to show flash message
+                    } else {
+                        // Display the error in a modal
+                        document.getElementById('errorModalMessage').textContent = data.error_message;
                         var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
                         errorModal.show();
-                    })
-                    .finally(() => {
-                        hideLoadingOverlay();  // Hide the loading overlay once the request is complete
-                    });
-            });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    hideLoadingOverlay();  // Hide the loading overlay
+                    document.getElementById('errorModalMessage').textContent = "An unexpected error occurred.";
+                    var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                    errorModal.show();
+                });
         });
     });
 </script>

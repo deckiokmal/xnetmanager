@@ -6,6 +6,7 @@ from wtforms import (
     FileField,
     SelectField,
     TextAreaField,
+    SubmitField,
 )
 from wtforms.validators import (
     DataRequired,
@@ -343,3 +344,142 @@ class ManualTemplateForm(FlaskForm):
         "Parameter Content",
         validators=[DataRequired(message="Konten parameter tidak boleh kosong.")],
     )
+
+
+class ManualConfigurationForm(FlaskForm):
+    filename = StringField(
+        "Filename",
+        validators=[
+            DataRequired(message="Filename is required."),
+            Length(
+                min=1, max=100, message="Filename must be between 1 and 100 characters."
+            ),
+            Regexp(
+                r"^[\w\-\.]+$",
+                message="Filename can only contain letters, numbers, underscores, dashes, and periods.",
+            ),
+        ],
+    )
+    vendor = StringField(
+        "Vendor",
+        validators=[
+            DataRequired(message="Vendor name is required."),
+            Length(
+                min=1,
+                max=20,
+                message="Vendor name must be between 1 and 20 characters.",
+            ),
+            Regexp(
+                r"^[\w\-\.]+$",
+                message="Vendor name can only contain letters, numbers, underscores, dashes, and periods.",
+            ),
+        ],
+    )
+    configuration_description = TextAreaField(
+        "Configuration Description",
+        validators=[
+            Length(max=500, message="Description must be less than 500 characters.")
+        ],
+    )
+    configuration_content = TextAreaField(
+        "Configuration Content",
+        validators=[
+            DataRequired(message="Configuration content is required."),
+            Length(
+                min=1,
+                max=10000,
+                message="Configuration content must be between 1 and 10,000 characters.",
+            ),
+        ],
+    )
+    submit = SubmitField("Create Configuration")
+
+
+class AIConfigurationForm(FlaskForm):
+    filename = StringField(
+        "Filename",
+        validators=[
+            DataRequired(message="Filename is required."),
+            Length(
+                min=1, max=100, message="Filename must be between 1 and 100 characters."
+            ),
+            Regexp(
+                r"^[\w\-\.]+$",
+                message="Filename can only contain letters, numbers, underscores, dashes, and periods.",
+            ),
+        ],
+    )
+    vendor = StringField(
+        "Vendor",
+        validators=[
+            DataRequired(message="Vendor name is required."),
+            Length(
+                min=1,
+                max=20,
+                message="Vendor name must be between 1 and 20 characters.",
+            ),
+            Regexp(
+                r"^[\w\-\.]+$",
+                message="Vendor name can only contain letters, numbers, underscores, dashes, and periods.",
+            ),
+        ],
+    )
+    description = TextAreaField(
+        "Description",
+        validators=[
+            Length(max=500, message="Description must be less than 500 characters.")
+        ],
+    )
+    ask_configuration = TextAreaField(
+        "Configuration Requirements",
+        validators=[
+            DataRequired(message="Configuration requirements are required."),
+            Length(
+                min=10,
+                max=5000,
+                message="Configuration requirements must be between 10 and 5000 characters.",
+            ),
+        ],
+    )
+    submit = SubmitField("Create Configuration")
+
+
+class UpdateConfigurationForm(FlaskForm):
+    template_name = StringField(
+        "Template Name",
+        validators=[
+            DataRequired(message="Template name is required."),
+            Length(
+                min=1,
+                max=100,
+                message="Template name must be between 1 and 100 characters.",
+            ),
+            Regexp(
+                r"^[\w\-\.]+$",
+                message="Template name can only contain letters, numbers, underscores, dashes, and periods.",
+            ),
+        ],
+    )
+    vendor = StringField(
+        "Vendor",
+        validators=[
+            DataRequired(message="Vendor is required."),
+            Length(
+                min=1, max=50, message="Vendor must be between 1 and 50 characters."
+            ),
+        ],
+    )
+    description = TextAreaField(
+        "Description",
+        validators=[
+            Length(max=500, message="Description must be less than 500 characters.")
+        ],
+    )
+    template_content = TextAreaField(
+        "Template Content",
+        validators=[
+            DataRequired(message="Template content is required."),
+            Length(min=1, message="Template content cannot be empty."),
+        ],
+    )
+    submit = SubmitField("Update Configuration")

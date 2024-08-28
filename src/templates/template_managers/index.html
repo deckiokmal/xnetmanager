@@ -92,8 +92,8 @@
                 <i class="fas fa-trash"></i>
             </button>
         </form>
-        <form action="{{ url_for('tm.template_generator', template_id=template.id) }}" method="post" class="d-inline">
-            <button type="submit" class="btn btn-primary btn-sm mb-2"
+        <form class="generate-form d-inline">
+            <button type="button" class="btn btn-primary btn-sm mb-2 generate-btn" data-template-id="{{ template.id }}"
                 onclick="return confirm('Are you sure you want to generate this template?');">
                 <i class="fas fa-cogs"></i> Generate
             </button>
@@ -282,7 +282,6 @@
             </div>
         </div>
 
-
         <!-- Modal Error Template Generation -->
         <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
@@ -327,21 +326,22 @@
             });
 
             document.addEventListener("DOMContentLoaded", function () {
-                document.querySelectorAll('form[action*="template_generator"]').forEach(function (form) {
-                    form.addEventListener('submit', function (event) {
-                        event.preventDefault();  // Prevent the form from submitting the default way
+                document.querySelectorAll('.generate-btn').forEach(function (button) {
+                    button.addEventListener('click', function (event) {
+                        event.preventDefault();  // Prevent the default behavior
+
+                        const templateId = this.getAttribute('data-template-id');
+                        const actionUrl = `/template-generator/${templateId}`;
 
                         showLoadingOverlay();  // Show the loading overlay when the form is submitted
 
-                        const formData = new FormData(form);
-                        const actionUrl = form.getAttribute('action');
-
                         fetch(actionUrl, {
-                            method: 'POST',
-                            body: formData
+                            method: 'POST'
                         })
                             .then(response => response.json())
                             .then(data => {
+                                hideLoadingOverlay();  // Hide the loading overlay once the request is complete
+
                                 if (data.is_valid) {
                                     window.location.reload();  // Reload the page if successful
                                 } else {
@@ -351,14 +351,20 @@
                                     errorModal.show();
                                 }
                             })
-                            .catch(error => console.error('Error:', error))
-                            .finally(() => {
-                                hideLoadingOverlay();  // Hide the loading overlay once the request is complete
+                            .catch(error => {
+                                hideLoadingOverlay();  // Hide the loading overlay
+                                console.error('Error:', error);
+                                document.getElementById('errorModalMessage').textContent = 'Terjadi kesalahan saat memproses permintaan.';
+                                var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                                errorModal.show();
                             });
                     });
                 });
             });
+        </script>
 
+        <!-- handle template detail -->
+        <script>
             // Handle template detail
             function showTemplateDetails(button) {
                 const templateId = button.getAttribute("data-template-id");

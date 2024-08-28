@@ -25,7 +25,14 @@ import random
 import string
 from flask_paginate import Pagination
 import logging
-from src.utils.forms_utils import TemplateForm, TemplateUpdateForm, ManualTemplateForm
+from src.utils.forms_utils import (
+    TemplateForm,
+    TemplateUpdateForm,
+    ManualTemplateForm,
+    ManualConfigurationForm,
+    AIConfigurationForm,
+    UpdateConfigurationForm,
+)
 
 # Blueprint untuk template manager
 tm_bp = Blueprint("tm", __name__)
@@ -111,7 +118,7 @@ def read_file(filepath):
 
 def generate_random_filename(vendor_name):
     random_str = "".join(random.choices(string.ascii_letters + string.digits, k=8))
-    date_str = datetime.now().strftime("%d.%m.%Y_%H.%M.%S")
+    date_str = datetime.now().strftime("%d_%m_%Y")
     filename = f"{vendor_name}_{random_str}_{date_str}"
     current_app.logger.info(f"Generated random filename: {filename}")
     return filename
@@ -751,9 +758,8 @@ def template_generator(template_id):
         if not config_validated.get("is_valid"):
             error_message = config_validated.get("error_message")
             current_app.logger.error(
-                f"Template validation failed for template ID {template_id} by {current_user.email}: {error_message}"
+                f"Template validation failed for template ID {template_id} by {current_user.email}"
             )
-            flash("Validasi template gagal: " + error_message, "error")
             return jsonify({"is_valid": False, "error_message": error_message})
 
     except Exception as e:
@@ -827,6 +833,9 @@ def index_configuration_file():
     # Logging untuk akses ke endpoint
     current_app.logger.info(f"{current_user.email} accessed index_configuration_file")
 
+    formManualConfiguration = ManualConfigurationForm(request.form)
+    formAIconfiguration = AIConfigurationForm(request.form)
+
     # Validasi input untuk page, per_page, dan search_query
     try:
         page = int(request.args.get("page", 1))
@@ -894,6 +903,8 @@ def index_configuration_file():
         search_query=search_query,
         template_contents=template_contents,
         total_templates=total_templates,
+        formManualConfiguration=formManualConfiguration,
+        formAIconfiguration=formAIconfiguration,
     )
 
 
@@ -907,64 +918,80 @@ def index_configuration_file():
 )
 def create_manual_configuration():
     """Membuat file konfigurasi manual dan menyimpannya ke dalam database."""
-    filename = secure_filename(request.form.get("filename"))
-    vendor = request.form.get("vendor")
-    configuration_description = request.form.get("configuration_description")
-    configuration_content = (
-        request.form.get("configuration_content")
-        .replace("\r\n", "\n")
-        .replace("\r", "\n")
-        .strip()
-    )
+    formManualConfiguration = ManualConfigurationForm()
 
-    current_app.logger.info(
-        f"Attempting to create a manual configuration file by {current_user.email}"
-    )
-
-    if not filename or not vendor:
-        flash("Filename and vendor cannot be empty!", "info")
-        current_app.logger.warning("Filename is empty.")
-        return redirect(request.url)
-
-    gen_filename = generate_random_filename(vendor)
-
-    configuration_name = f"{filename}_{gen_filename}.txt"
-    file_path = os.path.join(
-        current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration_name
-    )
-
-    try:
-        # Validasi konfigurasi dengan OpenAI API (pastikan fungsi ini aman dan memadai)
-        config_validated = validate_generated_template_with_openai(
-            config=configuration_content, vendor=vendor
+    if formManualConfiguration.validate_on_submit():
+        filename = secure_filename(formManualConfiguration.filename.data)
+        vendor = formManualConfiguration.vendor.data
+        configuration_description = (
+            formManualConfiguration.configuration_description.data
+        )
+        configuration_content = (
+            formManualConfiguration.configuration_content.data.replace("\r\n", "\n")
+            .replace("\r", "\n")
+            .strip()
         )
 
-        if config_validated.get("is_valid"):
-            # Menulis file konfigurasi ke disk dan menyimpan ke database
-            with open(file_path, "w", encoding="utf-8") as configuration_file:
-                configuration_file.write(configuration_content)
+        current_app.logger.info(
+            f"Attempting to create a manual configuration file by {current_user.email}"
+        )
 
-            new_configuration = ConfigurationManager(
-                config_name=configuration_name,
-                vendor=vendor,
-                description=configuration_description,
-                created_by=current_user.email,
-                user_id=current_user.id,
+        if not filename or not vendor:
+            flash("Filename and vendor cannot be empty!", "info")
+            current_app.logger.warning("Filename is empty.")
+            return redirect(url_for("tm.index_configuration_file"))
+
+        gen_filename = generate_random_filename(vendor)
+
+        configuration_name = f"{gen_filename}.conf"
+        file_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration_name
+        )
+
+        try:
+            # Validasi konfigurasi dengan OpenAI API (pastikan fungsi ini aman dan memadai)
+            config_validated = validate_generated_template_with_openai(
+                config=configuration_content, vendor=vendor
             )
-            db.session.add(new_configuration)
-            db.session.commit()
 
-            return jsonify({"is_valid": True})  # Respond with JSON indicating success
-        else:
-            error_message = config_validated.get("error_message")
-            return jsonify({"is_valid": False, "error_message": error_message})
+            if config_validated.get("is_valid"):
+                # Menulis file konfigurasi ke disk dan menyimpan ke database
+                with open(file_path, "w", encoding="utf-8") as configuration_file:
+                    configuration_file.write(configuration_content)
 
-    except Exception as e:
-        # Rolling back session jika terjadi kesalahan
-        db.session.rollback()
-        current_app.logger.error(f"Error creating configuration file: {e}")
-        flash("Failed to create configuration file.", "error")
-        return redirect("tm.index")
+                new_configuration = ConfigurationManager(
+                    config_name=configuration_name,
+                    vendor=vendor,
+                    description=configuration_description,
+                    created_by=current_user.email,
+                    user_id=current_user.id,
+                )
+                db.session.add(new_configuration)
+                db.session.commit()
+
+                flash("Berhasil membuat configuration file.", "success")
+                return jsonify(
+                    {"is_valid": True}
+                )  # Respond with JSON indicating success
+            else:
+                error_message = config_validated.get("error_message")
+                return jsonify({"is_valid": False, "error_message": error_message})
+
+        except Exception as e:
+            # Rolling back session jika terjadi kesalahan
+            db.session.rollback()
+            current_app.logger.error(f"Error creating configuration file: {e}")
+            flash("Failed to create configuration file.", "error")
+            return redirect(url_for("tm.index_configuration_file"))
+
+    else:
+        for field, errors in formManualConfiguration.errors.items():
+            for error in errors:
+                flash(
+                    f"Error in the {getattr(formManualConfiguration, field).label.text} field - {error}",
+                    "danger",
+                )
+        return redirect(url_for("tm.index_configuration_file"))
 
 
 @tm_bp.route("/templates-management/create-configuration-with-ai", methods=["POST"])
@@ -977,64 +1004,71 @@ def create_manual_configuration():
 )
 def create_configuration_with_ai():
     """Membuat file konfigurasi dengan bantuan AI dan menyimpannya ke dalam database."""
-    filename = secure_filename(request.form.get("filename"))
-    vendor = request.form.get("vendor")
-    description = request.form.get("description")
-    ask_configuration = request.form.get("ask_configuration")
 
-    current_app.logger.info(
-        f"Attempting to create an AI-generated configuration file by {current_user.email}"
-    )
+    formAIconfiguration = AIConfigurationForm()
 
-    if not filename or not vendor:
-        flash("Filename and vendor cannot be empty!", "info")
-        current_app.logger.warning("Filename is empty.")
-        return redirect(request.url)
+    if formAIconfiguration.validate_on_submit():
+        filename = secure_filename(formAIconfiguration.filename.data)
+        vendor = formAIconfiguration.vendor.data
+        description = formAIconfiguration.description.data
+        ask_configuration = formAIconfiguration.ask_configuration.data
 
-    gen_filename = generate_random_filename(vendor)
-
-    configuration_name = f"{filename}_{gen_filename}.txt"
-    file_path = os.path.join(
-        current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration_name
-    )
-
-    try:
-        # Menghasilkan konfigurasi dengan OpenAI API
-        configuration_content, error = create_configuration_with_openai(
-            question=ask_configuration, vendor=vendor
+        current_app.logger.info(
+            f"Attempting to create an AI-generated configuration file by {current_user.email}"
         )
 
-        if error:
-            # Return the error message in JSON format
-            current_app.logger.error(f"AI configuration error: {error}")
-            return jsonify({"is_valid": False, "error_message": error}), 400
+        gen_filename = generate_random_filename(vendor)
 
-        # Menulis file konfigurasi ke disk dan menyimpan ke database
-        with open(file_path, "w", encoding="utf-8") as configuration_file:
-            configuration_file.write(configuration_content)
-
-        new_configuration = ConfigurationManager(
-            config_name=configuration_name,
-            vendor=vendor,
-            description=description,
-            created_by=current_user.email,
-            user_id=current_user.id,
+        configuration_name = f"{gen_filename}.conf"
+        file_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration_name
         )
-        db.session.add(new_configuration)
-        db.session.commit()
 
-        flash(
-            "Configuration created successfully with AI, please verify the configuration.",
-            "info",
-        )
-        return jsonify({"is_valid": True})  # Respond with JSON indicating success
+        try:
+            # Menghasilkan konfigurasi dengan OpenAI API
+            configuration_content, error = create_configuration_with_openai(
+                question=ask_configuration, vendor=vendor
+            )
 
-    except Exception as e:
-        # Rolling back session jika terjadi kesalahan
-        db.session.rollback()
-        current_app.logger.error(f"Error creating configuration file: {e}")
-        flash("Failed to create configuration file.", "error")
-        return redirect("tm.index")
+            if error:
+                # Return the error message in JSON format
+                current_app.logger.error(f"AI configuration error: {error}")
+                return jsonify({"is_valid": False, "error_message": error}), 400
+
+            # Menulis file konfigurasi ke disk dan menyimpan ke database
+            with open(file_path, "w", encoding="utf-8") as configuration_file:
+                configuration_file.write(configuration_content)
+
+            new_configuration = ConfigurationManager(
+                config_name=configuration_name,
+                vendor=vendor,
+                description=description,
+                created_by=current_user.email,
+                user_id=current_user.id,
+            )
+            db.session.add(new_configuration)
+            db.session.commit()
+
+            flash(
+                "Configuration created successfully with AI, please verify the configuration.",
+                "info",
+            )
+            return jsonify({"is_valid": True})  # Respond with JSON indicating success
+
+        except Exception as e:
+            # Rolling back session jika terjadi kesalahan
+            db.session.rollback()
+            current_app.logger.error(f"Error creating configuration file: {e}")
+            flash("Failed to create configuration file.", "error")
+            return redirect(url_for("tm.index_configuration_file"))
+    else:
+        for field, errors in formAIconfiguration.errors.items():
+            for error in errors:
+                flash(
+                    f"Error in the {getattr(formAIconfiguration, field).label.text} field - {error}",
+                    "danger",
+                )
+        return redirect(url_for("tm.index_configuration_file"))
 
 
 @tm_bp.route(
@@ -1057,8 +1091,11 @@ def update_configuration(template_result_id):
     template = ConfigurationManager.query.get_or_404(template_result_id)
 
     # Verifikasi kepemilikan file konfigurasi
-    if template.user_id != current_user.id:
+    if template.user_id != current_user.id and not current_user.has_role("Admin"):
         flash("You do not have permission to update this configuration file.", "danger")
+        current_app.logger.warning(
+            f"Unauthorized update attempt by user {current_user.email} on configuration ID {template.id}"
+        )
         return redirect(url_for("tm.index_configuration_file"))
 
     template_content = read_file(
@@ -1069,20 +1106,44 @@ def update_configuration(template_result_id):
 
     if template_content is None:
         flash("Error loading template content.", "error")
+        current_app.logger.error(
+            f"Error loading template content for ID {template_result_id} by {current_user.email}"
+        )
         return redirect(url_for("tm.index_configuration_file"))
 
-    if request.method == "POST":
-        new_template_name = secure_filename(request.form["template_name"])
-        new_vendor = request.form["vendor"]
-        new_description = request.form["description"]
+    form = UpdateConfigurationForm()
+
+    if request.method == "POST" and form.validate_on_submit():
+        new_template_name = secure_filename(form.template_name.data)
+        new_vendor = form.vendor.data
+        new_description = form.description.data
         new_template_content = (
-            request.form["template_content"]
-            .replace("\r\n", "\n")
-            .replace("\r", "\n")
-            .strip()
+            form.template_content.data.replace("\r\n", "\n").replace("\r", "\n").strip()
         )
 
+        # Validasi jika tidak ada perubahan
+        if (
+            new_template_name == template.config_name
+            and new_vendor == template.vendor
+            and new_description == template.description
+            and new_template_content == template_content
+        ):
+            return redirect(url_for("tm.index_configuration_file"))
+
+        # Validasi jika `config_name` sudah ada
+        if new_template_name != template.config_name:
+            existing_template = ConfigurationManager.query.filter_by(
+                config_name=new_template_name
+            ).first()
+            if existing_template:
+                flash("File with the new name already exists.", "error")
+                current_app.logger.warning(
+                    f"File with the new name '{new_template_name}' already exists, requested by user {current_user.email}"
+                )
+                return redirect(request.url)
+
         try:
+            # Update content file jika ada perubahan
             if new_template_content != template_content:
                 template_path = os.path.join(
                     current_app.static_folder, GEN_TEMPLATE_FOLDER, template.config_name
@@ -1090,49 +1151,62 @@ def update_configuration(template_result_id):
                 with open(template_path, "w", encoding="utf-8") as file:
                     file.write(new_template_content)
                 current_app.logger.info(
-                    f"Successfully updated template content in file: {template_path}"
+                    f"Successfully updated template content in file: {template_path} by user {current_user.email}"
                 )
 
+            # Update nama file jika ada perubahan dan nama baru tidak ada konflik
             if new_template_name != template.config_name:
                 new_path_template = os.path.join(
                     current_app.static_folder, GEN_TEMPLATE_FOLDER, new_template_name
                 )
-
-                if os.path.exists(new_path_template):
-                    flash("File with the new name already exists.", "info")
-                    current_app.logger.warning(
-                        f"File with the new name already exists: {new_path_template}"
-                    )
-                else:
-                    old_path_template = os.path.join(
-                        current_app.static_folder,
-                        GEN_TEMPLATE_FOLDER,
-                        template.config_name,
-                    )
-                    os.rename(old_path_template, new_path_template)
-                    template.config_name = new_template_name
-                    current_app.logger.info(
-                        f"Successfully renamed file from {old_path_template} to {new_path_template}"
-                    )
+                old_path_template = os.path.join(
+                    current_app.static_folder,
+                    GEN_TEMPLATE_FOLDER,
+                    template.config_name,
+                )
+                os.rename(old_path_template, new_path_template)
+                template.config_name = new_template_name
+                current_app.logger.info(
+                    f"Successfully renamed file from {old_path_template} to {new_path_template} by user {current_user.email}"
+                )
 
             template.vendor = new_vendor
             template.description = new_description
             db.session.commit()
             current_app.logger.info(
-                f"Successfully updated template data in database: ID {template_result_id}"
+                f"Successfully updated template data in database: ID {template_result_id} by user {current_user.email}"
             )
             flash("Template update successful.", "success")
             return redirect(url_for("tm.index_configuration_file"))
 
         except Exception as e:
-            current_app.logger.error(f"Error updating template: {e}")
+            db.session.rollback()  # Ensure rollback on error
+            current_app.logger.error(
+                f"Error updating template: {e} by user {current_user.email}"
+            )
             flash("Failed to update template.", "error")
             return redirect(request.url)
 
+    elif request.method == "GET":
+        # Isi form dengan data dari database dan file pada saat permintaan GET
+        form.template_name.data = template.config_name
+        form.vendor.data = template.vendor
+        form.description.data = template.description
+        form.template_content.data = template_content
+
+    elif request.method == "POST":
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(
+                    f"Error in the {getattr(form, field).label.text} field - {error}",
+                    "danger",
+                )
+                current_app.logger.warning(f"Validation error on {field}: {error}")
+
     return render_template(
-        "/template_managers/template_result_update.html",
+        "/template_managers/update_configuration_file.html",
         template=template,
-        template_content=template_content,
+        form=form,
     )
 
 
@@ -1149,31 +1223,42 @@ def update_configuration(template_result_id):
 def delete_configuration(template_id):
     template = ConfigurationManager.query.get_or_404(template_id)
 
-    # Verifikasi kepemilikan file konfigurasi
-    if template.user_id != current_user.id:
+    # Logika pengecekan: apakah user adalah admin atau pemilik konfigurasi
+    if current_user.has_role("Admin") or template.user_id == current_user.id:
+        try:
+            file_path = os.path.join(
+                current_app.static_folder,
+                GEN_TEMPLATE_FOLDER,
+                str(template.config_name),
+            )
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                current_app.logger.info(
+                    f"Deleted configuration file: {file_path} by user {current_user.email}"
+                )
+            else:
+                current_app.logger.warning(
+                    f"Configuration file not found: {file_path} requested by user {current_user.email}"
+                )
+
+            db.session.delete(template)
+            db.session.commit()
+            current_app.logger.info(
+                f"Configuration file successfully deleted: ID {template.id} by user {current_user.email}"
+            )
+            flash("Configuration file successfully deleted.", "success")
+
+        except Exception as e:
+            db.session.rollback()  # Rolling back session jika terjadi kesalahan
+            current_app.logger.error(
+                f"Error deleting configuration file: {e} by user {current_user.email}"
+            )
+            flash("Failed to delete configuration file.", "error")
+    else:
         flash("You do not have permission to delete this configuration file.", "danger")
-        return redirect(url_for("tm.index_configuration_file"))
-
-    try:
-        file_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, str(template.config_name)
+        current_app.logger.warning(
+            f"Unauthorized delete attempt by user {current_user.email} on configuration ID {template.id}"
         )
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            current_app.logger.info(f"Deleted configuration file: {file_path}")
-        else:
-            current_app.logger.warning(f"Configuration file not found: {file_path}")
-
-        db.session.delete(template)
-        db.session.commit()
-        current_app.logger.info(
-            f"Configuration file successfully deleted: ID {template.id}"
-        )
-        flash("Configuration file successfully deleted.", "success")
-
-    except Exception as e:
-        current_app.logger.error(f"Error deleting configuration file: {e}")
-        flash("Failed to delete configuration file.", "error")
 
     return redirect(url_for("tm.index_configuration_file"))
 
@@ -1209,10 +1294,8 @@ def ask_talita():
             current_app.logger.warning(f"Failed to connect Talita AI")
         elif not response.startswith("Gagal"):
             # Membuat nama file acak
-            random_name = "".join(
-                random.choices(string.ascii_letters + string.digits, k=8)
-            )
-            filename = f"talita_{random_name}.txt"
+            gen_filename = generate_random_filename("talita")
+            filename = f"{gen_filename}.conf"
             file_path = os.path.join(
                 current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
             )
