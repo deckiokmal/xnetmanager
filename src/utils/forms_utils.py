@@ -7,6 +7,7 @@ from wtforms import (
     SelectField,
     TextAreaField,
     SubmitField,
+    HiddenField,
 )
 from wtforms.validators import (
     DataRequired,
@@ -483,3 +484,34 @@ class UpdateConfigurationForm(FlaskForm):
         ],
     )
     submit = SubmitField("Update Configuration")
+
+
+class TalitaQuestionForm(FlaskForm):
+    config_name = StringField(
+        "Configuration Name",
+        validators=[
+            DataRequired(message="Configuration name is required."),
+            Length(max=100, message="Configuration name cannot exceed 100 characters."),
+        ],
+    )
+    vendor = StringField(
+        "Vendor",
+        validators=[
+            DataRequired(message="Vendor is required."),
+            Length(max=100, message="Vendor name cannot exceed 100 characters."),
+        ],
+    )
+    description = TextAreaField(
+        "Description",
+        validators=[
+            Length(max=500, message="Description cannot exceed 500 characters.")
+        ],
+    )
+    question = TextAreaField(
+        "Pertanyaan",
+        validators=[
+            DataRequired(message="Pertanyaan tidak boleh kosong."),
+            Length(min=10, message="Pertanyaan harus berisi setidaknya 10 karakter."),
+        ],
+    )
+    submit = SubmitField("Submit")

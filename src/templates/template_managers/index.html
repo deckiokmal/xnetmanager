@@ -50,8 +50,8 @@
 
 {% block form_search %}
 <form id="searchForm" method="get" action="{{ url_for('tm.index') }}" class="form-inline d-flex">
-    <input id="searchInput" type="text" name="search" class="form-control form-control-sm me-2"
-        placeholder="Cari template" value="{{ search_query }}">
+    <input id="searchInput" type="text" name="search" class="form-control form-control-sm me-2" placeholder="Search..."
+        value="{{ search_query }}">
     <button class="btn btn-outline-success btn-sm" type="submit">
         <i class="fas fa-search"></i>
     </button>
@@ -70,9 +70,9 @@
 {% endblock %}
 
 {% block table_body %}
-{% for template in all_templates.items %}
+{% for template in templates %}
 <tr>
-    <th scope="row">{{ loop.index + (all_templates.page - 1) * per_page }}</th>
+    <th scope="row">{{ loop.index + (page - 1) * per_page }}</th>
     <td>{{ template.template_name }}</td>
     <td>{{ template.parameter_name }}</td>
     <td>{{ template.vendor }}</td>
@@ -104,292 +104,288 @@
 {% endblock %}
 
 {% block show_total_data %}
-<div class="dataTables_info" role="status" aria-live="polite">
-    Menampilkan {{ (all_templates.page - 1) * per_page + 1 }} hingga {{ (all_templates.page - 1) * per_page + per_page
-    if (all_templates.page - 1) * per_page + per_page < all_templates.total else all_templates.total }} dari {{
-        all_templates.total }} entri </div>
-        {% endblock %}
+<div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
+    Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if
+    (page - 1)
+    * per_page + per_page < total_templates else total_templates }} dari {{ total_templates }} entri </div>
+</div>
+{% endblock %}
 
-        {% block pagination %}
-        <div class="d-flex justify-content-end pagination-sm">
-            {{ all_templates.links }}
-        </div>
+{% block pagination %}
+<div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
+    {{ pagination.links }}
+</div>
+{% endblock %}
 
-        {% endblock %}
-
-        {% block modal_data %}
-        <!-- Modal for Template Details -->
-        <div class="modal fade" id="templateDetailModal" tabindex="-1" aria-labelledby="templateDetailModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog modal-dialog-scrollable">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="templateDetailModalLabel">Template Details</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p><strong>Template File Name:</strong> <span id="template_name"></span></p>
-                        <p><strong>Parameter File Name:</strong> <span id="parameter_name"></span></p>
-                        <p><strong>Vendor:</strong> <span id="vendor"></span></p>
-                        <p><strong>Version:</strong> <span id="version"></span></p>
-                        <p><strong>Description:</strong> <span id="description"></span></p>
-                        <p><strong>Created by:</strong> <span id="created_by"></span></p>
-                        <p><strong>Template Content:</strong></p>
-                        <pre id="template_content" class="content-data"></pre>
-                        <p><strong>Parameter Content:</strong></p>
-                        <pre id="parameter_content" class="content-data"></pre>
-                    </div>
-                </div>
+{% block modal_data %}
+<!-- Modal for Template Details -->
+<div class="modal fade" id="templateDetailModal" tabindex="-1" aria-labelledby="templateDetailModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="templateDetailModalLabel">Template Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Template File Name:</strong> <span id="template_name"></span></p>
+                <p><strong>Parameter File Name:</strong> <span id="parameter_name"></span></p>
+                <p><strong>Vendor:</strong> <span id="vendor"></span></p>
+                <p><strong>Version:</strong> <span id="version"></span></p>
+                <p><strong>Description:</strong> <span id="description"></span></p>
+                <p><strong>Created by:</strong> <span id="created_by"></span></p>
+                <p><strong>Template Content:</strong></p>
+                <pre id="template_content" class="content-data"></pre>
+                <p><strong>Parameter Content:</strong></p>
+                <pre id="parameter_content" class="content-data"></pre>
             </div>
         </div>
+    </div>
+</div>
 
-        <!-- Modal for Upload Template -->
-        <div class="modal fade" id="uploadTemplateModal" tabindex="-1" aria-labelledby="uploadTemplateModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog modal-dialog-scrollable">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="uploadTemplateModalLabel">
-                            Upload Template
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Modal for Upload Template -->
+<div class="modal fade" id="uploadTemplateModal" tabindex="-1" aria-labelledby="uploadTemplateModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadTemplateModalLabel">
+                    Upload Template
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Form pointing to upload_template endpoint -->
+                <form id="uploadTemplateForm" method="post" action="{{ url_for('tm.upload_template') }}"
+                    enctype="multipart/form-data">
+                    {{ form.csrf_token }}
+
+                    <div class="mb-3">
+                        <label for="vendor" class="form-label">Vendor</label>
+                        {{ form.vendor(class="form-control", id="vendor") }}
+                        {% if form.vendor.errors %}
+                        {% for error in form.vendor.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        {% endif %}
                     </div>
-                    <div class="modal-body">
-                        <!-- Form pointing to upload_template endpoint -->
-                        <form id="uploadTemplateForm" method="post" action="{{ url_for('tm.upload_template') }}"
-                            enctype="multipart/form-data">
-                            {{ form.csrf_token }}
 
-                            <div class="mb-3">
-                                <label for="vendor" class="form-label">Vendor</label>
-                                {{ form.vendor(class="form-control", id="vendor") }}
-                                {% if form.vendor.errors %}
-                                {% for error in form.vendor.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="version" class="form-label">Version</label>
-                                {{ form.version(class="form-control", id="version") }}
-                                {% if form.version.errors %}
-                                {% for error in form.version.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="description" class="form-label">Description</label>
-                                {{ form.description(class="form-control", id="description") }}
-                                {% if form.description.errors %}
-                                {% for error in form.description.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="j2" class="form-label">Template File (.j2)</label>
-                                <input type="file" name="j2" id="j2" class="form-control">
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="yaml" class="form-label">Parameter File (.yaml)</label>
-                                <input type="file" name="yaml" id="yaml" class="form-control">
-                            </div>
-
-                            <button type="submit" class="btn btn-primary">Upload</button>
-                        </form>
+                    <div class="mb-3">
+                        <label for="version" class="form-label">Version</label>
+                        {{ form.version(class="form-control", id="version") }}
+                        {% if form.version.errors %}
+                        {% for error in form.version.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        {% endif %}
                     </div>
-                </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        {{ form.description(class="form-control", id="description") }}
+                        {% if form.description.errors %}
+                        {% for error in form.description.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="j2" class="form-label">Template File (.j2)</label>
+                        <input type="file" name="j2" id="j2" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="yaml" class="form-label">Parameter File (.yaml)</label>
+                        <input type="file" name="yaml" id="yaml" class="form-control">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                </form>
             </div>
         </div>
+    </div>
+</div>
 
-        <!-- Modal for Manual Template Creation -->
-        <div class="modal fade" id="createManualTemplateModal" tabindex="-1"
-            aria-labelledby="createManualTemplateModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-scrollable">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h6 class="modal-title" id="createManualTemplateModalLabel">Create Manual Template
-                        </h6>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Modal for Manual Template Creation -->
+<div class="modal fade" id="createManualTemplateModal" tabindex="-1" aria-labelledby="createManualTemplateModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title" id="createManualTemplateModalLabel">Create Manual Template
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="manualTemplateForm" method="post" action="{{ url_for('tm.create_template_manual') }}">
+                    {{ form_manual_create.csrf_token }}
+
+                    <div class="mb-3">
+                        <label for="vendor" class="form-label">Vendor</label>
+                        {{ form_manual_create.vendor(class="form-control", id="vendor") }}
+                        {% if form_manual_create.vendor.errors %}
+                        {% for error in form_manual_create.vendor.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        {% endif %}
                     </div>
-                    <div class="modal-body">
-                        <form id="manualTemplateForm" method="post" action="{{ url_for('tm.create_template_manual') }}">
-                            {{ form_manual_create.csrf_token }}
 
-                            <div class="mb-3">
-                                <label for="vendor" class="form-label">Vendor</label>
-                                {{ form_manual_create.vendor(class="form-control", id="vendor") }}
-                                {% if form_manual_create.vendor.errors %}
-                                {% for error in form_manual_create.vendor.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="version" class="form-label">Version</label>
-                                {{ form_manual_create.version(class="form-control", id="version") }}
-                                {% if form_manual_create.version.errors %}
-                                {% for error in form_manual_create.version.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="description" class="form-label">Description</label>
-                                {{ form_manual_create.description(class="form-control", id="description") }}
-                                {% if form_manual_create.description.errors %}
-                                {% for error in form_manual_create.description.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="template_content" class="form-label">Template Content
-                                    (Jinja2)</label>
-                                {{ form_manual_create.template_content(class="form-control", id="template_content",
-                                rows="5") }}
-                                {% if form_manual_create.template_content.errors %}
-                                {% for error in form_manual_create.template_content.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="parameter_content" class="form-label">Parameter Content
-                                    (YAML)</label>
-                                {{ form_manual_create.parameter_content(class="form-control", id="parameter_content",
-                                rows="5") }}
-                                {% if form_manual_create.parameter_content.errors %}
-                                {% for error in form_manual_create.parameter_content.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <button type="submit" class="btn btn-primary">Create Template</button>
-                        </form>
+                    <div class="mb-3">
+                        <label for="version" class="form-label">Version</label>
+                        {{ form_manual_create.version(class="form-control", id="version") }}
+                        {% if form_manual_create.version.errors %}
+                        {% for error in form_manual_create.version.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        {% endif %}
                     </div>
-                </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        {{ form_manual_create.description(class="form-control", id="description") }}
+                        {% if form_manual_create.description.errors %}
+                        {% for error in form_manual_create.description.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="template_content" class="form-label">Template Content
+                            (Jinja2)</label>
+                        {{ form_manual_create.template_content(class="form-control", id="template_content",
+                        rows="5") }}
+                        {% if form_manual_create.template_content.errors %}
+                        {% for error in form_manual_create.template_content.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="parameter_content" class="form-label">Parameter Content
+                            (YAML)</label>
+                        {{ form_manual_create.parameter_content(class="form-control", id="parameter_content",
+                        rows="5") }}
+                        {% if form_manual_create.parameter_content.errors %}
+                        {% for error in form_manual_create.parameter_content.errors %}
+                        <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Create Template</button>
+                </form>
             </div>
         </div>
+    </div>
+</div>
 
-        <!-- Modal Error Template Generation -->
-        <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content bg-danger text-light">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="errorModalLabel">Error Generating Template</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p id="errorModalMessage"></p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
-                    </div>
-                </div>
+<!-- Modal Error Template Generation -->
+<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-danger text-light">
+            <div class="modal-header">
+                <h5 class="modal-title" id="errorModalLabel">Error Generating Template</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="errorModalMessage"></p>
             </div>
         </div>
+    </div>
+</div>
 
-        {% endblock %}
+{% endblock %}
 
-        {% block script_js %}
+{% block script_js %}
 
-        <script>
-            // Function to show the loading overlay
-            function showLoadingOverlay() {
-                document.getElementById('loadingOverlay').style.display = 'flex';
-            }
+<script>
+    // Function to show the loading overlay
+    function showLoadingOverlay() {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+    }
 
-            // Function to hide the loading overlay
-            function hideLoadingOverlay() {
-                document.getElementById('loadingOverlay').style.display = 'none';
-            }
+    // Function to hide the loading overlay
+    function hideLoadingOverlay() {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
 
-            let timeout = null;
+    let timeout = null;
 
-            // Handle search input delay
-            document.getElementById("searchInput").addEventListener("input", function () {
-                clearTimeout(timeout);
-                timeout = setTimeout(function () {
-                    document.getElementById('searchForm').submit();
-                }, 1000);
-            });
+    // Handle search input delay
+    document.getElementById("searchInput").addEventListener("input", function () {
+        clearTimeout(timeout);
+        timeout = setTimeout(function () {
+            document.getElementById('searchForm').submit();
+        }, 1000);
+    });
 
-            document.addEventListener("DOMContentLoaded", function () {
-                document.querySelectorAll('.generate-btn').forEach(function (button) {
-                    button.addEventListener('click', function (event) {
-                        event.preventDefault();  // Prevent the default behavior
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll('.generate-btn').forEach(function (button) {
+            button.addEventListener('click', function (event) {
+                event.preventDefault();  // Prevent the default behavior
 
-                        const templateId = this.getAttribute('data-template-id');
-                        const actionUrl = `/template-generator/${templateId}`;
+                const templateId = this.getAttribute('data-template-id');
+                const actionUrl = `/template-generator/${templateId}`;
 
-                        showLoadingOverlay();  // Show the loading overlay when the form is submitted
+                showLoadingOverlay();  // Show the loading overlay when the form is submitted
 
-                        fetch(actionUrl, {
-                            method: 'POST'
-                        })
-                            .then(response => response.json())
-                            .then(data => {
-                                hideLoadingOverlay();  // Hide the loading overlay once the request is complete
-
-                                if (data.is_valid) {
-                                    window.location.reload();  // Reload the page if successful
-                                } else {
-                                    // Display the error in a modal
-                                    document.getElementById('errorModalMessage').textContent = data.error_message;
-                                    var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-                                    errorModal.show();
-                                }
-                            })
-                            .catch(error => {
-                                hideLoadingOverlay();  // Hide the loading overlay
-                                console.error('Error:', error);
-                                document.getElementById('errorModalMessage').textContent = 'Terjadi kesalahan saat memproses permintaan.';
-                                var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-                                errorModal.show();
-                            });
-                    });
-                });
-            });
-        </script>
-
-        <!-- handle template detail -->
-        <script>
-            // Handle template detail
-            function showTemplateDetails(button) {
-                const templateId = button.getAttribute("data-template-id");
-
-                fetch(`/template_detail/${templateId}`)
+                fetch(actionUrl, {
+                    method: 'POST'
+                })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.error) {
-                            alert(data.error);
-                        } else {
-                            document.getElementById("template_name").innerText = data.template_name;
-                            document.getElementById("parameter_name").innerText = data.parameter_name;
-                            document.getElementById("vendor").innerText = data.vendor;
-                            document.getElementById("version").innerText = data.version;
-                            document.getElementById("description").innerText = data.description;
-                            document.getElementById("created_by").innerText = data.created_by;
-                            document.getElementById("template_content").innerText = data.template_content;
-                            document.getElementById("parameter_content").innerText = data.parameter_content;
+                        hideLoadingOverlay();  // Hide the loading overlay once the request is complete
 
-                            var detailModal = new bootstrap.Modal(document.getElementById("templateDetailModal"));
-                            detailModal.show();
+                        if (data.is_valid) {
+                            window.location.reload();  // Reload the page if successful
+                        } else {
+                            // Display the error in a modal
+                            document.getElementById('errorModalMessage').textContent = data.error_message;
+                            var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                            errorModal.show();
                         }
                     })
-                    .catch(error => console.error('Error fetching template details:', error));
-            }
-        </script>
+                    .catch(error => {
+                        hideLoadingOverlay();  // Hide the loading overlay
+                        console.error('Error:', error);
+                        document.getElementById('errorModalMessage').textContent = 'Terjadi kesalahan saat memproses permintaan.';
+                        var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                        errorModal.show();
+                    });
+            });
+        });
+    });
+</script>
 
-        {% endblock %}
+<!-- handle template detail -->
+<script>
+    // Handle template detail
+    function showTemplateDetails(button) {
+        const templateId = button.getAttribute("data-template-id");
+
+        fetch(`/template_detail/${templateId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    document.getElementById("template_name").innerText = data.template_name;
+                    document.getElementById("parameter_name").innerText = data.parameter_name;
+                    document.getElementById("vendor").innerText = data.vendor;
+                    document.getElementById("version").innerText = data.version;
+                    document.getElementById("description").innerText = data.description;
+                    document.getElementById("created_by").innerText = data.created_by;
+                    document.getElementById("template_content").innerText = data.template_content;
+                    document.getElementById("parameter_content").innerText = data.parameter_content;
+
+                    var detailModal = new bootstrap.Modal(document.getElementById("templateDetailModal"));
+                    detailModal.show();
+                }
+            })
+            .catch(error => console.error('Error fetching template details:', error));
+    }
+</script>
+{% endblock %}

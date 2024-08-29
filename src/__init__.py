@@ -49,7 +49,24 @@ def create_app(config_class=None):
         raise ValueError("Invalid CONFIG_NAME")
 
     # Inisiasi pustaka OpenAI dengan API key
-    openai.api_key = decouple_config("OPENAI_API_KEY")
+    openai_api_key = decouple_config("OPENAI_API_KEY", default=None)
+    talita_api_key = decouple_config("TALITA_API_KEY", default=None)
+    talita_url = decouple_config("TALITA_URL", default=None)
+
+    # Pengecekan apakah variabel konfigurasi penting telah dimuat
+    if not openai_api_key:
+        raise ValueError("Missing required configuration: OPENAI_API_KEY")
+    if not talita_api_key:
+        raise ValueError("Missing required configuration: TALITA_API_KEY")
+    if not talita_url:
+        raise ValueError("Missing required configuration: TALITA_URL")
+
+    # Set API key untuk OpenAI
+    openai.api_key = openai_api_key
+    
+    # Simpan TALITA API Key dan URL ke dalam konfigurasi aplikasi
+    app.config['TALITA_API_KEY'] = talita_api_key
+    app.config['TALITA_URL'] = talita_url
 
     # Initialize extensions
     bcrypt.init_app(app)

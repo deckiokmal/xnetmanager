@@ -23,7 +23,7 @@ from datetime import datetime
 from .decorators import login_required, role_required, required_2fa
 import random
 import string
-from flask_paginate import Pagination
+from flask_paginate import Pagination, get_page_args
 import logging
 from src.utils.forms_utils import (
     TemplateForm,
@@ -32,6 +32,7 @@ from src.utils.forms_utils import (
     ManualConfigurationForm,
     AIConfigurationForm,
     UpdateConfigurationForm,
+    TalitaQuestionForm,
 )
 
 # Blueprint untuk template manager
@@ -124,8 +125,8 @@ def generate_random_filename(vendor_name):
     return filename
 
 
-RAW_TEMPLATE_FOLDER = "xmanager/raw_templates"
-GEN_TEMPLATE_FOLDER = "xmanager/gen_templates"
+RAW_TEMPLATE_FOLDER = "xmanager/templates"
+GEN_TEMPLATE_FOLDER = "xmanager/configurations"
 TEMPLATE_EXTENSIONS = {"j2"}
 PARAMS_EXTENSIONS = {"yml", "yaml"}
 
@@ -139,42 +140,65 @@ PARAMS_EXTENSIONS = {"yml", "yaml"}
     page="Templates Management",
 )
 def index():
+    """
+    Display the main page of the Templates File Manager.
+    This page includes a list of Templates file and supports pagination and searching.
+    """
+    # Logging untuk akses ke endpoint
+    current_app.logger.info(f"{current_user.email} accessed index template management")
+
     form = TemplateForm(request.form)
     form_manual_create = ManualTemplateForm(request.form)
+
+    search_query = request.args.get("search", "").lower()
+    page, per_page, offset = get_page_args(
+        page_parameter="page", per_page_parameter="per_page", per_page=10
+    )
+    if page < 1 or per_page < 1:
+        raise ValueError("Page and per_page must be positive integers.")
+
     try:
-        # Retrieve pagination and search parameters from request
-        page = request.args.get("page", 1, type=int)
-        per_page = request.args.get("per_page", 10, type=int)
-        search_query = request.args.get("search", "")
+        if current_user.has_role("Admin"):
+            if search_query:
+                query = TemplateManager.query.filter(
+                    TemplateManager.template_name.ilike(f"%{search_query}%")
+                    | TemplateManager.parameter_name.ilike(f"%{search_query}%")
+                    | TemplateManager.vendor.ilike(f"%{search_query}%")
+                    | TemplateManager.version.ilike(f"%{search_query}%")
+                )
+            else:
+                query = TemplateManager.query
+        else:
+            if search_query:
+                query = TemplateManager.query.filter(
+                    TemplateManager.template_name.ilike(f"%{search_query}%")
+                    | TemplateManager.parameter_name.ilike(f"%{search_query}%")
+                    | TemplateManager.vendor.ilike(f"%{search_query}%")
+                    | TemplateManager.version.ilike(f"%{search_query}%")
+                )
 
-        # Log user access to the template management page
-        current_app.logger.info(
-            f"User {current_user.email} accessed Template Manager page."
-        )
+        total_templates = query.count()
+        templates = query.limit(per_page).offset(offset).all()
+        pagination = Pagination(page=page, per_page=per_page, total=total_templates)
 
-        # Build the query for fetching templates
-        query = TemplateManager.query
-        if search_query:
-            query = query.filter(
-                TemplateManager.template_name.ilike(f"%{search_query}%")
-                | TemplateManager.parameter_name.ilike(f"%{search_query}%")
-                | TemplateManager.vendor.ilike(f"%{search_query}%")
-                | TemplateManager.version.ilike(f"%{search_query}%")
-            )
+        # Logging jika tidak ada hasil pencarian
+        if total_templates == 0:
             current_app.logger.info(
-                f"User {current_user.email} searched for '{search_query}' in Template Manager."
+                f"No template file found for user {current_user.email} with query '{search_query}'"
             )
+            flash("No template found matching your search criteria.", "info")
 
-        # Paginate the query results
-        try:
-            all_templates = query.paginate(page=page, per_page=per_page)
-        except ValueError as ve:
-            current_app.logger.error(
-                f"Pagination error in Template Manager page for user {current_user.email}: {str(ve)}"
-            )
-            flash("Nomor halaman tidak valid. Silakan coba lagi.", "danger")
-            return redirect(url_for("tm.index", page=1, per_page=10))
-
+        return render_template(
+            "/template_managers/index.html",
+            form=form,
+            form_manual_create=form_manual_create,
+            page=page,
+            per_page=per_page,
+            search_query=search_query,
+            total_templates=total_templates,
+            templates=templates,
+            pagination=pagination,
+        )
     except Exception as e:
         # Handle any unexpected errors that occur during the query or pagination
         current_app.logger.error(f"Error accessing Template Manager page: {str(e)}")
@@ -182,17 +206,9 @@ def index():
             "Terjadi kesalahan saat mengakses template. Silakan coba lagi nanti.",
             "danger",
         )
-        all_templates = []  # Set an empty list to avoid breaking the template
-
-    # Render the template management page with the retrieved templates
-    return render_template(
-        "/template_managers/index.html",
-        per_page=per_page,
-        search_query=search_query,
-        all_templates=all_templates,
-        form=form,
-        form_manual_create=form_manual_create,
-    )
+        return redirect(
+            url_for("users.dashboard")
+        )  # Redirect to a safe page like dashboard
 
 
 @tm_bp.route("/template_detail/<template_id>", methods=["GET"])
@@ -777,7 +793,7 @@ def template_generator(template_id):
 
     try:
         gen_filename = generate_random_filename(template.vendor)
-        newFileName = f"{gen_filename}.txt"
+        newFileName = f"{gen_filename}"
         new_file_path = os.path.join(
             current_app.static_folder, GEN_TEMPLATE_FOLDER, newFileName
         )
@@ -830,82 +846,148 @@ def template_generator(template_id):
     page="Configuration File Management",
 )
 def index_configuration_file():
+    """
+    Display the main page of the Configuration File Manager.
+    This page includes a list of configuration file and supports pagination and searching.
+    """
     # Logging untuk akses ke endpoint
     current_app.logger.info(f"{current_user.email} accessed index_configuration_file")
 
     formManualConfiguration = ManualConfigurationForm(request.form)
     formAIconfiguration = AIConfigurationForm(request.form)
+    formTalita = TalitaQuestionForm()
 
-    # Validasi input untuk page, per_page, dan search_query
-    try:
-        page = int(request.args.get("page", 1))
-        per_page = int(request.args.get("per_page", 10))
-        if page < 1 or per_page < 1:
-            raise ValueError("Page and per_page must be positive integers.")
-    except ValueError as e:
-        return redirect(url_for("tm.index_configuration_file"))
-
-    search_query = request.args.get("search", "").strip().lower()
-
-    # Logging untuk pencarian
-    if search_query:
-        current_app.logger.info(
-            f"{current_user.email} performed a search with query: {search_query}"
-        )
-
-    # Menerapkan filter berdasarkan search query dan user ownership
-    if search_query:
-        query = ConfigurationManager.query.filter(
-            ConfigurationManager.user_id == current_user.id,
-            ConfigurationManager.config_name.ilike(f"%{search_query}%")
-            | ConfigurationManager.vendor.ilike(f"%{search_query}%")
-            | ConfigurationManager.description.ilike(f"%{search_query}%"),
-        )
-    else:
-        query = ConfigurationManager.query.filter_by(user_id=current_user.id)
-
-    # Mendapatkan total hasil pencarian
-    total_templates = query.count()
-
-    # Logging jika tidak ada hasil pencarian
-    if total_templates == 0:
-        current_app.logger.info(
-            f"No templates found for user {current_user.email} with query '{search_query}'"
-        )
-        flash("No templates found matching your search criteria.", "info")
-
-    # Paginasi hasil pencarian
-    all_templates = query.limit(per_page).offset((page - 1) * per_page).all()
-    pagination = Pagination(page=page, per_page=per_page, total=total_templates)
-
-    template_contents = {}
-    for template in all_templates:
-        template_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, template.config_name
-        )
-        template_content = read_file(template_path)
-
-        if template_content:
-            template_contents[template.id] = template_content
-        else:
-            template_contents[template.id] = "File not found"
-            current_app.logger.warning(
-                f"Template file not found for {template.config_name} at {template_path}"
-            )
-            flash(f"Template file '{template.config_name}' not found.", "warning")
-
-    return render_template(
-        "/template_managers/index_configuration_file.html",
-        all_templates=all_templates,
-        page=page,
-        per_page=per_page,
-        pagination=pagination,
-        search_query=search_query,
-        template_contents=template_contents,
-        total_templates=total_templates,
-        formManualConfiguration=formManualConfiguration,
-        formAIconfiguration=formAIconfiguration,
+    search_query = request.args.get("search", "").lower()
+    page, per_page, offset = get_page_args(
+        page_parameter="page", per_page_parameter="per_page", per_page=10
     )
+    if page < 1 or per_page < 1:
+        raise ValueError("Page and per_page must be positive integers.")
+
+    try:
+        if current_user.has_role("Admin"):
+            if search_query:
+                query = ConfigurationManager.query.filter(
+                    ConfigurationManager.user_id == current_user.id,
+                    ConfigurationManager.config_name.ilike(f"%{search_query}%")
+                    | ConfigurationManager.vendor.ilike(f"%{search_query}%")
+                    | ConfigurationManager.description.ilike(f"%{search_query}%"),
+                )
+            else:
+                query = ConfigurationManager.query
+        else:
+            if search_query:
+                query = ConfigurationManager.query.filter(
+                    ConfigurationManager.user_id == current_user.id,
+                    (
+                        ConfigurationManager.config_name.ilike(f"%{search_query}%")
+                        | ConfigurationManager.vendor.ilike(f"%{search_query}%")
+                        | ConfigurationManager.description.ilike(f"%{search_query}%"),
+                    ),
+                )
+            else:
+                query = ConfigurationManager.query.filter_by(user_id=current_user.id)
+
+        total_configuration_file = query.count()
+        configurations = query.limit(per_page).offset(offset).all()
+        pagination = Pagination(
+            page=page, per_page=per_page, total=total_configuration_file
+        )
+
+        # Logging jika tidak ada hasil pencarian
+        if total_configuration_file == 0:
+            current_app.logger.info(
+                f"No configuration file found for user {current_user.email} with query '{search_query}'"
+            )
+            flash("No configuration found matching your search criteria.", "info")
+        
+        return render_template(
+            "/template_managers/index_configuration_file.html",
+            formManualConfiguration=formManualConfiguration,
+            formAIconfiguration=formAIconfiguration,
+            formTalita=formTalita,
+            page=page,
+            per_page=per_page,
+            search_query=search_query,
+            total_configuration_file=total_configuration_file,
+            configurations=configurations,
+            pagination=pagination,
+        )
+    except Exception as e:
+        # Handle exceptions and log the error
+        current_app.logger.error(
+            f"Error accessing configuration Manager page by user {current_user.email}: {str(e)}"
+        )
+        flash(
+            "Terjadi kesalahan saat mengakses configuration Managament, silahkan coba lagi nanti.",
+            "danger",
+        )
+        return redirect(
+            url_for("users.dashboard")
+        )  # Redirect to a safe page like dashboard
+
+
+@tm_bp.route("/configuration_detail/<config_id>", methods=["GET"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User", "View"],
+    permissions=["Manage Templates", "View Templates"],
+    page="Templates Management",
+)
+def configuration_detail(config_id):
+    configuration = ConfigurationManager.query.get_or_404(config_id)
+    try:
+        # Ensure paths are safe
+        configuration_file_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration.config_name
+        )
+
+        # Reading configuration files
+        if not os.path.isfile(configuration_file_path):
+            return (
+                jsonify({"error": "Configuration file tidak ditemukan."}),
+                404,
+            )
+
+        configuration_content = read_file(configuration_file_path)
+
+        if configuration_content is None:
+            current_app.logger.error(
+                f"Error reading files for configuration ID {config_id} by {current_user.email}"
+            )
+            return (
+                jsonify(
+                    {"error": "Terjadi kesalahan saat membaca konten konfigurasi."}
+                ),
+                500,
+            )
+
+        current_app.logger.info(
+            f"User {current_user.email} accessed details for configuration ID {config_id}"
+        )
+        return jsonify(
+            {
+                "config_name": configuration.config_name,
+                "vendor": configuration.vendor,
+                "description": configuration.description,
+                "created_by": configuration.created_by,
+                "configuration_content": configuration_content,
+            }
+        )
+
+    except Exception as e:
+        current_app.logger.error(
+            f"Unexpected error in configuration_detail for configuration ID {config_id} by {current_user.email}: {str(e)}"
+        )
+        return (
+            jsonify(
+                {
+                    "error": "Terjadi kesalahan yang tidak terduga. Silakan coba lagi nanti."
+                }
+            ),
+            500,
+        )
 
 
 @tm_bp.route("/templates-management/create-manual-configuration", methods=["POST"])
@@ -943,7 +1025,7 @@ def create_manual_configuration():
 
         gen_filename = generate_random_filename(vendor)
 
-        configuration_name = f"{gen_filename}.conf"
+        configuration_name = f"{gen_filename}"
         file_path = os.path.join(
             current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration_name
         )
@@ -1019,7 +1101,7 @@ def create_configuration_with_ai():
 
         gen_filename = generate_random_filename(vendor)
 
-        configuration_name = f"{gen_filename}.conf"
+        configuration_name = f"{gen_filename}"
         file_path = os.path.join(
             current_app.static_folder, GEN_TEMPLATE_FOLDER, configuration_name
         )
@@ -1277,54 +1359,117 @@ def delete_configuration(template_id):
     page="Configuration File Management",
 )
 def ask_talita():
-    if request.method == "POST":
-        # Mengambil data dari form modal
-        question = request.form.get("question")
-        context = request.form.get("context")
-        question_with_context = f"{context}\n{question}"
-        user_id = request.form.get("user_id")
-        url = "https://talita.lintasarta.net/api/portal"
-        apikey = "ZTczN2Y0N2E0ZDcxZTIwZjUzN2I5MzA5MDE4MWZmODg="
+    formTalita = TalitaQuestionForm()
 
-        # Memanggil fungsi talita_chat_completion
-        response = talita_chat_completion(url, apikey, question_with_context, user_id)
+    current_app.logger.warning(
+        f"Attempting Talita AI Endpoint for user {current_user.email} (ID: {current_user.id})"
+    )
 
-        # Mengecek apakah respon berhasil atau gagal
-        if response is None:
-            current_app.logger.warning(f"Failed to connect Talita AI")
-        elif not response.startswith("Gagal"):
-            # Membuat nama file acak
-            gen_filename = generate_random_filename("talita")
-            filename = f"{gen_filename}.conf"
-            file_path = os.path.join(
-                current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
+    if formTalita.validate_on_submit():
+        config_name = formTalita.config_name.data
+        vendor = formTalita.vendor.data
+        description = formTalita.description.data
+        question = formTalita.question.data
+
+        context = (
+            f"Berikan hanya sintaks konfigurasi yang tepat untuk {vendor}.\n"
+            "Keluaran harus berupa teks polos dan tidak mengandung deskripsi atau placeholder.\n"
+            f"Hanya sertakan perintah konfigurasi yang spesifik tanpa pemformatan tambahan dan tanpa penjelasan tambahan untuk {vendor} vendor."
+            f"Jika permintaan tidak dapat di aplikasikan atau jika sintaks tidak valid untuk vendor {vendor}, Anda harus merespons dengan kata 'Gagal' persis pada baris pertama. Lalu lanjutkan penjelasan rinci tentang kesalahan tersebut.\n"
+            "Kata pertama dari respons Anda harus selalu 'Gagal' jika permintaan tidak dapat dipenuhi persis seperti yang ditentukan. Jangan memberikan konten atau penjelasan lain sebelum 'Gagal'. Berikut adalah permintaannya:\n"
+            f"{question}\n"
+        )
+
+        user_id = str(current_user.id)  # Using the actual current_user ID
+
+        current_app.logger.info(
+            f"User {current_user.email} (ID: {current_user.id}) is asking TALITA a question."
+        )
+
+        try:
+            response = talita_chat_completion(context, user_id)
+
+            if response is None:
+                current_app.logger.warning(
+                    f"Failed to connect to Talita AI for user {current_user.email} (ID: {current_user.id})"
+                )
+                return (
+                    jsonify(
+                        {
+                            "is_valid": False,
+                            "error_message": "Tidak dapat terhubung dengan TALITA. Silakan coba lagi nanti.",
+                        }
+                    ),
+                    400,
+                )
+            elif response.startswith("Gagal"):
+                return (
+                    jsonify(
+                        {
+                            "is_valid": False,
+                            "error_message": response,
+                        }
+                    ),
+                    400,
+                )
+            elif not response.startswith("Gagal"):
+                gen_filename = generate_random_filename(config_name)
+                filename = f"{gen_filename}"
+                file_path = os.path.join(
+                    current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
+                )
+
+                with open(file_path, "w") as file:
+                    file.write(response)
+
+                new_configuration = ConfigurationManager(
+                    config_name=filename,
+                    vendor=vendor,
+                    description=description,
+                    created_by=current_user.email,
+                    user_id=current_user.id,
+                )
+                db.session.add(new_configuration)
+                db.session.commit()
+
+                current_app.logger.info(
+                    f"User {current_user.email} (ID: {current_user.id}) successfully saved response from TALITA to file {filename}."
+                )
+
+                return jsonify({"is_valid": True}), 200
+            else:
+                current_app.logger.error(
+                    f"Failed to get a valid response from TALITA for user {current_user.email} (ID: {current_user.id}): {response}"
+                )
+                return (
+                    jsonify(
+                        {
+                            "is_valid": False,
+                            "error_message": f"Gagal mendapatkan jawaban dari TALITA: {response}",
+                        }
+                    ),
+                    400,
+                )
+        except Exception as e:
+            current_app.logger.error(
+                f"An error occurred while processing TALITA request for user {current_user.email} (ID: {current_user.id}): {str(e)}"
+            )
+            return (
+                jsonify(
+                    {
+                        "is_valid": False,
+                        "error_message": "Terjadi kesalahan saat memproses permintaan Anda. Silakan coba lagi.",
+                    }
+                ),
+                500,
             )
 
-            # Menyimpan hasil ke dalam file
-            with open(file_path, "w") as file:
-                file.write(response)
-
-            new_configuration = ConfigurationManager(
-                config_name=filename,
-                vendor="talita",
-                description=filename,
-                created_by=current_user.email,
-                user_id=current_user.id,
-            )
-            db.session.add(new_configuration)
-            db.session.commit()
-
-            # Flash message sukses
-            flash(
-                "Berhasil mendapatkan jawaban dari TALITA dan menyimpan ke dalam file.",
-                "success",
-            )
-        else:
-            # Flash message gagal
-            flash(f"Gagal mendapatkan jawaban dari TALITA: {response}", "danger")
-
-        # Redirect kembali ke halaman yang sama untuk menutup modal dan memperbarui UI
-        return redirect(url_for("tm.index_configuration_file"))
-
-    # Jika GET request, tampilkan halaman dengan modal
-    return render_template("tm.index_configuration_file")
+    return (
+        jsonify(
+            {
+                "is_valid": False,
+                "error_message": "Form is not valid. Please check the inputs.",
+            }
+        ),
+        400,
+    )

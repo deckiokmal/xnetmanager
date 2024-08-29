@@ -99,11 +99,17 @@ def index():
     Display the main page of the Device Manager.
     This page includes a list of devices and supports pagination and searching.
     """
+    # Logging untuk akses ke endpoint
+    current_app.logger.info(f"{current_user.email} accessed index_configuration_file")
+
     form = DeviceForm(request.form)
+
     search_query = request.args.get("search", "").lower()
     page, per_page, offset = get_page_args(
         page_parameter="page", per_page_parameter="per_page", per_page=10
     )
+    if page < 1 or per_page < 1:
+        raise ValueError("Page and per_page must be positive integers.")
 
     try:
         # Determine the user's role and adjust the query accordingly
@@ -137,19 +143,16 @@ def index():
         devices = devices_query.limit(per_page).offset(offset).all()
         pagination = Pagination(page=page, per_page=per_page, total=total_devices)
 
-        current_app.logger.info(
-            f"User {current_user.email} accessed Device Manager page."
-        )
 
         return render_template(
             "/device_managers/index.html",
-            devices=devices,
+            form=form,
             page=page,
             per_page=per_page,
-            pagination=pagination,
             search_query=search_query,
             total_devices=total_devices,
-            form=form,
+            devices=devices,
+            pagination=pagination,
         )
 
     except Exception as e:

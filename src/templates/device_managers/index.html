@@ -14,8 +14,7 @@
 <form id="perPageForm" action="{{ url_for('dm.index') }}" method="get">
     <label class="d-flex align-items-center">
         <span>Tampilkan</span>
-        <select name="per_page" aria-controls="dataTable"
-            class="custom-select custom-select-sm form-control form-control-sm mx-2" style="padding-right: 1.75rem;"
+        <select name="per_page" class="form-select form-select-sm mx-2"
             onchange="document.getElementById('perPageForm').submit()">
             <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
             <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
@@ -28,12 +27,11 @@
 {% endblock %}
 
 {% block form_search %}
-<!-- Form Pencarian -->
 <form id="searchForm" method="get" action="{{ url_for('dm.index') }}" class="form-inline d-flex">
-    <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2"
-        placeholder="Cari perangkat" value="{{ search_query }}">
+    <input id="searchInput" type="text" name="search" class="form-control form-control-sm me-2"
+        placeholder="Search..." value="{{ search_query }}">
     <button class="btn btn-outline-success btn-sm" type="submit">
-        <i class="fa-solid fa-magnifying-glass"></i>
+        <i class="fas fa-search"></i>
     </button>
     <input type="hidden" name="per_page" value="{{ per_page }}">
 </form>
@@ -51,30 +49,30 @@
 {% endblock %}
 
 {% block table_body %}
-{% for device in devices %}
+{% for data in devices %}
 <tr>
     <th scope="row">{{ loop.index + (page - 1) * per_page }}</th>
-    <td>{{ device.device_name }}</td>
-    <td>{{ device.vendor }}</td>
-    <td>{{ device.ip_address }}</td>
-    <td>{{ device.username }}</td>
+    <td>{{ data.device_name }}</td>
+    <td>{{ data.vendor }}</td>
+    <td>{{ data.ip_address }}</td>
+    <td>{{ data.username }}</td>
     <td>
         <div class="d-flex align-items-center">
-            <span class="password-display">{{ device.password | mask_password }}</span>
+            <span class="password-display">{{ data.password | mask_password }}</span>
         </div>
     </td>
-    <td>{{ device.ssh }}</td>
+    <td>{{ data.ssh }}</td>
     <td>
-        <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#detailModal{{ device.id }}">
+        <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#detailModal{{ data.id }}">
             <i class="fas fa-eye"></i>
         </button>
-        <a href="{{ url_for('dm.update_device', device_id=device.id) }}" class="btn btn-success btn-sm">
+        <a href="{{ url_for('dm.update_device', device_id=data.id) }}" class="btn btn-success btn-sm">
             <i class="fas fa-edit"></i>
         </a>
-        <form action="{{ url_for('dm.delete_device', device_id=device.id) }}" method="post" style="display:inline;">
+        <form action="{{ url_for('dm.delete_device', device_id=data.id) }}" method="post" style="display:inline;">
             {{ form.csrf_token }} <!-- Adding CSRF token -->
             <button type="submit" class="btn btn-danger btn-sm"
-                onclick="return confirm('Apakah Anda yakin ingin menghapus perangkat ini?');">
+                onclick="return confirm('Apakah Anda yakin ingin menghapus ?');">
                 <i class="fas fa-trash"></i>
             </button>
         </form>
@@ -82,24 +80,24 @@
 </tr>
 
 <!-- Modal Detail Perangkat -->
-<div class="modal fade" id="detailModal{{ device.id }}" tabindex="-1" aria-labelledby="detailModalLabel{{ device.id }}"
+<div class="modal fade" id="detailModal{{ data.id }}" tabindex="-1" aria-labelledby="detailModalLabel{{ data.id }}"
     aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content bg-black text-white">
             <div class="modal-header">
-                <h5 class="modal-title" id="detailModalLabel{{ device.id }}">Detail Perangkat</h5>
+                <h5 class="modal-title" id="detailModalLabel{{ data.id }}">Detail Perangkat</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
             </div>
             <div class="modal-body">
-                <p><strong>Nama Perangkat:</strong> {{ device.device_name }}</p>
-                <p><strong>Vendor:</strong> {{ device.vendor }}</p>
-                <p><strong>IP Address:</strong> {{ device.ip_address }}</p>
-                <p><strong>Username:</strong> {{ device.username }}</p>
-                <p><strong>Password:</strong> {{ device.password }}</p>
-                <p><strong>Port SSH:</strong> {{ device.ssh }}</p>
-                <p><strong>Description:</strong> {{ device.description }}</p>
-                <p><strong>Dibuat oleh:</strong> {{ device.created_by }}</p>
-                <p><strong>Status Jaringan:</strong> {{ device.status }}</p>
+                <p><strong>Nama Perangkat:</strong> {{ data.device_name }}</p>
+                <p><strong>Vendor:</strong> {{ data.vendor }}</p>
+                <p><strong>IP Address:</strong> {{ data.ip_address }}</p>
+                <p><strong>Username:</strong> {{ data.username }}</p>
+                <p><strong>Password:</strong> {{ data.password }}</p>
+                <p><strong>Port SSH:</strong> {{ data.ssh }}</p>
+                <p><strong>Description:</strong> {{ data.description }}</p>
+                <p><strong>Dibuat oleh:</strong> {{ data.created_by }}</p>
+                <p><strong>Status Jaringan:</strong> {{ data.status }}</p>
             </div>
         </div>
     </div>

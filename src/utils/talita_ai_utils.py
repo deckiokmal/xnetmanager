@@ -1,8 +1,9 @@
 import requests
-from flask import flash
+from flask import flash, current_app
 
 
-def talita_chat_completion(url, apikey, question, user_id):
+
+def talita_chat_completion(question, user_id):
     """
     Mengirimkan permintaan POST ke API TALITA untuk mendapatkan jawaban dari chat completion.
 
@@ -16,10 +17,13 @@ def talita_chat_completion(url, apikey, question, user_id):
     str: Jawaban dari TALITA jika permintaan berhasil, atau None jika gagal.
     """
 
+    talita_api_key = current_app.config.get('TALITA_API_KEY')
+    talita_url = current_app.config.get('TALITA_URL')
+
     # Header yang ingin ditambahkan
     headers = {
         "Content-Type": "application/json",
-        "apikey": apikey,
+        "apikey": talita_api_key,
     }
 
     # Data yang akan dikirim dalam body request, dalam format JSON
@@ -30,7 +34,7 @@ def talita_chat_completion(url, apikey, question, user_id):
 
     try:
         # Mengirimkan permintaan POST
-        response = requests.post(url, headers=headers, json=data)
+        response = requests.post(talita_url, headers=headers, json=data)
 
         # Mengecek status kode dari respon
         if response.status_code == 200:
