@@ -1,0 +1,24 @@
+config system interface
+
+    edit wan
+        set ip 192.168.1.1/24
+        set mode static
+        set description "A"
+        set status up
+    next
+
+    edit port1
+        set ip 192.168.2.1/24
+        set mode static
+        set description "B"
+        set status up
+    next
+
+    edit port2
+        set ip 192.168.3.1/24
+        set mode static
+        set description "C"
+        set status up
+    next
+
+end

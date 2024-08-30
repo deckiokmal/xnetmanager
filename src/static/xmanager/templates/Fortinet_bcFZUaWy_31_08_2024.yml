@@ -1,0 +1,10 @@
+interface:
+ - port: wan
+   ip: "192.168.1.1/24"
+   des: "A"
+ - port: port1
+   ip: "192.168.2.1/24"
+   des: "B"
+ - port: port2
+   ip: "192.168.3.1/24"
+   des: "C"

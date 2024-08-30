@@ -1,0 +1,10 @@
+config system interface
+{% for int in interface %}
+    edit {{ int.port }}
+        set ip {{ int.ip }}
+        set mode static
+        set description "{{ int.des}}"
+        set status up
+    next
+{% endfor %}
+end
