@@ -2,8 +2,8 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="text-right text-light">Dashboard</h1>
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h3 class="text-right text-light">Dashboard</h3>
 </div>
 
 <div class="container-fluid">
@@ -12,7 +12,7 @@
     <div class="row">
         <!-- Total Devices -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card bg-dark text-light shadow h-100 py-2">
+            <div class="card border-left-success shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
@@ -30,7 +30,7 @@
 
         <!-- Total Templates -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card bg-dark text-light shadow h-100 py-2">
+            <div class="card border-left-primary shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
@@ -48,7 +48,7 @@
 
         <!-- Total Configuration Files -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card bg-dark text-light shadow h-100 py-2">
+            <div class="card border-left-info shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
@@ -66,7 +66,7 @@
 
         <!-- Total Backup Files -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card bg-dark text-light shadow h-100 py-2">
+            <div class="card border-left-warning shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
@@ -85,26 +85,31 @@
 
     <!-- Chart -->
     <div class="row">
-        <!-- Pie Chart for Devices by Vendor -->
-        <div class="col-12 col-sm-6 col-lg-6 mb-4">
-            <div class="card bg-dark text-light shadow mb-4">
-                <div class="card-header">
-                    <h6 class="m-0 font-weight-bold">Devices by Vendor</h6>
-                </div>
+        <div class="col-12 col-sm-6 col-lg-6 mb-2">
+            <div class="card border-left-warning shadow mb-4">
                 <div class="card-body">
-                    <canvas id="devicePieChart"></canvas>
+                    <div class="row no-gutters align-item-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Devices by vendor
+                            </div>
+                            <canvas id="devicePieChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- Pie Chart for Templates -->
-        <div class="col-12 col-sm-6 col-lg-6 mb-4">
-            <div class="card bg-dark text-light shadow mb-4">
-                <div class="card-header">
-                    <h6 class="m-0 font-weight-bold">Templates by Vendor</h6>
-                </div>
+        <div class="col-12 col-sm-6 col-lg-6 mb-2">
+            <div class="card border-left-warning shadow mb-4">
                 <div class="card-body">
-                    <canvas id="templatePieChart"></canvas>
+                    <div class="row no-gutters align-item-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Templates by vendor
+                            </div>
+                            <canvas id="templatePieChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -112,55 +117,66 @@
 
     <!-- Card Informasi -->
     <div class="row">
-        <div class="col-md-6">
-            <div class="card bg-dark text-light shadow mb-4">
-                <div class="card-header">
-                    <h6 class="m-0 font-weight-bold">Panduan Membuat Template</h6>
-                </div>
+        <div class="col-12 col-sm-6 col-lg-6 mb-4">
+            <div class="card border-left-warning shadow mb-4">
                 <div class="card-body">
-                    <!-- Embed YouTube Video -->
-                    <div class="ratio ratio-16x9">
-                        <iframe width="560" height="315" src="https://www.youtube.com/embed/NbaPfFTTsVE" frameborder="0"
-                            allowfullscreen></iframe>
+                    <div class="row no-gutters align-item-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Templates Tutorial
+                            </div>
+                            <!-- Embed YouTube Video -->
+                            <div class="ratio ratio-16x9">
+                                <iframe width="560" height="315" src="https://www.youtube.com/embed/NbaPfFTTsVE"
+                                    frameborder="0" allowfullscreen></iframe>
+                            </div>
+                            <p class="mt-4">
+                                Template yang digunakan adalah Jinja2 dan YAML. Simak video di atas untuk detail
+                                templating.
+                                Anda juga dapat melakukan simulasi pada website <a target="_blank" class="text-info"
+                                    rel="nofollow" href="https://j2live.ttl255.com/">J2live.</a>
+                            </p>
+                        </div>
                     </div>
-                    <p class="mt-2">
-                        Template yang digunakan adalah Jinja2, simak video di atas untuk detail templating.
-                        Anda dapat melakukan simulasi pada website <a target="_blank" class="text-info" rel="nofollow"
-                            href="https://j2live.ttl255.com/">J2live.</a>
-                    </p>
-                    <a target="_blank" class="text-info" rel="nofollow"
-                        href="https://jinja.palletsprojects.com/en/2.10.x/">Jinja Template Documentation &rarr;</a>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-6">
-            <div class="card bg-dark text-light shadow mb-4">
-                <div class="card-header">
-                    <h6 class="m-0 font-weight-bold">Template Example</h6>
-                </div>
+        <div class="col-12 col-sm-6 col-lg-6 mb-4">
+            <div class="card border-left-warning shadow mb-4">
                 <div class="card-body">
-                    <!-- Jinja2 Code Block -->
-                    <h6 class="text-warning">Template (j2):</h6>
-                    <pre class="bg-secondary text-light p-3 rounded mb-4"
-                        style="white-space: pre-wrap; word-wrap: break-word;">
-{% raw %}
+                    <div class="row no-gutters align-item-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Templates Examples
+                            </div>
+                            <!-- Jinja2 Code Block -->
+                            <h6 class="text-white">Template (.j2):</h6>
+                            <pre class="bg-black text-light rounded"
+                                style="white-space: pre-wrap; word-wrap: break-word;">
+                            {% raw %}
 config system global
     set hostname {{ hostname }}
 end
-{% endraw %}
-                    </pre>
+                            {% endraw %}
+                        </pre>
+                            <!-- YAML Code Block -->
+                            <h6 class="text-white">Parameter (.yaml):</h6>
+                            <pre class="bg-black text-light rounded"
+                                style="white-space: pre-wrap; word-wrap: break-word;">
 
-                    <!-- YAML Code Block -->
-                    <h6 class="text-warning">Parameter (yaml):</h6>
-                    <pre class="bg-secondary text-light p-3 rounded"
-                        style="white-space: pre-wrap; word-wrap: break-word;">
 hostname: "yourhostname"
-                    </pre>
+                            </pre>
+                            <p>Pelajari lebih lanjut</p>
+                            <a target="_blank" class="text-info" rel="nofollow"
+                                href="https://jinja.palletsprojects.com/en/2.10.x/">Jinja Template Documentation
+                                &rarr;</a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
 </div>
 {% endblock %}
 

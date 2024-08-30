@@ -116,6 +116,7 @@ def create_app(config_class=None):
     from .controllers.config_manager_controller import nm_bp
     from .utils.error_helper_utils import error_bp
     from .controllers.backup_controller import backup_bp
+    from .controllers.ai_chatbot_controller import api_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(users_bp)
@@ -126,6 +127,7 @@ def create_app(config_class=None):
     app.register_blueprint(nm_bp)
     app.register_blueprint(error_bp)
     app.register_blueprint(backup_bp)
+    app.register_blueprint(api_bp)
 
     # Set up user loader
     from .models.app_models import User

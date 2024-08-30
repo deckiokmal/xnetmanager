@@ -1,3 +1,19 @@
+/* sidebar */
+.bg-navbar-la {
+    background-color: #1b5ca2;
+    /* background-image: linear-gradient(180deg, #4e73df 10%, #224abe 100%); */
+    /* background-size: cover */
+}
+
+.bg-main-content {
+    background-color: #45474a;
+}
+
+.bg-footer {
+    background-color: #3f485190;
+    color: #ffffff;
+}
+
 /* Styles for the loading overlay */
 .loading-overlay {
     position: fixed;
@@ -65,3 +81,213 @@
     background-color: #0000007b;
     color: #ffffff;
 }
+
+/* card style */
+.border-left-success {
+    border-left: .25rem solid #1cc88a !important
+}
+
+.border-left-primary {
+    border-left: .25rem solid #4e73df !important
+}
+
+.border-left-info {
+    border-left: .25rem solid #36b9cc !important
+}
+
+.border-left-warning {
+    border-left: .25rem solid #f6c23e !important
+}
+
+/* talita chatbot message */
+#chatbot-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    background-color: ;#1b5ca2
+    color: white;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+    z-index: 1000;
+    background-image: url('https://iili.io/JpjR5tp.png');
+    background-size: cover;
+    background-position: center;
+}
+
+#chatbot-button.clicked {
+    background-image: none;
+    background-color: #1b5ca2;
+    transform: rotate(180deg);
+}
+
+#chatbot-button:hover {
+    transform: scale(1.1);
+}
+
+#chatbot-button:active {
+    transform: scale(0.95);
+}
+
+#chatbot-container {
+    display: none;
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 350px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    background-color: #fff;
+    overflow: hidden;
+    z-index: 999;
+}
+
+#chat-header {
+    background-color: #1b5ca2;
+    color: #fff;
+    padding: 10px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    padding-left: 20px;
+}
+
+#chat-header img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+#chat-body {
+    height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+    background-color: #e5ddd5;
+    word-wrap: break-word;
+    /* Pastikan teks panjang dibungkus */
+    overflow-wrap: break-word;
+    display: flex;
+    flex-direction: column;
+}
+
+#chat-input {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid #ddd;
+    background-color: white;
+}
+
+#chat-input textarea {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    resize: none;
+    height: auto;
+    /* Pastikan tinggi otomatis */
+    max-height: 100px;
+    /* Batasi tinggi maksimum */
+    overflow-y: auto;
+    font-size: 10px;
+}
+
+#chat-input button {
+    background-color: #1b5ca2;
+    color: #fff;
+    border: none;
+    padding: 10px;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-left: 5px;
+}
+
+#chat-input button:hover {
+    background-color: #1b5ca2c7;
+}
+
+.message {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: flex-start;
+    max-width: 100%;
+    /* Sesuaikan lebar ke kontainer */
+    word-wrap: break-word;
+    font-size: 10px;
+    line-height: 1.2em;
+}
+
+.bot-message {
+    justify-content: flex-start;
+    flex-direction: row;
+    margin-right: auto;
+}
+
+.user-message {
+    justify-content: flex-end;
+    flex-direction: row-reverse;
+    margin-left: auto;
+}
+
+.bot-message .message-text,
+.user-message .message-text {
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.bot-message .message-text {
+    background-color: #ffffff;
+    margin-left: 10px;
+}
+
+.user-message .message-text {
+    background-color: #dcf8c6;
+    margin-right: 10px;
+}
+
+.message img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin: 0 10px;
+}
+
+.bot-message img {
+    order: -1;
+}
+
+.user-message img {
+    order: 1;
+}
+
+#send-btn {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 10px;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-left: 5px;
+    width: 40px;
+    height: 40px;
+    /* Ukuran tetap untuk tombol */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#send-btn:hover {
+    background-color: #0056b3;
+}
+
+/* talita chatbot end */

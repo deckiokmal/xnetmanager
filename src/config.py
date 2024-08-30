@@ -25,13 +25,15 @@ DATABASE_URI = config("DATABASE_URL", default="sqlite:///xnetmanager.sqlite")
 if DATABASE_URI.startswith("postgres://"):
     DATABASE_URI = DATABASE_URI.replace("postgres://", "postgresql://", 1)
 
+
 def get_uuid_type(database_uri):
     """Menentukan tipe UUID berdasarkan URI database."""
     if database_uri.startswith("sqlite"):
         return String(36)  # Menggunakan String untuk UUID di SQLite
     else:
         return PostgresUUID(as_uuid=True)  # Menggunakan UUID asli di PostgreSQL
-    
+
+
 class Config(object):
     """Konfigurasi dasar aplikasi."""
 
@@ -117,7 +119,13 @@ class DevelopmentConfig(Config):
     TALISMAN_STRICT_TRANSPORT_SECURITY = False
     TALISMAN_CONTENT_SECURITY_POLICY = {
         "default-src": ["'self'", "https://www.youtube.com"],
-        "img-src": ["'self'", "data:", "cdn.jsdelivr.net", "via.placeholder.com"],
+        "img-src": [
+            "'self'",
+            "data:",
+            "cdn.jsdelivr.net",
+            "via.placeholder.com",
+            "https://iili.io",
+        ],
         "style-src": [
             "'self'",
             "'unsafe-inline'",
@@ -171,7 +179,13 @@ class ProductionConfig(Config):
     TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE = 31536000  # 1 year
     TALISMAN_CONTENT_SECURITY_POLICY = {
         "default-src": ["'self'", "https://www.youtube.com"],
-        "img-src": ["'self'", "data:", "cdn.jsdelivr.net", "via.placeholder.com"],
+        "img-src": [
+            "'self'",
+            "data:",
+            "cdn.jsdelivr.net",
+            "via.placeholder.com",
+            "https://iili.io",
+        ],
         "style-src": [
             "'self'",
             "'unsafe-inline'",

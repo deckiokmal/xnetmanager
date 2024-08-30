@@ -28,3 +28,83 @@
         });
     });
 </script>
+
+<!-- Talita chatbot JS -->
+<script>
+    const chatbotButton = document.getElementById('chatbot-button');
+    const chatbotContainer = document.getElementById('chatbot-container');
+    const chatBody = document.getElementById('chat-body');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+
+    chatbotButton.addEventListener('click', () => {
+        if (chatbotContainer.style.display === 'none' || chatbotContainer.style.display === '') {
+            chatbotContainer.style.display = 'block';
+            chatbotButton.classList.add('clicked');
+            chatbotButton.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                    d="M18.601 8.39897C18.269 8.06702 17.7309 8.06702 17.3989 8.39897L12 13.7979L6.60099 8.39897C6.26904 8.06702 5.73086 8.06702 5.39891 8.39897C5.06696 8.73091 5.06696 9.2691 5.39891 9.60105L11.3989 15.601C11.7309 15.933 12.269 15.933 12.601 15.601L18.601 9.60105C18.9329 9.2691 18.9329 8.73091 18.601 8.39897Z">
+                </path>
+            </svg>
+        `;
+        } else {
+            chatbotContainer.style.display = 'none';
+            chatbotButton.classList.remove('clicked');
+            chatbotButton.innerHTML = '';
+            chatbotButton.style.backgroundImage = 'url("https://iili.io/JpjR5tp.png")';
+        }
+    });
+
+    userInput.addEventListener('input', () => {
+        userInput.style.height = 'auto';
+        userInput.style.height = userInput.scrollHeight + 'px';
+    });
+
+    function addMessage(message, className) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${className}`;
+
+        let imgSrc = className === 'user-message' ?
+            '{{ url_for("static", filename=current_user.profile_picture) if current_user.profile_picture else "https://via.placeholder.com/100" }}' :
+            'https://iili.io/JpjR5tp.png';
+
+        // Replace newline characters with <br> for HTML display
+        const formattedMessage = message.replace(/\n/g, '<br>');
+
+        messageDiv.innerHTML = `<img src="${imgSrc}" alt="Avatar"> <div class="message-text">${formattedMessage}</div>`;
+        chatBody.appendChild(messageDiv);
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    async function sendMessage() {
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        addMessage(message, 'user-message');
+        userInput.value = '';
+        userInput.style.height = '40px'; // Reset height to default
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                addMessage(data.message, 'bot-message');
+            } else {
+                addMessage('Error: ' + data.message, 'bot-message');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            addMessage('Error contacting chatbot.', 'bot-message');
+        }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+</script>
