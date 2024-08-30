@@ -1,0 +1,10 @@
+config firewall policy
+edit 1
+set srcintf "WAN1"
+set dstintf "internal"
+set srcaddr "all"
+set dstaddr "Active Directory Server"
+set action deny
+set schedule "always"
+set service "ALL"
+end
