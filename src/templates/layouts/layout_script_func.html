@@ -36,6 +36,23 @@
     const chatBody = document.getElementById('chat-body');
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
+    const typingIndicator = document.getElementById('typing-indicator');
+
+    // Set initial state based on localStorage
+    if (localStorage.getItem('chatbotOpen') === 'true') {
+        chatbotContainer.style.display = 'block';
+        chatbotButton.classList.add('clicked');
+        chatbotButton.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+                d="M18.601 8.39897C18.269 8.06702 17.7309 8.06702 17.3989 8.39897L12 13.7979L6.60099 8.39897C6.26904 8.06702 5.73086 8.06702 5.39891 8.39897C5.06696 8.73091 5.06696 9.2691 5.39891 9.60105L11.3989 15.601C11.7309 15.933 12.269 15.933 12.601 15.601L18.601 9.60105C18.9329 9.2691 18.9329 8.73091 18.601 8.39897Z">
+            </path>
+        </svg>
+    `;
+    } else {
+        chatbotContainer.style.display = 'none';
+        chatbotButton.style.backgroundImage = 'url("https://iili.io/JpjR5tp.png")';
+    }
 
     chatbotButton.addEventListener('click', () => {
         if (chatbotContainer.style.display === 'none' || chatbotContainer.style.display === '') {
@@ -48,17 +65,19 @@
                 </path>
             </svg>
         `;
+            localStorage.setItem('chatbotOpen', 'true'); // Save state as open
         } else {
             chatbotContainer.style.display = 'none';
             chatbotButton.classList.remove('clicked');
             chatbotButton.innerHTML = '';
             chatbotButton.style.backgroundImage = 'url("https://iili.io/JpjR5tp.png")';
+            localStorage.setItem('chatbotOpen', 'false'); // Save state as closed
         }
     });
 
     userInput.addEventListener('input', () => {
-        userInput.style.height = 'auto';
-        userInput.style.height = userInput.scrollHeight + 'px';
+        userInput.style.height = 'auto'; // Reset height
+        userInput.style.height = userInput.scrollHeight + 'px'; // Resize based on content
     });
 
     function addMessage(message, className) {
@@ -69,9 +88,10 @@
             '{{ url_for("static", filename=current_user.profile_picture) if current_user.profile_picture else "https://via.placeholder.com/100" }}' :
             'https://iili.io/JpjR5tp.png';
 
-        // Replace newline characters with <br> for HTML display
-        const formattedMessage = message.replace(/\n/g, '<br>');
+        // If the message has no newlines, just render as is; else use Marked.js for markdown formatting
+        const formattedMessage = message.includes('\n') ? marked.parse(message) : message.replace(/\n/g, '');
 
+        // Create the message element
         messageDiv.innerHTML = `<img src="${imgSrc}" alt="Avatar"> <div class="message-text">${formattedMessage}</div>`;
         chatBody.appendChild(messageDiv);
         chatBody.scrollTop = chatBody.scrollHeight;
@@ -85,6 +105,8 @@
         userInput.value = '';
         userInput.style.height = '40px'; // Reset height to default
 
+        typingIndicator.style.display = 'inline'; // Show typing indicator
+
         try {
             const response = await fetch('/api/chat', {
                 method: 'POST',
@@ -95,6 +117,8 @@
             });
             const data = await response.json();
 
+            typingIndicator.style.display = 'none'; // Hide typing indicator after response
+
             if (data.success) {
                 addMessage(data.message, 'bot-message');
             } else {
@@ -103,6 +127,7 @@
         } catch (error) {
             console.error('Error:', error);
             addMessage('Error contacting chatbot.', 'bot-message');
+            typingIndicator.style.display = 'none'; // Hide typing indicator on error
         }
     }
 
