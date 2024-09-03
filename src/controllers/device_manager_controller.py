@@ -422,6 +422,7 @@ def get_devices():
             "password": device.password,
             "ssh": device.ssh,
             "description": device.description,
+            "user_id": device.user_id,
         }
         for device in devices
     ]
