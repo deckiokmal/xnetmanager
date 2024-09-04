@@ -1,4 +1,0 @@
-config system sdwan zone
-    edit "SD-WAN-Zone"
-    next
-end

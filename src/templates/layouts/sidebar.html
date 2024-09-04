@@ -80,10 +80,10 @@
 
     {% if current_user.has_role('Admin') or current_user.has_role('User') %}
     <!-- Nav Item - Configuration Management -->
-    <li class="nav-item {{ is_active('/nm') }}">
-        <a class="nav-link" href="/nm">
+    <li class="nav-item {{ is_active('/push-configuration') }}">
+        <a class="nav-link" href="/push-configuration">
             <i class="fas fa-fw fa-cogs"></i>
-            <span>Config Management</span>
+            <span>Push Configuration</span>
         </a>
     </li>
     {% endif %}

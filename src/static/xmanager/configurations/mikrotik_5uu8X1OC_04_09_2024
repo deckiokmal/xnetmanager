@@ -1,0 +1,2 @@
+/interface vlan
+add interface=ether1 name=VLAN3999 vlan-id=3999

@@ -4,6 +4,9 @@ from flask import (
     jsonify,
     request,
     current_app,
+    redirect,
+    url_for,
+    flash,
 )
 from flask_login import login_required, current_user
 from src.models.app_models import DeviceManager, ConfigurationManager
@@ -78,7 +81,7 @@ def inject_user():
 # --------------------------------------------------------------------------------
 
 
-GEN_TEMPLATE_FOLDER = "xmanager/gen_templates"
+GEN_TEMPLATE_FOLDER = "xmanager/configurations"
 
 
 # Fungsi pembantu untuk menghasilkan nama file acak
@@ -93,7 +96,7 @@ def generate_random_filename(filename):
 
 
 # Endpoint Network Manager index
-@nm_bp.route("/nm", methods=["GET"])
+@nm_bp.route("/push-configuration", methods=["GET"])
 @login_required
 @required_2fa
 @role_required(
@@ -104,48 +107,69 @@ def index():
     Menampilkan halaman index Network Manager.
     Fitur: Pencarian perangkat, pagination, dan pengambilan data konfigurasi.
     """
-    search_query = request.args.get("search", "")
-
-    # Ambil halaman dan jumlah per halaman dari argumen URL
+    # Logging untuk akses ke endpoint
+    current_app.logger.info(f"{current_user.email} accessed Push Configurations")
+    
+    search_query = request.args.get("search", "").lower()
     page, per_page, offset = get_page_args(
         page_parameter="page", per_page_parameter="per_page", per_page=10
     )
+    if page < 1 or per_page < 1:
+        raise ValueError("Page and per_page must be positive integers.")
 
-    # Query perangkat berdasarkan pencarian dan pemiliknya
-    devices_query = DeviceManager.query.filter(DeviceManager.user_id == current_user.id)
-    if search_query:
-        devices_query = devices_query.filter(
-            DeviceManager.device_name.ilike(f"%{search_query}%")
-            | DeviceManager.ip_address.ilike(f"%{search_query}%")
-            | DeviceManager.vendor.ilike(f"%{search_query}%")
+    try:
+        # Determine the user's role and adjust the query accordingly
+        if current_user.has_role("Admin"):
+            config_query = ConfigurationManager.query
+            if search_query:
+                devices_query = devices_query.filter(
+                    DeviceManager.device_name.ilike(f"%{search_query}%")
+                    | DeviceManager.ip_address.ilike(f"%{search_query}%")
+                    | DeviceManager.vendor.ilike(f"%{search_query}%")
+                )
+            else:
+                devices_query = DeviceManager.query
+        else:
+            config_query = ConfigurationManager.query.filter_by(user_id=current_user.id)
+            if search_query:
+                devices_query = DeviceManager.query.filter(
+                    DeviceManager.user_id == current_user.id,
+                    (
+                        DeviceManager.device_name.ilike(f"%{search_query}%")
+                        | DeviceManager.ip_address.ilike(f"%{search_query}%")
+                        | DeviceManager.vendor.ilike(f"%{search_query}%")
+                    ),
+                )
+            else:
+                devices_query = DeviceManager.query.filter_by(user_id=current_user.id)
+
+        total_devices = devices_query.count()
+        devices = devices_query.limit(per_page).offset(offset).all()
+        pagination = Pagination(page=page, per_page=per_page, total=total_devices)
+        config_file = config_query.all()
+
+        return render_template(
+            "config_managers/index.html",
+            devices=devices,
+            config_file=config_file,
+            page=page,
+            per_page=per_page,
+            pagination=pagination,
+            search_query=search_query,
+            total_devices=total_devices,
         )
-
-    # Query file konfigurasi berdasarkan pemiliknya
-    config_query = ConfigurationManager.query.filter(
-        ConfigurationManager.user_id == current_user.id
-    )
-
-    total_devices = devices_query.count()
-    devices = devices_query.limit(per_page).offset(offset).all()
-    config_file = config_query.all()
-
-    # Setup pagination
-    pagination = Pagination(
-        page=page,
-        per_page=per_page,
-        total=total_devices,
-    )
-
-    return render_template(
-        "config_managers/index.html",
-        devices=devices,
-        config_file=config_file,
-        page=page,
-        per_page=per_page,
-        pagination=pagination,
-        search_query=search_query,
-        total_devices=total_devices,
-    )
+    except Exception as e:
+        # Handle exceptions and log the error
+        current_app.logger.error(
+            f"Error accessing Push Configuration page by user {current_user.email}: {str(e)}"
+        )
+        flash(
+            "An error occurred while accessing the Push Configuration. Please try again later.",
+            "danger",
+        )
+        return redirect(
+            url_for("users.dashboard")
+        )  # Redirect to a safe page like dashboard
 
 
 # Endpoint untuk mengecek status perangkat
