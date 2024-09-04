@@ -2,11 +2,13 @@ from datetime import datetime
 from flask_login import UserMixin
 import pyotp
 from src import bcrypt, db
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from src.config import Config
 from itsdangerous import URLSafeTimedSerializer as Serializer, SignatureExpired
 from flask import current_app
 import uuid
 from src import UUID_TYPE
+import os
 
 
 # ------------------------------------------------------------------------
@@ -274,6 +276,12 @@ class BackupData(db.Model):
     user = db.relationship(
         "User", back_populates="backups", overlaps="shared_backups,backup_shares"
     )
+    git_versions = db.relationship(
+        "GitBackupVersion", back_populates="backup", cascade="all, delete-orphan"
+    )
+    shared_with = db.relationship(
+        "UserBackupShare", back_populates="backup", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<BackupData {self.backup_name} v{self.version}>"
@@ -281,7 +289,7 @@ class BackupData(db.Model):
     @staticmethod
     def create_backup(backup_name, description, user_id):
         try:
-            # Dapatkan versi terakhir dari backup dengan nama yang sama dan user yang sama
+            # Fetch the latest version of the backup with the same name and user
             last_backup = (
                 BackupData.query.filter_by(backup_name=backup_name, user_id=user_id)
                 .order_by(BackupData.version.desc())
@@ -298,17 +306,30 @@ class BackupData(db.Model):
             db.session.add(new_backup)
             db.session.commit()
 
-            # Log the successful creation of a backup
             current_app.logger.info(
                 f"Backup {new_backup.backup_name} v{new_backup.version} created successfully."
             )
             return new_backup
+        except IntegrityError as ie:
+            db.session.rollback()
+            current_app.logger.error(
+                f"Integrity error creating backup {backup_name} for user {user_id}: {ie}"
+            )
+            raise ValueError(
+                f"Failed to create backup due to integrity constraints: {ie}"
+            )
+        except SQLAlchemyError as sae:
+            db.session.rollback()
+            current_app.logger.error(
+                f"Database error creating backup {backup_name} for user {user_id}: {sae}"
+            )
+            raise RuntimeError(f"Database error occurred: {sae}")
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(
-                f"Error creating backup {backup_name} for user {user_id}: {e}"
+                f"Unexpected error creating backup {backup_name} for user {user_id}: {e}"
             )
-            return None
+            raise RuntimeError(f"Unexpected error occurred: {e}")
 
 
 class UserBackupShare(db.Model):
@@ -323,14 +344,10 @@ class UserBackupShare(db.Model):
     )
 
     user = db.relationship(
-        "User",
-        back_populates="backup_shares",
-        overlaps="backup_shares,shared_user",
+        "User", back_populates="backup_shares", overlaps="backup_shares,shared_user"
     )
     backup = db.relationship(
-        "BackupData",
-        backref=db.backref("shared_with", lazy=True),
-        overlaps="shared_backups",
+        "BackupData", back_populates="shared_with", overlaps="shared_backups"
     )
 
     def __repr__(self):
@@ -344,15 +361,25 @@ class GitBackupVersion(db.Model):
     backup_id = db.Column(
         db.String(36), db.ForeignKey("backup_data.id"), nullable=False, index=True
     )
-    commit_hash = db.Column(db.String(40), nullable=False)  # Hash dari commit Git
+    commit_hash = db.Column(db.String(40), nullable=False)  # Git commit hash
     commit_message = db.Column(db.String(255), nullable=False)
     committed_at = db.Column(db.DateTime, default=datetime.utcnow)
     file_path = db.Column(db.String(255), nullable=False)
 
-    # Relasi ke BackupData
-    backup = db.relationship(
-        "BackupData", backref=db.backref("git_versions", lazy=True)
-    )
+    backup = db.relationship("BackupData", back_populates="git_versions")
 
     def __repr__(self):
         return f"<GitBackupVersion {self.commit_hash} for Backup {self.backup_id}>"
+
+    def validate_file_path(self):
+        """
+        Ensure that the file path is valid and does not lead to security issues.
+        """
+        base_dir = os.path.abspath(
+            os.path.dirname(__file__)
+        )  # Base directory of the application
+        abs_file_path = os.path.abspath(self.file_path)
+        if not abs_file_path.startswith(base_dir):
+            current_app.logger.error(f"Invalid file path: {self.file_path}")
+            raise ValueError(f"Invalid file path: {self.file_path}")
+        return abs_file_path
