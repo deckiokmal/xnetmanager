@@ -1,0 +1,32 @@
+{% extends "/layouts/layout_table.html" %}
+{% block title %}Shared Backups{% endblock %}
+
+{% block button_group1 %}
+<a class="btn btn-primary" href="{{ url_for('backup.backups') }}">
+    <i class="fas fa-arrow-left"></i> Back to Backup List
+</a>
+{% endblock %}
+
+{% block table_name %}Shared Backups{% endblock %}
+
+{% block table_header %}
+<th scope="col">No</th>
+<th scope="col">Backup Name</th>
+<th scope="col">Description</th>
+<th scope="col">Shared By</th>
+<th scope="col">Created At</th>
+<th scope="col">Version</th>
+{% endblock %}
+
+{% block table_body %}
+{% for shared_backup in shared_backups %}
+<tr>
+    <th scope="row">{{ loop.index + (page - 1) * per_page }}</th>
+    <td>{{ shared_backup.backup_name }}</td>
+    <td>{{ shared_backup.description }}</td>
+    <td>{{ shared_backup.shared_by }}</td>
+    <td>{{ shared_backup.created_at }}</td>
+    <td>{{ shared_backup.version }}</td>
+</tr>
+{% endfor %}
+{% endblock %}

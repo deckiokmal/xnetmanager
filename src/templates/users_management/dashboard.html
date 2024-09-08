@@ -231,7 +231,7 @@ hostname: "yourhostname"
     devicePieCtx.canvas.addEventListener('click', function (event) {
         const points = deviceChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
         if (points.length) {
-            window.location.href = "/dm";
+            window.location.href = "/devices-management";
         }
     });
 
@@ -260,7 +260,7 @@ hostname: "yourhostname"
     templatePieCtx.canvas.addEventListener('click', function (event) {
         const points = templateChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
         if (points.length) {
-            window.location.href = "/tm";
+            window.location.href = "/templates-management";
         }
     });
     });

@@ -1,0 +1,68 @@
+{% extends "/layouts/layout_table.html" %}
+{% block title %}Backup History{% endblock %}
+
+{% block button_group1 %}
+<a class="btn btn-primary" href="{{ url_for('backup.backups') }}">
+    <i class="fas fa-arrow-left"></i> Back to Backup List
+</a>
+{% endblock %}
+
+{% block table_name %}History of Backup: {{ backup.backup_name }}{% endblock %}
+
+{% block table_header %}
+<th>Commit Hash</th>
+<th>Message</th>
+<th>Date</th>
+<th>Actions</th>
+{% endblock %}
+
+{% block table_body %}
+{% for commit in commits %}
+<tr>
+    <td>{{ commit.hash }}</td>
+    <td>{{ commit.message }}</td>
+    <td>{{ commit.date }}</td>
+    <td>
+        <button class="btn btn-warning btn-sm" onclick="rollbackCommit('{{ commit.hash }}')">Rollback</button>
+        <button class="btn btn-info btn-sm" onclick="viewDiff('{{ commit.hash }}')">View Diff</button>
+    </td>
+</tr>
+{% endfor %}
+{% endblock %}
+
+{% block script_js %}
+<script>
+    function rollbackCommit(commitHash) {
+        if (confirm("Are you sure you want to rollback to this commit?")) {
+            fetch(`/rollback/{{ backup.id }}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ version_id: commitHash })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    location.reload();
+                })
+                .catch(error => console.error('Error:', error));
+        }
+    }
+
+    function viewDiff(commitHash) {
+        fetch(`/backup_diff/{{ backup.id }}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ old_commit: "{{ latest_commit_hash }}", new_commit: commitHash })
+        })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.diff);
+            })
+            .catch(error => console.error('Error:', error));
+    }
+</script>
+{% endblock %}

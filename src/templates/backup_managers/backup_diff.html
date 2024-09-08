@@ -1,0 +1,14 @@
+{% extends "/layouts/layout_table.html" %}
+{% block title %}Backup Diff{% endblock %}
+
+{% block button_group1 %}
+<a class="btn btn-primary" href="{{ url_for('backup.backup_history', backup_id=backup.id) }}">
+    <i class="fas fa-arrow-left"></i> Back to Backup History
+</a>
+{% endblock %}
+
+{% block table_name %}Diff Between Commits{% endblock %}
+
+{% block table_body %}
+<pre>{{ diff_content }}</pre>
+{% endblock %}

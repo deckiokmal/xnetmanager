@@ -63,7 +63,7 @@
     <td>{{ 'Yes' if user.is_2fa_enabled else 'No' }}</td>
     <td>
         <!-- Tombol Detail Perangkat -->
-        <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#detailModal{{ user.id }}">
+        <button class="btn btn-info btn-sm" data-user-id="{{ user.id }}" onclick="showUserDetails(this)">
             <i class="fas fa-eye"></i>
         </button>
         <!-- Tombol Edit Perangkat -->
@@ -80,34 +80,6 @@
         </form>
     </td>
 </tr>
-
-<!-- Modal Detail User -->
-<div class="modal fade" id="detailModal{{ user.id }}" tabindex="-1" aria-labelledby="detailModalLabel{{ user.id }}"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-black text-light">
-            <div class="modal-header">
-                <h5 class="modal-title" id="detailModalLabel{{ user.id }}">Detail User</h5>
-                <button type="button" class="btn-close btn-light" data-bs-dismiss="modal" aria-label="Tutup"></button>
-            </div>
-            <div class="modal-body">
-                <p><strong>email:</strong> {{ user.email }}</p>
-                <p><strong>Password:</strong> {{ user.password_hash }}</p>
-                <p><strong>Email Verified Status:</strong> {{ 'Yes' if user.is_verified else 'No' }}</p>
-                <p><strong>Role:</strong> {{ user.roles|join(', ') }}</p>
-                <p><strong>Dibuat pada:</strong> {{ user.date_joined.strftime('%Y-%m-%d %H:%M:%S') }}</p>
-                <p><strong>Terakhir login:</strong>
-                    {% if user.last_login %}
-                    {{ user.last_login.strftime('%Y-%m-%d %H:%M:%S') }}
-                    {% else %}
-                    Never logged in
-                    {% endif %}
-                </p>
-            </div>
-        </div>
-    </div>
-</div>
-
 {% endfor %}
 {% endblock %}
 
@@ -127,6 +99,28 @@
 {% endblock %}
 
 {% block modal_data %}
+<!-- Modal Detail User -->
+<div class="modal fade" id="userDetailModal" tabindex="-1" aria-labelledby="userDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userDetailModalLabel">User Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Email:</strong> <span id="email"></span></p>
+                <p><strong>Password:</strong> <span id="password"></span></p>
+                <p><strong>First name:</strong> <span id="first_name"></span></p>
+                <p><strong>Last name:</strong> <span id="last_name"></span></p>
+                <p><strong>User role:</strong> <span id="roles"></span></p>
+                <p><strong>2FA status:</strong> <span id="is_2fa_enabled"></span></p>
+                <p><strong>Date joined:</strong> <span id="date_joined"></span></p>
+                <p><strong>Last login:</strong> <span id="last_login"></span></p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- create user Modal -->
 <div class="modal fade" id="createuserModal" tabindex="-1" aria-labelledby="createuserModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 400px;">
@@ -207,23 +201,66 @@
 
     document.getElementById("searchInput").addEventListener("input", function () {
         const query = this.value.toLowerCase();
-        const rows = document.querySelectorAll("#deviceTable tbody tr");
+        const rows = document.querySelectorAll("#dataTable tbody tr");
 
         rows.forEach(row => {
-            const deviceName = row.cells[2].textContent.toLowerCase();
-            const ipAddress = row.cells[3].textContent.toLowerCase();
-            const vendor = row.cells[4].textContent.toLowerCase();
+            // Ambil kolom email dan company sesuai dengan urutan kolom pada tabel
+            const email = row.cells[1].textContent.toLowerCase();
+            const company = row.cells[3].textContent.toLowerCase();
 
-            if (
-                deviceName.includes(query) ||
-                ipAddress.includes(query) ||
-                vendor.includes(query)
-            ) {
-                row.style.display = "";
+            // Periksa apakah pencarian cocok dengan email atau company
+            if (email.includes(query) || company.includes(query)) {
+                row.style.display = ""; // Tampilkan baris jika cocok
             } else {
-                row.style.display = "none";
+                row.style.display = "none"; // Sembunyikan baris jika tidak cocok
             }
         });
+    });
+</script>
+
+<script>
+    // Handle user detail
+    function showUserDetails(button) {
+        const userId = button.getAttribute("data-user-id");
+
+        fetch(`/detail-user/${userId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    // Update UI with user details
+                    document.getElementById("email").innerText = data.email;
+                    document.getElementById("password").innerText = data.password;
+                    document.getElementById("first_name").innerText = data.first_name;
+                    document.getElementById("last_name").innerText = data.last_name;
+                    document.getElementById("roles").innerText = data.roles;
+                    document.getElementById("is_2fa_enabled").innerText = data.is_2fa_enabled;
+                    document.getElementById("date_joined").innerText = data.date_joined;
+
+                    // Handle last_login
+                    if (data.last_login) {
+                        document.getElementById("last_login").innerText = data.last_login;
+                    } else {
+                        document.getElementById("last_login").innerText = 'Never login';
+                    }
+
+                    // Show modal
+                    var detailModal = new bootstrap.Modal(document.getElementById("userDetailModal"));
+                    detailModal.show();
+                }
+            })
+            .catch(error => console.error('Error fetching user details:', error));
+    }
+</script>
+
+<script>
+    // Cek apakah modal perlu dibuka kembali setelah validasi gagal
+    document.addEventListener("DOMContentLoaded", function () {
+        {% if open_modal %}
+        var modal = new bootstrap.Modal(document.getElementById('createuserModal'));
+        modal.show();  // Buka modal secara otomatis
+        {% endif %}
     });
 </script>
 {% endblock %}

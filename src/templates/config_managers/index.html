@@ -38,7 +38,7 @@
 <!-- Form Pencarian -->
 <form id="searchForm" method="get" action="{{ url_for('nm.index') }}" class="form-inline d-flex">
     <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2"
-        placeholder="Cari perangkat" value="{{ search_query }}">
+        placeholder="Search..." value="{{ search_query }}">
     <button class="btn btn-outline-success btn-sm" type="submit">
         <i class="fa-solid fa-magnifying-glass"></i>
     </button>
@@ -167,7 +167,6 @@
     document.getElementById("searchInput").addEventListener("input", function () {
         clearTimeout(timeout);
         timeout = setTimeout(function () {
-            showLoadingOverlay(); // Show overlay before form submission
             document.getElementById('searchForm').submit();
         }, 1000);
     });

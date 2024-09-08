@@ -1,0 +1,33 @@
+{% extends "/layouts/layout_table.html" %}
+{% block title %}Backup Detail{% endblock %}
+
+{% block button_group1 %}
+<a class="btn btn-primary" href="{{ url_for('backup.backups') }}">
+    <i class="fas fa-arrow-left"></i> Back to Backup List
+</a>
+{% endblock %}
+
+{% block table_name %}Detail of Backup: {{ backup.backup_name }}{% endblock %}
+
+{% block table_body %}
+<tr>
+    <th>Backup Name</th>
+    <td>{{ backup.backup_name }}</td>
+</tr>
+<tr>
+    <th>Description</th>
+    <td>{{ backup.description }}</td>
+</tr>
+<tr>
+    <th>Created At</th>
+    <td>{{ backup.created_at }}</td>
+</tr>
+<tr>
+    <th>Version</th>
+    <td>{{ backup.version }}</td>
+</tr>
+<tr>
+    <th>Content</th>
+    <td><pre>{{ backup_content }}</pre></td>
+</tr>
+{% endblock %}

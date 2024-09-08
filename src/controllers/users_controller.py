@@ -88,17 +88,45 @@ def inject_user():
 @required_2fa
 def dashboard():
     try:
-        # Mengambil semua perangkat dan template konfigurasi dari database
-        devices = DeviceManager.query.filter_by(user_id=current_user.id)
-        templates = TemplateManager.query.all()
-        configuration_file = ConfigurationManager.query.filter_by(
-            user_id=current_user.id
-        )
-        backupdata = BackupData.query.filter_by(user_id=current_user.id)
+        # Filter perangkat berdasarkan peran user
+        if current_user.has_role("Admin"):
+            devices = DeviceManager.query  # Admin dapat melihat semua perangkat
+        else:
+            devices = DeviceManager.query.filter_by(
+                user_id=current_user.id
+            )  # Non-Admin hanya dapat melihat perangkat miliknya
+
+        # Filter template berdasarkan peran user
+        if current_user.has_role("Admin"):
+            templates = (
+                TemplateManager.query.all()
+            )  # Admin dapat melihat semua template
+        else:
+            templates = TemplateManager.query.all()
+
+        # Filter file konfigurasi berdasarkan peran user
+        if current_user.has_role("Admin"):
+            configuration_file = (
+                ConfigurationManager.query
+            )  # Admin dapat melihat semua konfigurasi
+        else:
+            configuration_file = ConfigurationManager.query.filter_by(
+                user_id=current_user.id
+            )  # Non-Admin hanya dapat melihat konfigurasi miliknya
+
+        # Filter backup data berdasarkan peran user
+        if current_user.has_role("Admin"):
+            backupdata = BackupData.query  # Admin dapat melihat semua backup data
+        else:
+            backupdata = BackupData.query.filter_by(
+                user_id=current_user.id
+            )  # Non-Admin hanya dapat melihat backup data miliknya
 
         # Menghitung jumlah total
         total_devices = devices.count()
-        total_templates = len(templates)
+        total_templates = len(
+            templates
+        )  # .all() menghasilkan list, jadi menggunakan len() untuk menghitung jumlahnya
         total_configuration_file = configuration_file.count()
         total_backupdata = backupdata.count()
 
@@ -144,7 +172,7 @@ def dashboard():
 # --------------------------------------------------------------------------------
 
 
-@users_bp.route("/users-management", methods=["GET", "POST"])
+@users_bp.route("/users-management", methods=["GET"])
 @login_required
 @required_2fa
 @role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
@@ -153,42 +181,48 @@ def index():
     Display the main page of the User Management.
     This page includes a list of users and supports pagination and searching.
     """
+    # Logging untuk akses ke endpoint
+    current_app.logger.info(f"{current_user.email} accessed users-management")
+
+    # Menginisialisasi form untuk pendaftaran pengguna baru
+    form = RegisterForm()
+
+    # Mengambil parameter search dari query string URL (jika ada) dan mengubahnya menjadi huruf kecil.
+    search_query = request.args.get("search", "").lower()
+    page, per_page, offset = get_page_args(
+        page_parameter="page", per_page_parameter="per_page", per_page=10
+    )
+    if page < 1 or per_page < 1:
+        flash("Invalid pagination values.", "danger")
+
     try:
-        form = RegisterForm(request.form)  # Initialize the form for creating new users
+        # Memulai query untuk mengambil semua data
+        user_query = User.query
 
-        search_query = request.args.get("search", "").lower()  # Get the search query
-
-        page, per_page, offset = get_page_args(
-            page_parameter="page", per_page_parameter="per_page", per_page=10
-        )
-
-        # Filtering users based on search query
         if search_query:
-            user_query = User.query.filter(User.email.ilike(f"%{search_query}%"))
-            current_app.logger.info(
-                f"Search query '{search_query}' performed by {current_user.email}."
+            user_query = user_query.filter(
+                User.email.ilike(f"%{search_query}%")
+                | User.company.ilike(f"%{search_query}%")
             )
-        else:
-            user_query = User.query
 
+        # Pagination dan User query
         total_user = user_query.count()
         users = user_query.limit(per_page).offset(offset).all()
-
         pagination = Pagination(page=page, per_page=per_page, total=total_user)
 
-        current_app.logger.info(
-            f"User management page accessed by {current_user.email}"
-        )
+        if total_user == 0:
+            flash("Tidak ada data apapun di halaman ini.", "info")
 
         return render_template(
             "/users_management/index.html",
-            users=users,
+            form=form,
+            search_query=search_query,
             page=page,
             per_page=per_page,
-            pagination=pagination,
-            search_query=search_query,
             total_user=total_user,
-            form=form,
+            users=users,
+            pagination=pagination,
+            open_modal=False,  # Pastikan modal tidak terbuka di halaman awal
         )
 
     except Exception as e:
@@ -199,16 +233,7 @@ def index():
             "An unexpected error occurred while accessing the user management page. Please try again later.",
             "danger",
         )
-        return render_template(
-            "/users_management/index.html",
-            users=[],
-            page=1,
-            per_page=10,
-            pagination=Pagination(page=1, per_page=10, total=0),
-            search_query="",
-            total_user=0,
-            form=form,
-        )
+        return redirect(url_for("users.dashboard"))
 
 
 @users_bp.route("/create-user", methods=["POST"])
@@ -220,50 +245,93 @@ def create_user():
 
     try:
         if form.validate_on_submit():
-            existing_user = User.query.filter_by(email=form.email.data.strip()).first()
-            if existing_user:
-                flash("Alamat email sudah terdaftar", "warning")
-                current_app.logger.warning(
-                    f"Registration attempt failed: {form.email.data.strip()} already exists"
-                )
-            else:
-                # Create a new user with provided data
-                new_user = User(
-                    first_name=form.first_name.data.strip(),
-                    last_name=form.last_name.data.strip(),
-                    email=form.email.data.strip(),
-                    password_hash=form.password.data.strip(),
-                )
+            # Buat user baru setelah validasi berhasil
+            new_user = User(
+                first_name=form.first_name.data.strip(),
+                last_name=form.last_name.data.strip(),
+                email=form.email.data.strip(),
+                password_hash=form.password.data.strip(),
+            )
 
-                # Assign the 'User' role to the new user
-                view_role = Role.query.filter_by(name="User").first()
-                if view_role:
-                    new_user.roles.append(view_role)
+            # Assign role 'User'
+            user_role = Role.query.filter_by(name="User").first()
+            if user_role:
+                new_user.roles.append(user_role)
 
-                db.session.add(new_user)
-                db.session.commit()
+            db.session.add(new_user)
+            db.session.commit()
 
-                flash("User berhasil ditambahkan.", "success")
-                current_app.logger.info(f"New user created: {form.email.data.strip()}")
-                return redirect(url_for("users.index"))
+            flash("User berhasil ditambahkan.", "success")
+            return redirect(url_for("users.index"))
         else:
-            # Log and flash form validation errors
-            for field, errors in form.errors.items():
-                for error in errors:
-                    flash(
-                        f"Kesalahan pada {getattr(form, field).label.text}: {error}",
-                        "danger",
-                    )
-            current_app.logger.warning("Form validation failed during user creation.")
+            # Jika validasi form gagal, render ulang halaman dengan modal terbuka
+            search_query = request.args.get("search", "").lower()
+            page, per_page, offset = get_page_args(
+                page_parameter="page", per_page_parameter="per_page", per_page=10
+            )
+            user_query = User.query
+
+            if search_query:
+                user_query = user_query.filter(
+                    User.email.ilike(f"%{search_query}%")
+                    | User.company.ilike(f"%{search_query}%")
+                )
+
+            total_user = user_query.count()
+            users = user_query.limit(per_page).offset(offset).all()
+            pagination = Pagination(page=page, per_page=per_page, total=total_user)
+
+            return render_template(
+                "users_management/index.html",
+                form=form,
+                users=users,
+                search_query=search_query,
+                page=page,
+                per_page=per_page,
+                total_user=total_user,
+                pagination=pagination,
+                open_modal=True,  # Modal tetap terbuka
+            )
 
     except Exception as e:
         current_app.logger.error(
             f"Error creating user {form.email.data.strip()}: {str(e)}"
         )
         flash("Terjadi kesalahan saat membuat user. Silakan coba lagi.", "danger")
-        db.session.rollback()  # Rollback the session to maintain data integrity
+        db.session.rollback()
+        return redirect(url_for("users.index"))
 
-    return redirect(url_for("users.index"))
+
+@users_bp.route("/detail-user/<user_id>", methods=["GET"])
+@login_required
+@required_2fa
+@role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
+def detail_user(user_id):
+    user = User.query.get_or_404(user_id)
+
+    # Format datetime fields
+    date_joined = (
+        user.date_joined.strftime("%Y-%m-%d %H:%M:%S") if user.date_joined else None
+    )
+    last_login = (
+        user.last_login.strftime("%Y-%m-%d %H:%M:%S") if user.last_login else None
+    )
+
+    # Convert roles to a string or list of roles
+    roles = ", ".join([role.name for role in user.roles])
+
+    return jsonify(
+        {
+            "email": user.email,
+            "password": "*****",  # Mask the password for security
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "roles": roles,
+            "is_2fa_enabled": "Yes" if user.is_2fa_enabled else "No",
+            "date_joined": date_joined,
+            "last_login": last_login,
+        }
+    )
 
 
 @users_bp.route("/update-user/<user_id>", methods=["GET", "POST"])

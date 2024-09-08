@@ -8,18 +8,27 @@ from flask import (
     url_for,
     flash,
 )
-from flask_login import login_required, current_user
+from flask_login import (
+    login_required, 
+    current_user,
+)
+from .decorators import (
+    role_required, 
+    required_2fa,
+)
+import logging
 from src.models.app_models import DeviceManager, ConfigurationManager
 from src.utils.config_manager_utils import ConfigurationManagerUtils
 import os
-from .decorators import login_required, role_required, required_2fa
 from flask_paginate import Pagination, get_page_args
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import logging
 import json
 import random
 from datetime import datetime
 import string
+from functools import lru_cache
+import time
+from sqlalchemy.exc import SQLAlchemyError
 
 # Membuat blueprint untuk Network Manager (nm_bp) dan Error Handling (error_bp)
 nm_bp = Blueprint("nm", __name__)
@@ -39,7 +48,6 @@ def setup_logging():
     current_app.logger.addHandler(handler)
 
 
-# Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
     """
@@ -49,7 +57,6 @@ def page_not_found(error):
     return render_template("main/404.html"), 404
 
 
-# Middleware untuk autentikasi dan otorisasi sebelum permintaan.
 @nm_bp.before_request
 def before_request_func():
     """
@@ -63,7 +70,6 @@ def before_request_func():
         return render_template("main/404.html"), 404
 
 
-# Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @nm_bp.context_processor
 def inject_user():
     """
@@ -109,43 +115,43 @@ def index():
     """
     # Logging untuk akses ke endpoint
     current_app.logger.info(f"{current_user.email} accessed Push Configurations")
-    
+
     search_query = request.args.get("search", "").lower()
     page, per_page, offset = get_page_args(
         page_parameter="page", per_page_parameter="per_page", per_page=10
     )
     if page < 1 or per_page < 1:
-        raise ValueError("Page and per_page must be positive integers.")
+        flash("Invalid pagination values.", "danger")
 
     try:
-        # Determine the user's role and adjust the query accordingly
+        # Query untuk DeviceManager
         if current_user.has_role("Admin"):
-            config_query = ConfigurationManager.query
-            if search_query:
-                devices_query = devices_query.filter(
-                    DeviceManager.device_name.ilike(f"%{search_query}%")
-                    | DeviceManager.ip_address.ilike(f"%{search_query}%")
-                    | DeviceManager.vendor.ilike(f"%{search_query}%")
-                )
-            else:
-                devices_query = DeviceManager.query
+            devices_query = DeviceManager.query
         else:
-            config_query = ConfigurationManager.query.filter_by(user_id=current_user.id)
-            if search_query:
-                devices_query = DeviceManager.query.filter(
-                    DeviceManager.user_id == current_user.id,
-                    (
-                        DeviceManager.device_name.ilike(f"%{search_query}%")
-                        | DeviceManager.ip_address.ilike(f"%{search_query}%")
-                        | DeviceManager.vendor.ilike(f"%{search_query}%")
-                    ),
-                )
-            else:
-                devices_query = DeviceManager.query.filter_by(user_id=current_user.id)
+            devices_query = DeviceManager.query.filter_by(user_id=current_user.id)
 
+        # Jika ada pencarian, tambahkan filter pencarian
+        if search_query:
+            devices_query = devices_query.filter(
+                DeviceManager.device_name.ilike(f"%{search_query}%")
+                | DeviceManager.ip_address.ilike(f"%{search_query}%")
+                | DeviceManager.vendor.ilike(f"%{search_query}%")
+            )
+
+        # Pagination dan device query
         total_devices = devices_query.count()
         devices = devices_query.limit(per_page).offset(offset).all()
         pagination = Pagination(page=page, per_page=per_page, total=total_devices)
+
+        if total_devices == 0:
+            flash("Tidak ada data apapun di halaman ini.", "info")
+
+        # Query untuk ConfigurationManager
+        if current_user.has_role("Admin"):
+            config_query = ConfigurationManager.query
+        else:
+            config_query = ConfigurationManager.query.filter_by(user_id=current_user.id)
+
         config_file = config_query.all()
 
         return render_template(
@@ -158,8 +164,17 @@ def index():
             search_query=search_query,
             total_devices=total_devices,
         )
+    except SQLAlchemyError as e:
+        # Specific database error handling
+        current_app.logger.error(
+            f"Database error while accessing Push Configuration page by user {current_user.email}: {str(e)}"
+        )
+        flash(
+            "A database error occurred while accessing the Push Configuration. Please try again later.",
+            "danger",
+        )
+        return redirect(url_for("users.dashboard"))
     except Exception as e:
-        # Handle exceptions and log the error
         current_app.logger.error(
             f"Error accessing Push Configuration page by user {current_user.email}: {str(e)}"
         )
@@ -167,12 +182,26 @@ def index():
             "An error occurred while accessing the Push Configuration. Please try again later.",
             "danger",
         )
-        return redirect(
-            url_for("users.dashboard")
-        )  # Redirect to a safe page like dashboard
+        return redirect(url_for("users.dashboard"))
 
 
-# Endpoint untuk mengecek status perangkat
+# Cache status perangkat untuk menghindari pengecekan berulang
+STATUS_CACHE_TTL = 60  # seconds
+device_status_cache = {}
+
+
+# Fungsi caching sederhana
+def get_cached_device_status(device_id):
+    cached = device_status_cache.get(device_id)
+    if cached and (time.time() - cached["timestamp"]) < STATUS_CACHE_TTL:
+        return cached["status"]
+    return None
+
+
+def set_device_status_cache(device_id, status):
+    device_status_cache[device_id] = {"status": status, "timestamp": time.time()}
+
+
 @nm_bp.route("/check_status", methods=["POST"])
 @login_required
 @required_2fa
@@ -181,32 +210,68 @@ def index():
 )
 def check_status():
     """
-    Memeriksa status setiap perangkat di database.
-    Mengembalikan status dalam format JSON untuk setiap perangkat.
+    Memeriksa status perangkat dalam database secara paralel dan caching.
+    Mengembalikan status perangkat dalam format JSON untuk setiap perangkat.
     """
-    devices = DeviceManager.query.filter(
-        DeviceManager.user_id == current_user.id
-    ).all()  # Filter perangkat berdasarkan pemilik
-    device_status = {}
+    try:
+        # Jika current_user memiliki peran "Admin", maka query akan mengambil semua data
+        # Jika bukan "Admin", query akan difilter berdasarkan ownership
+        if current_user.has_role("Admin"):
+            devices_query = DeviceManager.query
+        else:
+            devices_query = DeviceManager.query.filter_by(user_id=current_user.id)
+        
+        devices = devices_query.all()
 
-    # Mengecek status setiap perangkat
-    for device in devices:
-        check_device_status = ConfigurationManagerUtils(ip_address=device.ip_address)
-        status_json = check_device_status.check_device_status_threaded()
+        # Batasi jumlah thread
+        MAX_THREADS = 10
+        device_status = {}
 
-        try:
-            # Parsing hasil JSON dari status perangkat
+        def check_device_status(device):
+            """
+            Fungsi untuk mengecek status perangkat menggunakan ConfigurationManagerUtils
+            """
+            cached_status = get_cached_device_status(device.id)
+            if cached_status:
+                logging.info(f"Using cached status for device {device.device_name}")
+                return device.id, cached_status
+
+            # Jika tidak ada dalam cache, lakukan pengecekan status
+            utils = ConfigurationManagerUtils(ip_address=device.ip_address)
+            status_json = (
+                utils.check_device_status_threaded()
+            )  # Memeriksa status perangkat
             status_dict = json.loads(status_json)
-            # Set status berdasarkan hasil ping
-            if status_dict["status"] == "success":
-                device_status[device.id] = "success"
-            else:
-                device_status[device.id] = "error"
-        except json.JSONDecodeError as e:
-            logging.error("Error decoding JSON response: %s", e)
-            device_status[device.id] = "error"
 
-    return jsonify(device_status)
+            # Cache hasil status
+            set_device_status_cache(device.id, status_dict["status"])
+            return device.id, status_dict["status"]
+
+        # Gunakan ThreadPoolExecutor untuk melakukan pengecekan status secara paralel
+        with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+            futures = {
+                executor.submit(check_device_status, device): device
+                for device in devices
+            }
+
+            # Iterasi melalui hasil pengecekan
+            for future in as_completed(futures):
+                try:
+                    device_id, status = future.result()
+                    device_status[device_id] = status
+                except Exception as e:
+                    logging.error(f"Error checking status for device: {e}")
+                    device_status[device_id] = "error"
+
+        # Kembalikan hasil dalam bentuk JSON untuk ditangani oleh UI
+        return jsonify(device_status)
+
+    except Exception as e:
+        logging.error(f"Error checking device status: {str(e)}")
+        return (
+            jsonify({"error": "An error occurred while checking device status."}),
+            500,
+        )
 
 
 # Endpoint untuk push konfigurasi ke perangkat
@@ -231,11 +296,16 @@ def push_configs():
     if not config_id:
         return jsonify({"success": False, "message": "No config selected."}), 400
 
-    # Query perangkat dan konfigurasi berdasarkan input dan pemiliknya
-    devices = DeviceManager.query.filter(
-        DeviceManager.ip_address.in_(device_ips),
-        DeviceManager.user_id == current_user.id,
-    ).all()
+    # Query perangkat berdasarkan peran user
+    if current_user.has_role("Admin"):
+        devices = DeviceManager.query.filter(DeviceManager.ip_address.in_(device_ips)).all()
+    else:
+        devices = DeviceManager.query.filter(
+            DeviceManager.ip_address.in_(device_ips),
+            DeviceManager.user_id == current_user.id,
+        ).all()
+
+    # Jika tidak ada perangkat yang ditemukan
     if not devices:
         return (
             jsonify(
@@ -244,12 +314,18 @@ def push_configs():
             404,
         )
 
-    config = ConfigurationManager.query.filter_by(
-        id=config_id, user_id=current_user.id
-    ).first()
+    # Query konfigurasi berdasarkan peran user
+    if current_user.has_role("Admin"):
+        config = ConfigurationManager.query.filter_by(id=config_id).first()
+    else:
+        config = ConfigurationManager.query.filter_by(
+            id=config_id, user_id=current_user.id
+        ).first()
+
+    # Jika konfigurasi tidak ditemukan
     if not config:
         return jsonify({"success": False, "message": "Selected config not found."}), 404
-
+    
     # Membaca file konfigurasi
     def read_config(filename):
         config_path = os.path.join(

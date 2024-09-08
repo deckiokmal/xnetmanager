@@ -18,6 +18,7 @@ from wtforms.validators import (
     Optional,
     IPAddress,
     Regexp,
+    URL,
 )
 from src.models.app_models import User, TemplateManager
 
@@ -60,7 +61,7 @@ class RegisterForm(FlaskForm):
     )
 
     def validate_email(self, email):
-        user = User.query.filter_by(email=email.data).first()
+        user = User.query.filter_by(email=email.data.strip()).first()
         if user:
             raise ValidationError("Email sudah terdaftar.")
 
@@ -91,29 +92,89 @@ class TwoFactorForm(FlaskForm):
 
 class UserUpdateForm(FlaskForm):
     """
-    Formulir untuk memperbarui data pengguna oleh Role Admin.
+    Formulir untuk memperbarui data pengguna oleh Role Admin dengan pesan error yang relevan.
     """
 
-    first_name = StringField("First Name", validators=[DataRequired()])
-    last_name = StringField("Last Name", validators=[DataRequired()])
-    email = StringField("Email", validators=[DataRequired(), Email()])
-    password = PasswordField("New Password", validators=[Optional()])
-    phone_number = StringField("Phone Number")
-    profile_picture = StringField("Profile Picture URL")
-    company = StringField("Company")
-    title = StringField("Title")
-    city = StringField("City")
-    division = StringField("Division")
+    first_name = StringField(
+        "First Name",
+        validators=[DataRequired(message="Nama depan harus diisi.")],
+    )
+    last_name = StringField(
+        "Last Name",
+        validators=[DataRequired(message="Nama belakang harus diisi.")],
+    )
+    email = StringField(
+        "Email",
+        validators=[
+            DataRequired(message="Email harus diisi."),
+            Email(message="Format email tidak valid."),
+        ],
+    )
+    password = PasswordField(
+        "New Password",
+        validators=[
+            Optional(),
+            Length(min=8, message="Password minimal harus 8 karakter."),
+        ],
+    )
+    phone_number = StringField(
+        "Phone Number",
+        validators=[
+            Optional(),
+            Regexp(
+                r"^\+?[1-9]\d{1,14}$",
+                message="Nomor telepon harus valid dengan format internasional.",
+            ),
+        ],
+    )
+    profile_picture = StringField(
+        "Profile Picture URL",
+        validators=[Optional()],
+    )
+    company = StringField(
+        "Company",
+        validators=[Optional()],
+    )
+    title = StringField(
+        "Title",
+        validators=[Optional()],
+    )
+    city = StringField(
+        "City",
+        validators=[Optional()],
+    )
+    division = StringField(
+        "Division",
+        validators=[Optional()],
+    )
     is_verified = SelectField(
-        "Email Verified", choices=[("True", "True"), ("False", "False")], coerce=str
+        "Email Verified",
+        choices=[("True", "True"), ("False", "False")],
+        coerce=str,
+        validators=[DataRequired(message="Status verifikasi email harus dipilih.")],
     )
     is_2fa_enabled = SelectField(
-        "2FA Enabled", choices=[("True", "True"), ("False", "False")], coerce=str
+        "2FA Enabled",
+        choices=[("True", "True"), ("False", "False")],
+        coerce=str,
+        validators=[DataRequired(message="Status 2FA harus dipilih.")],
     )
     is_active = SelectField(
-        "Active", choices=[("True", "True"), ("False", "False")], coerce=str
+        "Active",
+        choices=[("True", "True"), ("False", "False")],
+        coerce=str,
+        validators=[DataRequired(message="Status aktif pengguna harus dipilih.")],
     )
-    time_zone = StringField("Time Zone")
+    time_zone = StringField(
+        "Time Zone",
+        validators=[
+            Optional(),
+            Regexp(
+                r"^[A-Za-z_]+/[A-Za-z_]+$",
+                message="Zona waktu harus dalam format yang valid (mis. Asia/Jakarta).",
+            ),
+        ],
+    )
 
 
 class ProfileUpdateForm(FlaskForm):
