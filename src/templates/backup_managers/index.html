@@ -96,10 +96,10 @@
 {% endblock %}
 
 {% block modal_data %}
-<!-- Modal Detail backup -->
+<!-- Modal Detail Backup -->
 <div class="modal fade" id="backupDetailModal" tabindex="-1" aria-labelledby="backupDetailModalLabel"
     aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg"> <!-- Modal ukuran besar -->
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="backupDetailModalLabel">Backup Details</h5>
@@ -115,14 +115,17 @@
                 <p><strong>Integrity Check:</strong> <span id="detailBackupIntegrity"></span></p>
                 <p><strong>Tags:</strong> <span id="detailBackupTags"></span></p>
                 <p><strong>Konten Backup:</strong></p>
-                <pre><code id="detailBackupContent"></code></pre>
+                <!-- Menambahkan Bootstrap class untuk tampilan konten dengan ukuran kecil -->
+                <pre><code id="detailBackupContent" class="text-white bg-dark p-2" style="font-size: 0.75rem;"></code></pre>
             </div>
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block script_js %}
+<!-- JavaScript handle search input -->
 <script>
     let timeout = null;
 
@@ -175,6 +178,13 @@
                     document.getElementById('detailBackupCompressed').textContent = data.is_compressed ? "Yes" : "No";
                     document.getElementById('detailBackupIntegrity').textContent = data.integrity_check || "N/A";
                     document.getElementById('detailBackupTags').textContent = data.tags.join(', ') || "None";
+
+                    // Menampilkan konten backup dengan format code
+                    if (data.file_content) {
+                        document.getElementById('detailBackupContent').textContent = data.file_content;
+                    } else {
+                        document.getElementById('detailBackupContent').textContent = "No content available.";
+                    }
 
                     // Show modal
                     var detailModal = new bootstrap.Modal(document.getElementById("backupDetailModal"));

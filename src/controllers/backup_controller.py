@@ -355,6 +355,14 @@ def detail_backup(backup_id):
     if not current_user.has_role("Admin") and backup.user_id != current_user.id:
         return jsonify({"message": "Unauthorized access"}), 403
 
+    # Read the content of the backup file using BackupUtils
+    try:
+        backup_content = BackupUtils.read_backup_file(backup.backup_path)
+    except FileNotFoundError:
+        return jsonify({"message": "Backup file not found"}), 404
+    except Exception as e:
+        return jsonify({"message": f"Error reading backup: {str(e)}"}), 500
+
     # Return the backup details if authorized
     return (
         jsonify(
@@ -367,6 +375,7 @@ def detail_backup(backup_id):
                 "is_compressed": backup.is_compressed,
                 "tags": [tag.tag for tag in backup.tags],
                 "integrity_check": backup.integrity_check,
+                "file_content": backup_content,
             }
         ),
         200,
