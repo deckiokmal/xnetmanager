@@ -18,6 +18,7 @@ from src.models.app_models import (
     BackupTag,
     BackupAuditLog,
     DeviceManager,
+    User,
 )
 from src.utils.backupUtils import BackupUtils
 from .decorators import login_required, role_required, required_2fa
@@ -29,6 +30,7 @@ from flask import copy_current_request_context
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 from src.utils.forms_utils import UpdateBackupForm
+from src.utils.config_manager_utils import ConfigurationManagerUtils
 
 # Membuat blueprint untuk Backup Manager (backup_bp) dan Error Handling (error_bp)
 backup_bp = Blueprint("backup", __name__)
@@ -107,7 +109,16 @@ def index():
         if current_user.has_role("Admin"):
             backups_query = BackupData.query
         else:
+            # Backup yang dimiliki oleh pengguna
             backups_query = BackupData.query.filter_by(user_id=current_user.id)
+
+            # Backup yang di-share dengan pengguna
+            shared_backups_query = BackupData.query.join(
+                UserBackupShare, UserBackupShare.backup_id == BackupData.id
+            ).filter(UserBackupShare.user_id == current_user.id)
+
+            # Gabungkan backup yang dimiliki dengan yang di-share
+            backups_query = backups_query.union(shared_backups_query)
 
         # Lakukan join dengan tabel DeviceManager agar bisa melakukan pencarian device_name
         backups_query = backups_query.join(
@@ -119,9 +130,7 @@ def index():
             backups_query = backups_query.filter(
                 BackupData.backup_name.ilike(f"%{search_query}%")
                 | BackupData.backup_type.ilike(f"%{search_query}%")
-                | DeviceManager.device_name.ilike(
-                    f"%{search_query}%"
-                )  # Pencarian berdasarkan device_name
+                | DeviceManager.device_name.ilike(f"%{search_query}%")
             )
 
         # Lakukan eager loading untuk menghindari query N+1 dan mengambil data device
@@ -497,32 +506,70 @@ def delete_backup(backup_id):
 
 
 # Share Backup
-@backup_bp.route("/backups/<backup_id>/share", methods=["POST"])
+@backup_bp.route("/share-backup", methods=["POST"])
 @login_required
-def share_backup(backup_id):
-    backup = BackupData.query.get(backup_id)
-    if not backup or backup.user_id != current_user.id:
-        return jsonify({"message": "Backup not found or unauthorized"}), 404
-
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Backups"],
+    page="Index Backups",
+)
+def share_backup():
+    """
+    Endpoint untuk berbagi backup dengan pengguna lain.
+    """
     data = request.get_json()
-    share_with_user_id = data.get("user_id")
-    permission_level = data.get("permission_level", "read-only")
+    user_id_to_share = data.get("user_id")
+    backup_id = data.get("backup_id")
+    permission_level = data.get(
+        "permission_level", "read-only"
+    )  # Default permission: read-only
 
-    try:
-        new_share = UserBackupShare(
-            user_id=share_with_user_id,
-            backup_id=backup.id,
-            permission_level=permission_level,
+    # Validasi input
+    if not user_id_to_share or not backup_id:
+        return jsonify({"message": "User ID and Backup ID are required"}), 400
+
+    # Query user dan backup
+    user_to_share = User.query.get(user_id_to_share)
+    backup = BackupData.query.get(backup_id)
+
+    if not user_to_share:
+        return jsonify({"message": "User to share with not found"}), 404
+    if not backup:
+        return jsonify({"message": "Backup not found"}), 404
+
+    # Pastikan bahwa pengguna memiliki backup ini (jika bukan Admin)
+    if not current_user.has_role("Admin") and backup.user_id != current_user.id:
+        return (
+            jsonify({"message": "You do not have permission to share this backup"}),
+            403,
         )
-        db.session.add(new_share)
-        db.session.commit()
 
-        # Add Audit log
-        log_action(backup.id, "shared", current_user.id)
+    # Cek apakah sudah ada share sebelumnya
+    existing_share = UserBackupShare.query.filter_by(
+        user_id=user_id_to_share, backup_id=backup_id
+    ).first()
+    if existing_share:
+        return jsonify({"message": "Backup already shared with this user"}), 409
 
-        return jsonify({"message": "Backup shared successfully"}), 201
-    except Exception as e:
-        return jsonify({"message": f"Error sharing backup: {str(e)}"}), 500
+    # Buat record baru di UserBackupShare
+    new_share = UserBackupShare(
+        user_id=user_id_to_share,
+        backup_id=backup_id,
+        permission_level=permission_level,
+    )
+
+    db.session.add(new_share)
+    db.session.commit()
+
+    return (
+        jsonify(
+            {
+                "message": f"Backup shared with user {user_to_share.email} with {permission_level} access"
+            }
+        ),
+        200,
+    )
 
 
 # ------------------------------------------------------------
@@ -531,29 +578,45 @@ def share_backup(backup_id):
 
 
 # Rollback to Specific Version
-@backup_bp.route("/backups/<backup_id>/rollback/<commit_hash>", methods=["POST"])
+@backup_bp.route("/rollback-backup/<backup_id>", methods=["POST"])
 @login_required
-def rollback_backup(backup_id, commit_hash):
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Backups"],
+    page="Index Backups",
+)
+def rollback_backup(backup_id):
+    # Query the backup by ID
     backup = BackupData.query.get(backup_id)
-    if not backup or backup.user_id != current_user.id:
-        return jsonify({"message": "Backup not found or unauthorized"}), 404
 
-    git_version = GitBackupVersion.query.filter_by(
-        backup_id=backup_id, commit_hash=commit_hash
-    ).first()
-    if not git_version:
-        return jsonify({"message": "Version not found"}), 404
+    # Check if backup exists
+    if not backup:
+        return jsonify({"message": "Backup not found"}), 404
 
+    # Check if user is Admin or owns the backup
+    if not current_user.has_role("Admin") and backup.user_id != current_user.id:
+        return jsonify({"message": "Unauthorized access"}), 403
+
+    # Baca isi backup dari filesystem
     try:
-        # Logic for restoring the backup to the given commit
-        # This is where you'd pull the backup from Git history and apply it to the system
+        backup_content = BackupUtils.read_backup_file(backup.backup_path)
 
-        # Add Audit log
-        log_action(backup.id, "rollback", current_user.id)
+        # Lakukan rollback dengan mengirimkan konfigurasi lama ke perangkat
+        device = DeviceManager.query.get(backup.device_id)
+        command = backup_content  # Menggunakan isi backup sebagai perintah rollback
 
-        return jsonify({"message": f"Backup rolled back to version {commit_hash}"}), 200
+        config_utils = ConfigurationManagerUtils(
+            ip_address=device.ip_address,
+            username=device.username,
+            password=device.password,
+            ssh=device.ssh,
+        )
+        result = config_utils.configure_device(command)
+
+        return jsonify({"message": "Rollback berhasil", "result": result}), 200
     except Exception as e:
-        return jsonify({"message": f"Error during rollback: {str(e)}"}), 500
+        return jsonify({"message": f"Error during rollback: {e}"}), 500
 
 
 # ------------------------------------------------------------
