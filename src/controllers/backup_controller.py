@@ -79,6 +79,8 @@ def inject_user():
 # ------------------------------------------------------------
 # CRUD OPERATIONS for BackupData
 # ------------------------------------------------------------
+
+
 # Read/List Backups
 @backup_bp.route("/backups", methods=["GET"])
 @login_required
@@ -441,6 +443,12 @@ def update_backup(backup_id):
 # Delete Backup
 @backup_bp.route("/delete-backup/<backup_id>", methods=["POST"])
 @login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Backups"],
+    page="Delete Backups",
+)
 def delete_backup(backup_id):
     try:
         # Query the backup from the database
