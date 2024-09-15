@@ -1,17 +1,11 @@
 {% extends "/layouts/layout_table.html" %}
 {% block title %}Backup Management{% endblock %}
 
-{% block button_group1 %}
-<!-- Tombol untuk Membuat Backup Baru -->
-<a href="{{ url_for('backup.backup_manager') }}" class="btn btn-danger">
-    <i class="fas fa-plus"></i> Create Backup
-</a>
-{% endblock %}
-
 {% block table_name %}Daftar File Backup{% endblock %}
 
+<!-- Filter row page peritem 10, 25 dan 50 item per table -->
 {% block form_filter_row %}
-<form id="perPageForm" action="{{ url_for('backup.backups') }}" method="get">
+<form id="perPageForm" action="{{ url_for('backup.index') }}" method="get">
     <label class="d-flex align-items-center">
         <span>Tampilkan</span>
         <select name="per_page" class="form-select form-select-sm mx-2"
@@ -26,10 +20,11 @@
 </form>
 {% endblock %}
 
+<!-- Search function -->
 {% block form_search %}
-<form id="searchForm" method="get" action="{{ url_for('backup.backups') }}" class="form-inline d-flex">
-    <input id="searchInput" type="text" name="search" class="form-control form-control-sm me-2"
-        placeholder="Cari backup" value="{{ search_query }}">
+<form id="searchForm" method="get" action="{{ url_for('backup.index') }}" class="form-inline d-flex">
+    <input id="searchInput" type="text" name="search" class="form-control form-control-sm me-2" placeholder="Search..."
+        value="{{ search_query }}">
     <button class="btn btn-outline-success btn-sm" type="submit">
         <i class="fas fa-search"></i>
     </button>
@@ -40,6 +35,8 @@
 {% block table_header %}
 <th>No</th>
 <th>Nama Backup</th>
+<th>Nama Device</th>
+<th>Backup Type</th>
 <th>Versi</th>
 <th>Tanggal Dibuat</th>
 <th>Jenis</th>
@@ -51,8 +48,10 @@
 <tr>
     <th scope="row">{{ loop.index + (page - 1) * per_page }}</th>
     <td>{{ backup.backup_name }}</td>
+    <td>{{ backup.device.device_name }}</td>
+    <td>{{ backup.backup_type }}</td>
     <td>{{ backup.version }}</td>
-    <td>{{ backup.created_at }}</td>
+    <td>{{ backup.created_at.strftime('%Y-%m-%d') }}</td>
     <td>
         {% if backup.user_id == current_user.id %}
         Milik Saya
@@ -61,136 +60,153 @@
         {% endif %}
     </td>
     <td>
-        <!-- Tombol View Detail Backup -->
-        <button class="btn btn-info btn-sm mb-2" onclick="viewBackupDetail({{ backup.id }})">
+        <!-- tombol detail -->
+        <button class="btn btn-info btn-sm" data-backup-id="{{ backup.id }}" onclick="showBackupDetails(this)">
             <i class="fas fa-eye"></i>
         </button>
 
-        {% if backup.user_id == current_user.id %}
-        <!-- Tombol Update Backup -->
-        <a href="{{ url_for('backup.backup_update', backup_id=backup.id) }}" class="btn btn-success btn-sm mb-2">
+        <!-- Tombol update -->
+        <a href="{{url_for('backup.update_backup', backup_id=backup.id)}}" class="btn btn-success btn-sm">
             <i class="fas fa-edit"></i>
         </a>
 
-        <!-- Tombol Delete Backup -->
-        <form action="{{ url_for('backup.delete_backup', backup_id=backup.id) }}" method="post" class="d-inline">
-            <button type="submit" class="btn btn-danger btn-sm mb-2"
-                onclick="return confirm('Are you sure you want to delete this backup?');">
-                <i class="fas fa-trash"></i>
-            </button>
-        </form>
-
-        <!-- Share Backup Button -->
-        <button class="btn btn-warning btn-sm mb-2" data-bs-toggle="modal" data-bs-target="#shareModal{{ backup.id }}">
-            <i class="fas fa-share-alt"></i> Share
+        <!-- Tombol Delete -->
+        <button class="btn btn-danger btn-sm" onclick="deleteBackup('{{ backup.id }}')">
+            <i class="fas fa-trash"></i>
         </button>
-        {% endif %}
     </td>
 </tr>
 {% endfor %}
 {% endblock %}
 
-{% block modal_data %}
-<!-- Modal Detail Backup -->
-<div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title text-black" id="detailModalLabel">Detail Backup</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-black">
-                <p><strong>Nama Backup:</strong> <span id="detailBackupName"></span></p>
-                <p><strong>Description:</strong> <span id="detailBackupDescription"></span></p>
-                <p><strong>Versi:</strong> <span id="detailBackupVersion"></span></p>
-                <p><strong>Tanggal Dibuat:</strong> <span id="detailBackupDate"></span></p>
-                <p><strong>Konten Backup:</strong></p>
-                <pre><code id="detailBackupContent"></code></pre> <!-- Tempatkan konten file disini -->
-            </div>
-        </div>
-    </div>
+<!-- Show total data yang ditampilkan dan pagination -->
+{% block show_total_data %}
+<div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
+    Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if
+    (page - 1)
+    * per_page + per_page < total_backups else total_backups }} dari {{ total_backups }} entri </div>
 </div>
+{% endblock %}
 
-<!-- Modal for Sharing Backup -->
-{% for backup in backups %}
-<div class="modal fade" id="shareModal{{ backup.id }}" tabindex="-1" aria-labelledby="shareModalLabel{{ backup.id }}"
+{% block pagination %}
+<div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
+    <!-- Link Pagination -->
+    {{ pagination.links }}
+</div>
+{% endblock %}
+
+{% block modal_data %}
+<!-- Modal Detail backup -->
+<div class="modal fade" id="backupDetailModal" tabindex="-1" aria-labelledby="backupDetailModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title text-black" id="shareModalLabel{{ backup.id }}">Share Backup</h5>
+                <h5 class="modal-title" id="backupDetailModalLabel">Backup Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="shareBackupForm{{ backup.id }}">
-                    <div class="mb-3">
-                        <label for="userEmail{{ backup.id }}" class="form-label">User Email or Username</label>
-                        <input type="text" class="form-control" id="userEmail{{ backup.id }}" name="user_email"
-                            required>
-                    </div>
-                    <button type="button" class="btn btn-primary" onclick="shareBackup({{ backup.id }})">
-                        <i class="fas fa-share-alt"></i> Share Backup
-                    </button>
-                </form>
+                <p><strong>Nama Backup:</strong> <span id="detailBackupName"></span></p>
+                <p><strong>Description:</strong> <span id="detailBackupDescription"></span></p>
+                <p><strong>Versi:</strong> <span id="detailBackupVersion"></span></p>
+                <p><strong>Tanggal Dibuat:</strong> <span id="detailBackupDate"></span></p>
+                <p><strong>Encrypted:</strong> <span id="detailBackupEncrypted"></span></p>
+                <p><strong>Compressed:</strong> <span id="detailBackupCompressed"></span></p>
+                <p><strong>Integrity Check:</strong> <span id="detailBackupIntegrity"></span></p>
+                <p><strong>Tags:</strong> <span id="detailBackupTags"></span></p>
+                <p><strong>Konten Backup:</strong></p>
+                <pre><code id="detailBackupContent"></code></pre>
             </div>
         </div>
     </div>
 </div>
-{% endfor %}
 {% endblock %}
 
 {% block script_js %}
-<!-- # Function to view backup details in a modal -->
 <script>
-    function viewBackupDetail(backupId) {
-        fetch(`/backup/${backupId}`)
+    let timeout = null;
+
+    document.getElementById("searchInput").addEventListener("input", function () {
+        clearTimeout(timeout);
+
+        timeout = setTimeout(function () {
+            document.getElementById('searchForm').submit();
+        }, 1000);
+    });
+
+    document.getElementById("searchInput").addEventListener("input", function () {
+        const query = this.value.toLowerCase();
+        const rows = document.querySelectorAll("#dataTable tbody tr");
+
+        rows.forEach(row => {
+            // Ambil kolom backup_name dan company sesuai dengan urutan kolom pada tabel (dimulai dari index 0)
+            const backup_name = row.cells[1].textContent.toLowerCase();
+            const device_name = row.cells[2].textContent.toLowerCase();
+            const backup_type = row.cells[3].textContent.toLowerCase();
+
+            // Periksa apakah pencarian cocok dengan backup_name atau device_name
+            if (backup_name.includes(query) || device_name.includes(query) || backup_type.includes(query)) {
+                row.style.display = ""; // Tampilkan baris jika cocok
+            } else {
+                row.style.display = "none"; // Sembunyikan baris jika tidak cocok
+            }
+        });
+    });
+</script>
+
+<!-- JavaScript to Fetch Backup Details and Populate Modal -->
+<script>
+    // Handle backup detail
+    function showBackupDetails(button) {
+        const backupId = button.getAttribute("data-backup-id");
+
+        fetch(`/detail-backup/${backupId}`)
             .then(response => response.json())
             .then(data => {
-                if (data.success === false) {
-                    alert(data.message);
+                if (data.error) {
+                    alert(data.error);
                 } else {
+                    // Populate the modal with backup details
                     document.getElementById('detailBackupName').textContent = data.backup_name;
                     document.getElementById('detailBackupDescription').textContent = data.description;
                     document.getElementById('detailBackupVersion').textContent = data.version;
-                    document.getElementById('detailBackupDate').textContent = data.created_at;
-                    document.getElementById('detailBackupContent').textContent = data.backup_content;
+                    document.getElementById('detailBackupDate').textContent = new Date(data.created_at).toLocaleString();
+                    document.getElementById('detailBackupEncrypted').textContent = data.is_encrypted ? "Yes" : "No";
+                    document.getElementById('detailBackupCompressed').textContent = data.is_compressed ? "Yes" : "No";
+                    document.getElementById('detailBackupIntegrity').textContent = data.integrity_check || "N/A";
+                    document.getElementById('detailBackupTags').textContent = data.tags.join(', ') || "None";
 
-                    const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+                    // Show modal
+                    var detailModal = new bootstrap.Modal(document.getElementById("backupDetailModal"));
                     detailModal.show();
                 }
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => console.error('Error fetching backup details:', error));
     }
-
 </script>
 
-<!-- # Script for handle Sharing  -->
+<!-- JavaScript to handel deletion -->
 <script>
-    // Function to handle backup sharing
-    function shareBackup(backupId) {
-        const userEmail = document.getElementById('userEmail' + backupId).value;
-        if (!userEmail) {
-            alert('Please enter a valid user email or username.');
-            return;
-        }
-
-        fetch(`/share_backup/${backupId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ user_email: userEmail }),
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Backup shared successfully!');
-                    location.reload();
-                } else {
-                    alert('Failed to share backup: ' + data.message);
+    function deleteBackup(backupId) {
+        if (confirm("Are you sure you want to delete this backup?")) {
+            fetch(`/delete-backup/${backupId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
                 }
             })
-            .catch(error => console.error('Error:', error));
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message) {
+                        alert(data.message);
+                        if (data.message.includes("successfully")) {
+                            location.reload();  // Optionally reload the page after successful deletion
+                        }
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
     }
 </script>
 {% endblock %}

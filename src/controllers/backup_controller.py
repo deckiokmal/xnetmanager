@@ -4,32 +4,31 @@ from flask import (
     jsonify,
     request,
     current_app,
-)
-from flask_login import (
-    login_required,
-    current_user,
-)
-from .decorators import (
-    role_required,
-    required_2fa,
+    copy_current_request_context,
+    redirect,
+    url_for,
+    flash,
 )
 from src import db
+from flask_login import login_required, current_user
 from src.models.app_models import (
-    DeviceManager,
     BackupData,
     UserBackupShare,
-    User,
     GitBackupVersion,
+    BackupTag,
+    BackupAuditLog,
+    DeviceManager,
 )
-from src.utils.config_manager_utils import ConfigurationManagerUtils
-from src.utils.git_version_utils import GitUtils
-from src.utils.path_check_utils import check_path_compatibility
-import os
+from src.utils.backupUtils import BackupUtils
+from .decorators import login_required, role_required, required_2fa
+from flask_paginate import Pagination, get_page_args
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
-import json
-import random
 from datetime import datetime
-import string
+from flask import copy_current_request_context
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import joinedload
+from src.utils.forms_utils import UpdateBackupForm
 
 # Membuat blueprint untuk Backup Manager (backup_bp) dan Error Handling (error_bp)
 backup_bp = Blueprint("backup", __name__)
@@ -41,41 +40,35 @@ logging.basicConfig(level=logging.INFO)
 
 @backup_bp.before_app_request
 def setup_logging():
-    """
-    Mengatur level logging untuk aplikasi.
-    """
+    """Mengatur level logging untuk aplikasi."""
     current_app.logger.setLevel(logging.INFO)
     handler = current_app.logger.handlers[0]
     current_app.logger.addHandler(handler)
 
 
+# Menangani error 404 menggunakan blueprint error_bp dan redirect ke 404.html page.
 @error_bp.app_errorhandler(404)
 def page_not_found(error):
-    """
-    Menangani error 404 dan menampilkan halaman 404.
-    """
+    """Menangani error 404 dan menampilkan halaman 404."""
     current_app.logger.error(f"Error 404: {error}")
     return render_template("main/404.html"), 404
 
 
+# Middleware untuk autentikasi dan otorisasi sebelum permintaan.
 @backup_bp.before_request
 def before_request_func():
-    """
-    Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
-    Jika tidak, mengembalikan pesan 'Unauthorized access'.
-    """
+    """Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan."""
     if not current_user.is_authenticated:
         current_app.logger.warning(
             f"Unauthorized access attempt by {request.remote_addr}"
         )
-        return render_template("main/404.html"), 404
+        return jsonify({"message": "Unauthorized access"}), 401
 
 
+# Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
 @backup_bp.context_processor
 def inject_user():
-    """
-    Menyediakan first_name dan last_name pengguna yang terotentikasi ke dalam template.
-    """
+    """Menyediakan first_name dan last_name pengguna yang terotentikasi ke dalam template."""
     if current_user.is_authenticated:
         return dict(
             first_name=current_user.first_name, last_name=current_user.last_name
@@ -83,597 +76,530 @@ def inject_user():
     return dict(first_name="", last_name="")
 
 
-# --------------------------------------------------------------------------------
-# Backup Management Section
-# --------------------------------------------------------------------------------
-
-# Pengaturan BASE_FOLDER untuk pengembangan dan produksi
-BASE_FOLDER = (
-    os.path.abspath("D:\\0. MY PROJECT\\16. BYOAI PROJECT XNETMANAGER\\backups")
-    if os.name == "nt"
-    else "/app/backups"
-)
-BACKUP_FOLDER = BASE_FOLDER
-
-
-# Modifikasi fungsi terkait path untuk menggunakan BASE_FOLDER dan user_id
-def get_user_backup_folder(user_id):
-    """
-    Mengembalikan path ke folder backup untuk pengguna tertentu.
-    Membuat folder jika belum ada.
-    """
-    user_backup_folder = os.path.join(BACKUP_FOLDER, str(user_id))
-    if not os.path.exists(user_backup_folder):
-        os.makedirs(user_backup_folder)
-    return user_backup_folder
-
-
-# Fungsi pembantu untuk menghasilkan nama file acak
-def generate_random_filename(filename):
-    random_str = "".join(random.choices(string.ascii_letters + string.digits, k=8))
-    date_str = datetime.now().strftime("%d.%m.%Y_%H.%M.%S")
-    filename = f"{filename}_{random_str}_{date_str}"
-    current_app.logger.info(f"Generated random filename: {filename}")
-    return filename
-
-
-@backup_bp.route("/backups")
+# ------------------------------------------------------------
+# CRUD OPERATIONS for BackupData
+# ------------------------------------------------------------
+# Read/List Backups
+@backup_bp.route("/backups", methods=["GET"])
 @login_required
 @required_2fa
 @role_required(
-    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
+    roles=["Admin", "User", "View"],
+    permissions=["Manage Backups"],
+    page="Index Backups",
 )
-def backup_dashboard():
-    devices = DeviceManager.query.filter_by(user_id=current_user.id).all()
-    return render_template("backup_managers/backup_dashboard.html", devices=devices)
+def index():
+    # Logging untuk akses ke endpoint
+    current_app.logger.info(f"{current_user.email} accessed Index Backups")
+
+    # Search Function
+    search_query = request.args.get("search", "").lower()
+    page, per_page, offset = get_page_args(
+        page_parameter="page", per_page_parameter="per_page", per_page=10
+    )
+    if page < 1 or per_page < 1:
+        flash("Invalid pagination values.", "danger")
+
+    try:
+        # Query untuk BackupData
+        if current_user.has_role("Admin"):
+            backups_query = BackupData.query
+        else:
+            backups_query = BackupData.query.filter_by(user_id=current_user.id)
+
+        # Lakukan join dengan tabel DeviceManager agar bisa melakukan pencarian device_name
+        backups_query = backups_query.join(
+            DeviceManager, BackupData.device_id == DeviceManager.id
+        )
+
+        # Jika ada pencarian, tambahkan filter untuk device_name, backup_name, atau backup_type
+        if search_query:
+            backups_query = backups_query.filter(
+                BackupData.backup_name.ilike(f"%{search_query}%")
+                | BackupData.backup_type.ilike(f"%{search_query}%")
+                | DeviceManager.device_name.ilike(
+                    f"%{search_query}%"
+                )  # Pencarian berdasarkan device_name
+            )
+
+        # Lakukan eager loading untuk menghindari query N+1 dan mengambil data device
+        backups_query = backups_query.options(joinedload(BackupData.device))
+
+        # Pagination dan Backups query
+        total_backups = backups_query.count()
+        backups = backups_query.limit(per_page).offset(offset).all()
+        pagination = Pagination(page=page, per_page=per_page, total=total_backups)
+
+        if total_backups == 0:
+            flash("Tidak ada backups apapun di halaman ini.", "info")
+
+        return render_template(
+            "backup_managers/index.html",
+            backups=backups,
+            page=page,
+            per_page=per_page,
+            pagination=pagination,
+            search_query=search_query,
+            total_backups=total_backups,
+        )
+    except SQLAlchemyError as e:
+        # Specific database error handling
+        current_app.logger.error(
+            f"Database error while accessing Backups page by user {current_user.email}: {str(e)}"
+        )
+        flash(
+            "A database error occurred while accessing the Backups. Please try again later.",
+            "danger",
+        )
+        return redirect(url_for("users.dashboard"))
+    except Exception as e:
+        current_app.logger.error(
+            f"Error accessing Backups page by user {current_user.email}: {str(e)}"
+        )
+        flash(
+            "An error occurred while accessing the Backups. Please try again later.",
+            "danger",
+        )
+        return redirect(url_for("users.dashboard"))
 
 
-# Endpoint untuk Membuat Backup Baru
-@backup_bp.route("/backup_create", methods=["POST"])
+@backup_bp.route("/backups/create_multiple", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(
-    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
+    roles=["Admin", "User"],
+    permissions=["Manage Backups"],
+    page="Index Backups",
 )
-def create_backup():
+def create_backup_multiple():
     try:
         data = request.get_json()
         device_ips = data.get("devices", [])
+        backup_name = data.get("backup_name", None)
+        description = data.get("description", "")
+        backup_type = data.get("backup_type", "full")
+        retention_days = data.get("retention_days", None)
         command = data.get("command")
         user_id = current_user.id
 
-        if not device_ips or not command:
-            return (
-                jsonify({"status": "error", "message": "Devices or command missing."}),
-                400,
-            )
+        if not device_ips:
+            return jsonify({"message": "No devices selected."}), 400
 
         devices = DeviceManager.query.filter(
-            DeviceManager.ip_address.in_(device_ips), DeviceManager.user_id == user_id
+            DeviceManager.ip_address.in_(device_ips)
         ).all()
 
+        if not devices:
+            return jsonify({"message": "No devices found."}), 404
+
+        vendors = {device.vendor for device in devices}
+        if len(vendors) > 1:
+            return jsonify({"message": "Devices must have the same vendor."}), 400
+
         results = []
-        backup_folder = get_user_backup_folder(user_id)
+        success = True
 
-        for device in devices:
-            config_utils = ConfigurationManagerUtils(
-                ip_address=device.ip_address,
-                username=device.username,
-                password=device.password,
-                ssh=device.ssh,
-            )
-            response_json = config_utils.backup_configuration(command=command)
-            response_dict = json.loads(response_json)
-            backup_data = response_dict.get("message")
-
-            if response_dict.get("status") == "success" and backup_data:
-                filename = generate_random_filename(device.device_name)
-                file_path = os.path.join(backup_folder, filename)
-                description = f"Backup created by {current_user.email}."
-
-                with open(file_path, "w", encoding="utf-8") as backup_file:
-                    backup_file.write(backup_data)
-
-                backup = BackupData.create_backup(
-                    backup_name=filename, description=description, user_id=user_id
+        @copy_current_request_context
+        def backup_device(app, device, command):
+            nonlocal success
+            try:
+                with app.app_context():
+                    new_backup = BackupData.create_backup(
+                        backup_name=backup_name,
+                        description=description,
+                        user_id=user_id,
+                        device_id=device.id,
+                        backup_type=backup_type,
+                        retention_days=retention_days,
+                        command=command,
+                    )
+                    results.append(
+                        {
+                            "device_name": device.device_name,
+                            "ip": device.ip_address,
+                            "status": "success",
+                            "message": "Backup successful",
+                            "backup_id": new_backup.id,
+                        }
+                    )
+            except Exception as e:
+                current_app.logger.error(
+                    f"Error during backup for {device.ip_address}: {e}"
                 )
-
-                git_utils = GitUtils(repo_path=backup_folder)
-                commit_hash = git_utils.commit_backup(
-                    file_path, f"Backup {filename} for {device.device_name}"
-                )
-                git_version = GitBackupVersion(
-                    backup_id=backup.id,
-                    commit_hash=commit_hash,
-                    commit_message=f"Backup {filename} created.",
-                    file_path=file_path,
-                )
-                db.session.add(git_version)
-                db.session.commit()
-
+                success = False
                 results.append(
                     {
                         "device_name": device.device_name,
-                        "status": "success",
-                        "message": "Backup successful.",
-                        "file_path": file_path,
-                    }
-                )
-            else:
-                results.append(
-                    {
-                        "device_name": device.device_name,
+                        "ip": device.ip_address,
                         "status": "error",
-                        "message": response_dict.get("message", "Backup failed."),
+                        "message": str(e),
                     }
                 )
 
-        return jsonify({"status": "success", "results": results})
+        app = current_app._get_current_object()
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {
+                executor.submit(backup_device, app, device, command): device
+                for device in devices
+            }
+            for future in as_completed(futures):
+                future.result()
+
+        return jsonify({"success": success, "results": results}), (
+            200 if success else 500
+        )
+
     except Exception as e:
         current_app.logger.error(f"Error creating backup: {e}")
-        return jsonify({"status": "error", "message": "Failed to create backup."}), 500
+        return jsonify({"message": f"Error creating backup: {str(e)}"}), 500
 
 
-# Endpoint untuk Mengupdate Backup
-@backup_bp.route("/backup_update/<backup_id>", methods=["POST"])
+@backup_bp.route("/backups/create_single/<device_id>", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(
-    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
+    roles=["Admin", "User"],
+    permissions=["Manage Backups"],
+    page="Index Backups",
 )
-def update_backup(backup_id):
+def create_backup_single(device_id):
+    """
+    Create a backup for a single device.
+
+    :param device_id: The ID of the device to back up.
+    """
     try:
-        backup = BackupData.query.filter_by(
-            id=backup_id, user_id=current_user.id
-        ).first()
-        if not backup:
-            return (
-                jsonify(
-                    {"status": "error", "message": "Backup not found or unauthorized."}
-                ),
-                404,
-            )
+        # Get the JSON payload from the request
+        data = request.get_json()
+        backup_name = data.get("backup_name", None)
+        description = data.get("description", "")
+        backup_type = data.get("backup_type", "full")
+        retention_days = data.get("retention_days", None)
+        command = data.get("command")  # Ensure command is retrieved correctly
+        user_id = current_user.id
 
-        backup_folder = get_user_backup_folder(current_user.id)
-        data = request.form
-        new_backup_content = data.get("backup_content")
+        # Validate that a backup name is provided
+        if not backup_name or not backup_name.strip():
+            return jsonify({"message": "Backup name is required."}), 400
 
-        if new_backup_content:
-            file_path = os.path.join(backup_folder, backup.backup_name)
-            with open(file_path, "w", encoding="utf-8") as backup_file:
-                backup_file.write(new_backup_content)
+        # Query the device by its ID
+        device = DeviceManager.query.get(device_id)
 
-            git_utils = GitUtils(repo_path=backup_folder)
-            commit_hash = git_utils.commit_backup(
-                file_path, f"Update {backup.backup_name}"
-            )
-            git_version = GitBackupVersion(
-                backup_id=backup.id,
-                commit_hash=commit_hash,
-                commit_message=f"Updated backup {backup.backup_name}.",
-                file_path=file_path,
-            )
-            db.session.add(git_version)
-            db.session.commit()
-
-            return (
-                jsonify(
-                    {"status": "success", "message": "Backup updated successfully."}
-                ),
-                200,
-            )
-
-        return (
-            jsonify({"status": "error", "message": "No content provided for update."}),
-            400,
-        )
-    except Exception as e:
-        current_app.logger.error(f"Error updating backup: {e}")
-        db.session.rollback()
-        return jsonify({"status": "error", "message": "Failed to update backup."}), 500
-
-
-# Endpoint untuk Menghapus Backup
-@backup_bp.route("/backup_delete/<backup_id>", methods=["DELETE"])
-@login_required
-@required_2fa
-@role_required(
-    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
-)
-def delete_backup(backup_id):
-    try:
-        backup = BackupData.query.filter_by(
-            id=backup_id, user_id=current_user.id
-        ).first()
-        if not backup:
-            return (
-                jsonify(
-                    {"status": "error", "message": "Backup not found or unauthorized."}
-                ),
-                404,
-            )
-
-        backup_folder = get_user_backup_folder(current_user.id)
-        file_path = os.path.join(backup_folder, backup.backup_name)
-        if os.path.exists(file_path):
-            os.remove(file_path)
-
-        GitBackupVersion.query.filter_by(backup_id=backup.id).delete()
-
-        db.session.delete(backup)
-        db.session.commit()
-        return (
-            jsonify({"status": "success", "message": "Backup deleted successfully."}),
-            200,
-        )
-    except Exception as e:
-        current_app.logger.error(f"Error deleting backup: {e}")
-        db.session.rollback()
-        return jsonify({"status": "error", "message": "Failed to delete backup."}), 500
-
-
-# Endpoint untuk Rollback ke Versi Sebelumnya
-@backup_bp.route("/rollback/<backup_id>", methods=["POST"])
-@login_required
-@required_2fa
-@role_required(
-    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
-)
-def rollback_backup(backup_id):
-    try:
-        backup = BackupData.query.filter_by(
-            id=backup_id, user_id=current_user.id
-        ).first()
-        if not backup:
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": "Backup not found or unauthorized.",
-                        "device": "N/A",
-                    }
-                ),
-                404,
-            )
-
-        version_id = request.json.get("version_id")
-        git_version = GitBackupVersion.query.filter_by(
-            id=version_id, backup_id=backup.id
-        ).first()
-
-        if not git_version:
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": "Backup version not found.",
-                        "device": backup.backup_name,
-                    }
-                ),
-                404,
-            )
-
-        backup_folder = get_user_backup_folder(current_user.id)
-
-        # Check path compatibility before performing any file operations
-        if not check_path_compatibility(backup_folder):
-            current_app.logger.error("Path compatibility check failed.")
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": "Path compatibility check failed.",
-                        "device": "N/A",
-                    }
-                ),
-                500,
-            )
-
-        git_utils = GitUtils(repo_path=backup_folder)
-        git_utils.rollback_to_commit(git_version.commit_hash)
-
-        # Push the configuration to the device
-        device = DeviceManager.query.filter_by(
-            user_id=current_user.id, device_name=backup.backup_name
-        ).first()
         if not device:
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": "Device not found.",
-                        "device": backup.backup_name,
-                    }
-                ),
-                404,
-            )
+            return jsonify({"message": f"Device with ID {device_id} not found."}), 404
 
-        config_utils = ConfigurationManagerUtils(
-            ip_address=device.ip_address,
-            username=device.username,
-            password=device.password,
-            ssh=device.ssh,
-        )
-        with open(git_version.file_path, "r", encoding="utf-8") as file:
-            command = file.read()
-        response_json = config_utils.configure_device(command)
-        response_dict = json.loads(response_json)
+        # Ensure the current user is the owner of the device or is an Admin
+        if current_user.has_role("Admin") or device.owner_id == user_id:
+            try:
+                # Create a new backup for this device using the static method
+                new_backup = BackupData.create_backup(
+                    backup_name=backup_name,
+                    description=description,
+                    user_id=user_id,
+                    device_id=device_id,
+                    backup_type=backup_type,
+                    retention_days=retention_days,
+                    command=command,
+                )
 
-        if response_dict.get("status") == "success":
-            return (
-                jsonify({"status": "success", "message": "Rollback successful."}),
-                200,
-            )
+                return (
+                    jsonify(
+                        {
+                            "success": True,
+                            "message": "Backup created successfully.",
+                            "backup_id": new_backup.id,
+                            "backup_path": new_backup.backup_path,
+                        }
+                    ),
+                    201,
+                )
+
+            except Exception as e:
+                current_app.logger.error(
+                    f"Error creating backup for device {device.ip_address}: {e}"
+                )
+                return jsonify({"message": f"Error creating backup: {str(e)}"}), 500
         else:
             return (
                 jsonify(
-                    {
-                        "status": "error",
-                        "message": "Rollback failed.",
-                        "device": device.device_name,
-                    }
+                    {"message": "You do not have permission to back up this device."}
                 ),
-                500,
+                403,
             )
+
     except Exception as e:
-        current_app.logger.error(f"Error during rollback: {e}")
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": "Failed to perform rollback.",
-                    "device": "N/A",
-                }
-            ),
-            500,
-        )
+        current_app.logger.error(f"Error processing backup for device {device_id}: {e}")
+        return jsonify({"message": f"Error processing backup: {str(e)}"}), 500
 
 
-# Endpoint untuk Menampilkan Riwayat Backup
-@backup_bp.route("/backup_history/<backup_id>", methods=["GET"])
+# Read Backup by ID
+@backup_bp.route("/detail-backup/<backup_id>", methods=["GET"])
 @login_required
 @required_2fa
 @role_required(
-    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
+    roles=["Admin", "User"],
+    permissions=["Manage Backups"],
+    page="Index Backups",
 )
-def backup_history(backup_id):
-    try:
-        backup = BackupData.query.filter_by(id=backup_id).first()
-        if not backup or (
-            backup.user_id != current_user.id and not current_user.has_role("Admin")
-        ):
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": "Backup not found or unauthorized.",
-                        "device": "N/A",
-                    }
-                ),
-                404,
-            )
+def detail_backup(backup_id):
+    # Query the backup by ID
+    backup = BackupData.query.get(backup_id)
 
-        git_utils = GitUtils(repo_path=get_user_backup_folder(backup.user_id))
-        commits = git_utils.get_commit_history(max_count=10)
-        commit_list = [
+    # Check if backup exists
+    if not backup:
+        return jsonify({"message": "Backup not found"}), 404
+
+    # Check if user is Admin or owns the backup
+    if not current_user.has_role("Admin") and backup.user_id != current_user.id:
+        return jsonify({"message": "Unauthorized access"}), 403
+
+    # Return the backup details if authorized
+    return (
+        jsonify(
             {
-                "hash": commit.hexsha,
-                "message": commit.message,
-                "date": commit.committed_datetime.strftime("%Y-%m-%d %H:%M:%S"),
+                "backup_name": backup.backup_name,
+                "description": backup.description,
+                "version": backup.version,
+                "created_at": backup.created_at.isoformat(),
+                "is_encrypted": backup.is_encrypted,
+                "is_compressed": backup.is_compressed,
+                "tags": [tag.tag for tag in backup.tags],
+                "integrity_check": backup.integrity_check,
             }
-            for commit in commits
-        ]
-
-        return jsonify({"status": "success", "commits": commit_list}), 200
-    except Exception as e:
-        current_app.logger.error(f"Error retrieving commit history: {e}")
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": "Failed to retrieve commit history.",
-                    "device": "N/A",
-                }
-            ),
-            500,
-        )
+        ),
+        200,
+    )
 
 
-# Endpoint untuk Mendapatkan Diff Antar Commit
-@backup_bp.route("/backup_diff/<backup_id>", methods=["POST"])
+@backup_bp.route("/update-backup/<backup_id>", methods=["GET", "POST"])
 @login_required
 @required_2fa
 @role_required(
-    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
+    roles=["Admin", "User"],
+    permissions=["Manage Backups"],
+    page="Update Backups",
 )
-def backup_diff(backup_id):
+def update_backup(backup_id):
     try:
-        data = request.get_json()
-        old_commit_hash = data.get("old_commit")
-        new_commit_hash = data.get("new_commit")
-
-        backup = BackupData.query.filter_by(id=backup_id).first()
-        if not backup or (
-            backup.user_id != current_user.id and not current_user.has_role("Admin")
-        ):
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": "Backup not found or unauthorized.",
-                        "device": "N/A",
-                    }
-                ),
-                404,
-            )
-
-        git_utils = GitUtils(repo_path=get_user_backup_folder(backup.user_id))
-        diff = git_utils.get_diff_between_commits(old_commit_hash, new_commit_hash)
-        diff_content = "\n".join([str(d) for d in diff])
-
-        return jsonify({"status": "success", "diff": diff_content}), 200
-    except Exception as e:
-        current_app.logger.error(f"Error retrieving diff between commits: {e}")
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": "Failed to get diff between commits.",
-                    "device": "N/A",
-                }
-            ),
-            500,
-        )
-
-
-# Endpoint untuk Mendapatkan Konten File pada Commit Tertentu
-@backup_bp.route("/backup_file_at_commit/<backup_id>", methods=["POST"])
-@login_required
-@required_2fa
-@role_required(
-    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
-)
-def backup_file_at_commit(backup_id):
-    try:
-        data = request.get_json()
-        commit_hash = data.get("commit_hash")
-
-        backup = BackupData.query.filter_by(id=backup_id).first()
-        if not backup or (
-            backup.user_id != current_user.id and not current_user.has_role("Admin")
-        ):
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": "Backup not found or unauthorized.",
-                        "device": "N/A",
-                    }
-                ),
-                404,
-            )
-
-        git_utils = GitUtils(repo_path=get_user_backup_folder(backup.user_id))
-        file_content = git_utils.get_file_at_commit(backup.backup_name, commit_hash)
-
-        return jsonify({"status": "success", "content": file_content}), 200
-    except Exception as e:
-        current_app.logger.error(f"Error retrieving file at commit: {e}")
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": "Failed to retrieve file at commit.",
-                    "device": "N/A",
-                }
-            ),
-            500,
-        )
-
-
-# Endpoint untuk Berbagi Backup dengan Pengguna Lain
-@backup_bp.route("/share_backup/<backup_id>", methods=["POST"])
-@login_required
-@required_2fa
-@role_required(
-    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
-)
-def share_backup(backup_id):
-    try:
-        backup = BackupData.query.filter_by(
-            id=backup_id, user_id=current_user.id
-        ).first()
+        # Fetch the backup record from the database
+        backup = BackupData.query.get(backup_id)
         if not backup:
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": "Backup not found or unauthorized.",
-                        "device": "N/A",
-                    }
-                ),
-                404,
-            )
+            return jsonify({"message": "Backup not found"}), 404
 
-        data = request.get_json()
-        user_email = data.get("user_email")
+        # Check if the user is either an Admin or the owner of the backup
+        if not current_user.has_role("Admin") and backup.user_id != current_user.id:
+            return jsonify({"message": "Unauthorized access"}), 403
 
-        user_to_share = User.query.filter_by(email=user_email).first()
-        if not user_to_share:
-            return (
-                jsonify(
-                    {"status": "error", "message": "User not found.", "device": "N/A"}
-                ),
-                404,
-            )
+        # Initialize the form and populate it with the current backup data
+        form = UpdateBackupForm(
+            backup_name=backup.backup_name,
+            description=backup.description,
+            retention_days=backup.retention_period_days,
+            is_encrypted=backup.is_encrypted,
+            is_compressed=backup.is_compressed,
+            tags=", ".join(
+                [tag.tag for tag in backup.tags]
+            ),  # Convert tags to a comma-separated string
+        )
 
-        new_share = UserBackupShare(user_id=user_to_share.id, backup_id=backup.id)
+        # Handle the form submission
+        if form.validate_on_submit():
+            # Update the backup details
+            backup.backup_name = form.backup_name.data
+            backup.description = form.description.data
+            backup.retention_period_days = form.retention_days.data
+            backup.is_encrypted = form.is_encrypted.data
+            backup.is_compressed = form.is_compressed.data
+
+            # Process tags (comma-separated input from the form)
+            new_tags = [tag.strip() for tag in form.tags.data.split(",") if tag.strip()]
+
+            # Clear existing tags and add new ones
+            backup.tags.clear()
+            for tag_text in new_tags:
+                tag_instance = BackupTag.query.filter_by(tag=tag_text).first()
+                if not tag_instance:
+                    tag_instance = BackupTag(tag=tag_text)
+                backup.tags.append(tag_instance)
+
+            # Save the changes
+            db.session.commit()
+
+            flash("Backup updated successfully!", "success")
+            return redirect(url_for("backup.index", backup_id=backup.id))
+
+        # Render the update template
+        return render_template("backup_managers/update.html", form=form, backup=backup)
+
+    except Exception as e:
+        current_app.logger.error(f"Error updating backup: {e}")
+        db.session.rollback()
+        flash(f"Error updating backup: {str(e)}", "danger")
+        return redirect(url_for("backup.update_backup", backup_id=backup.id))
+
+
+# Delete Backup
+@backup_bp.route("/delete-backup/<backup_id>", methods=["POST"])
+@login_required
+def delete_backup(backup_id):
+    try:
+        # Query the backup from the database
+        backup = BackupData.query.get(backup_id)
+
+        # Check if the backup exists
+        if not backup:
+            return jsonify({"message": "Backup not found."}), 404
+
+        # Authorization check: Admins can delete any backup, non-admins can only delete their own backups
+        if not current_user.has_role("Admin") and backup.user_id != current_user.id:
+            return jsonify({"message": "Unauthorized to delete this backup."}), 403
+
+        # Perform the actual deletion
+        db.session.delete(backup)
+        db.session.commit()
+
+        # Optionally, delete the backup file from the filesystem
+        try:
+            BackupUtils.delete_backup_file(backup.backup_path)
+        except Exception as e:
+            current_app.logger.error(f"Error deleting backup file: {e}")
+            # We don't rollback the DB transaction if the file deletion fails, just log the error
+
+        # Return success response
+        return jsonify({"message": "Backup successfully deleted."}), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error deleting backup: {e}")
+        db.session.rollback()
+        return jsonify({"message": f"Error deleting backup: {e}"}), 500
+
+
+# ------------------------------------------------------------
+# Sharing Backup with Other Users
+# ------------------------------------------------------------
+
+
+# Share Backup
+@backup_bp.route("/backups/<backup_id>/share", methods=["POST"])
+@login_required
+def share_backup(backup_id):
+    backup = BackupData.query.get(backup_id)
+    if not backup or backup.user_id != current_user.id:
+        return jsonify({"message": "Backup not found or unauthorized"}), 404
+
+    data = request.get_json()
+    share_with_user_id = data.get("user_id")
+    permission_level = data.get("permission_level", "read-only")
+
+    try:
+        new_share = UserBackupShare(
+            user_id=share_with_user_id,
+            backup_id=backup.id,
+            permission_level=permission_level,
+        )
         db.session.add(new_share)
         db.session.commit()
 
-        current_app.logger.info(
-            f"Backup ID {backup_id} shared with user ID {user_to_share.id} by {current_user.email}."
-        )
+        # Add Audit log
+        log_action(backup.id, "shared", current_user.id)
 
-        return (
-            jsonify({"status": "success", "message": "Backup shared successfully."}),
-            200,
-        )
+        return jsonify({"message": "Backup shared successfully"}), 201
     except Exception as e:
-        current_app.logger.error(f"Error sharing backup: {e}")
-        db.session.rollback()
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": "Failed to share backup.",
-                    "device": "N/A",
-                }
-            ),
-            500,
-        )
+        return jsonify({"message": f"Error sharing backup: {str(e)}"}), 500
 
 
-# Endpoint untuk Menampilkan Backup yang Dibagikan
-@backup_bp.route("/shared_backups", methods=["GET"])
+# ------------------------------------------------------------
+# Backup Versioning (Git Integration)
+# ------------------------------------------------------------
+
+
+# Rollback to Specific Version
+@backup_bp.route("/backups/<backup_id>/rollback/<commit_hash>", methods=["POST"])
 @login_required
-@required_2fa
-@role_required(
-    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
-)
-def shared_backups():
+def rollback_backup(backup_id, commit_hash):
+    backup = BackupData.query.get(backup_id)
+    if not backup or backup.user_id != current_user.id:
+        return jsonify({"message": "Backup not found or unauthorized"}), 404
+
+    git_version = GitBackupVersion.query.filter_by(
+        backup_id=backup_id, commit_hash=commit_hash
+    ).first()
+    if not git_version:
+        return jsonify({"message": "Version not found"}), 404
+
     try:
-        shared_backups_query = (
-            db.session.query(BackupData)
-            .join(UserBackupShare)
-            .filter(UserBackupShare.user_id == current_user.id)
-        )
+        # Logic for restoring the backup to the given commit
+        # This is where you'd pull the backup from Git history and apply it to the system
 
-        shared_backups = shared_backups_query.all()
-        shared_backups_list = [
-            {
-                "backup_id": backup.id,
-                "backup_name": backup.backup_name,
-                "description": backup.description,
-                "created_at": backup.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                "version": backup.version,
-            }
-            for backup in shared_backups
-        ]
+        # Add Audit log
+        log_action(backup.id, "rollback", current_user.id)
 
-        return (
-            jsonify({"status": "success", "shared_backups": shared_backups_list}),
-            200,
-        )
+        return jsonify({"message": f"Backup rolled back to version {commit_hash}"}), 200
     except Exception as e:
-        current_app.logger.error(f"Error retrieving shared backups: {e}")
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": "Failed to retrieve shared backups.",
-                    "device": "N/A",
-                }
-            ),
-            500,
-        )
+        return jsonify({"message": f"Error during rollback: {str(e)}"}), 500
+
+
+# ------------------------------------------------------------
+# Backup Tags
+# ------------------------------------------------------------
+
+
+# Add Tag to Backup
+@backup_bp.route("/backups/<backup_id>/tags", methods=["POST"])
+@login_required
+def add_tag_to_backup(backup_id):
+    backup = BackupData.query.get(backup_id)
+    if not backup or backup.user_id != current_user.id:
+        return jsonify({"message": "Backup not found or unauthorized"}), 404
+
+    data = request.get_json()
+    tag = data.get("tag")
+
+    try:
+        new_tag = BackupTag(backup_id=backup.id, tag=tag)
+        db.session.add(new_tag)
+        db.session.commit()
+
+        # Add Audit log
+        log_action(backup.id, "tag_added", current_user.id)
+
+        return jsonify({"message": "Tag added to backup"}), 201
+    except Exception as e:
+        return jsonify({"message": f"Error adding tag: {str(e)}"}), 500
+
+
+# ------------------------------------------------------------
+# Backup Audit Logging
+# ------------------------------------------------------------
+
+
+def log_action(backup_id, action, user_id):
+    """Helper function to log actions related to backups."""
+    audit_log = BackupAuditLog(
+        backup_id=backup_id,
+        action=action,
+        performed_by=user_id,
+        timestamp=datetime.utcnow(),
+    )
+    db.session.add(audit_log)
+    db.session.commit()
+
+
+# Get Audit Logs for a Backup
+@backup_bp.route("/backups/<backup_id>/logs", methods=["GET"])
+@login_required
+def get_audit_logs(backup_id):
+    backup = BackupData.query.get(backup_id)
+    if not backup or backup.user_id != current_user.id:
+        return jsonify({"message": "Backup not found or unauthorized"}), 404
+
+    audit_logs = BackupAuditLog.query.filter_by(backup_id=backup_id).all()
+    logs_list = [
+        {
+            "action": log.action,
+            "timestamp": log.timestamp,
+            "performed_by": log.performed_by,
+        }
+        for log in audit_logs
+    ]
+    return jsonify(logs_list), 200

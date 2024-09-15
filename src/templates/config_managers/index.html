@@ -14,6 +14,12 @@
     <i class="fas fa-upload"></i> Kirim Konfigurasi
 </button>
 {% endblock %}
+{% block button_group3 %}
+<!-- Button to trigger the "Create Backup" modal -->
+<button type="button" class="btn btn-sm btn-danger" id="pushBackupBtn">
+    <i class="fas fa-plus"></i> Create Backup
+</button>
+{% endblock %}
 
 {% block table_name %}Daftar Perangkat{% endblock %}
 
@@ -37,8 +43,8 @@
 {% block form_search %}
 <!-- Form Pencarian -->
 <form id="searchForm" method="get" action="{{ url_for('nm.index') }}" class="form-inline d-flex">
-    <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2"
-        placeholder="Search..." value="{{ search_query }}">
+    <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2" placeholder="Search..."
+        value="{{ search_query }}">
     <button class="btn btn-outline-success btn-sm" type="submit">
         <i class="fa-solid fa-magnifying-glass"></i>
     </button>
@@ -58,6 +64,7 @@
 <th scope="col">Alamat IP</th>
 <th scope="col">Vendor</th>
 <th scope="col">Status</th>
+<th scope="col">Aksi</th>
 {% endblock %}
 
 {% block table_body %}
@@ -81,6 +88,63 @@
     <td>{{ device.vendor }}</td>
     <td>
         <div id="statusIndicator{{ device.id }}" class="status-indicator"></div>
+    </td>
+    <td>
+        <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#configModal{{ device.id }}">
+            Config
+        </button>
+        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#backupModal{{ device.id }}">
+            Backup
+        </button>
+
+        <!-- Modal for Backup Configuration -->
+        <div class="modal fade" id="backupModal{{ device.id }}" tabindex="-1"
+            aria-labelledby="backupModalLabel{{ device.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="backupModalLabel{{ device.id }}">Create Backup for {{
+                            device.device_name }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="backupForm{{ device.id }}">
+                            <!-- Backup Name Input -->
+                            <div class="mb-3">
+                                <label for="backupName{{ device.id }}" class="form-label">Backup Name</label>
+                                <input type="text" class="form-control" id="backupName{{ device.id }}"
+                                    name="backup_name" required>
+                            </div>
+                            <!-- Backup Description -->
+                            <div class="mb-3">
+                                <label for="description{{ device.id }}" class="form-label">Description</label>
+                                <textarea class="form-control" id="description{{ device.id }}"
+                                    name="description"></textarea>
+                            </div>
+                            <!-- Backup Type -->
+                            <div class="mb-3">
+                                <label for="backupType{{ device.id }}" class="form-label">Backup Type</label>
+                                <select class="form-select" id="backupType{{ device.id }}" name="backup_type" required>
+                                    <option value="full">Full Backup</option>
+                                    <option value="incremental">Incremental Backup</option>
+                                    <option value="differential">Differential</option>
+                                </select>
+                            </div>
+                            <!-- Command -->
+                            <div class="mb-3">
+                                <label for="command{{ device.id }}" class="form-label">Backup Command</label>
+                                <select class="form-select" id="command{{ device.id }}" name="command" required>
+                                    <option value="show running-config">Cisco</option>
+                                    <option value="export compact terse">MikroTik</option>
+                                    <option value="show full-configuration">Fortinet</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Create Backup</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
     </td>
 </tr>
 {% endfor %}
@@ -107,7 +171,7 @@
 <div class="modal fade" id="selectConfigModal" tabindex="-1" aria-labelledby="selectConfigModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-black text-light">
+        <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="selectConfigModalLabel">Select File for Push Config</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -143,6 +207,59 @@
                 <div id="pushConfigResultTable">
                     <!-- Tabel hasil push config akan dimuat di sini -->
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal to Create Backup -->
+<div class="modal fade" id="backupConfigModal" tabindex="-1" aria-labelledby="backupConfigModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="backupConfigModalLabel">Create Backup</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="backupConfigForm">
+                    <!-- Backup Name Input -->
+                    <div class="mb-3">
+                        <label for="backupName" class="form-label">Backup Name</label>
+                        <input type="text" class="form-control" id="backupName" name="backup_name" required>
+                    </div>
+                    <!-- Backup Description -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description"></textarea>
+                    </div>
+                    <!-- Backup Type Selection -->
+                    <div class="mb-3">
+                        <label for="backupType" class="form-label">Backup Type</label>
+                        <select class="form-select" id="backupType" name="backup_type" required>
+                            <option value="full">Full Backup</option>
+                            <option value="incremental">Incremental Backup</option>
+                            <option value="differential">Differential Backup</option>
+                        </select>
+                    </div>
+                    <!-- Retention Days -->
+                    <div class="mb-3">
+                        <label for="retentionDays" class="form-label">Retention Days</label>
+                        <input type="number" class="form-control" id="retentionDays" name="retention_days">
+                    </div>
+                    <!-- Backup Command -->
+                    <div class="mb-3">
+                        <label for="command" class="form-label">Backup Command</label>
+                        <select class="form-select" id="command" name="command" required>
+                            <option value="show running-config">Cisco</option>
+                            <option value="export compact terse">MikroTik</option>
+                            <option value="show full-configuration">Fortinet</option>
+                        </select>
+                    </div>
+                    <!-- Hidden field to store selected devices -->
+                    <input type="hidden" id="selectedDevices" name="devices">
+                    <button type="submit" class="btn btn-primary" id="confirmBackupConfigBtn">Create Backup</button>
+                </form>
             </div>
         </div>
     </div>
@@ -267,6 +384,130 @@
     // Reload the page when the pushConfigResultModal is closed
     document.getElementById("pushConfigResultModal").addEventListener("hidden.bs.modal", function () {
         location.reload();
+    });
+</script>
+
+<script>
+    // Function to show the loading overlay
+    function showLoadingOverlay() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.style.display = 'flex';
+        }
+    }
+
+    // Function to hide the loading overlay
+    function hideLoadingOverlay() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
+    }
+
+    // Event for Push Backup button
+    document.getElementById("pushBackupBtn").addEventListener("click", function () {
+        const selectedDevices = Array.from(document.querySelectorAll(".btn-check:checked"))
+            .map(checkbox => checkbox.getAttribute("data-ip"));
+
+        if (selectedDevices.length > 0) {
+            // Open the backup modal
+            const backupConfigModal = new bootstrap.Modal(document.getElementById("backupConfigModal"));
+            backupConfigModal.show();
+
+            // Populate hidden input field with selected devices
+            document.getElementById("selectedDevices").value = JSON.stringify(selectedDevices);
+        } else {
+            alert("Please select at least one device.");
+        }
+    });
+
+    document.getElementById("backupConfigForm").addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const backupName = document.getElementById("backupName").value;
+        const command = document.getElementById("command").value;
+        const selectedDevices = document.getElementById("selectedDevices").value;
+
+        if (!backupName || !command || !selectedDevices) {
+            alert("Please fill in all required fields.");
+            return;
+        }
+
+        // Prepare backup data from form inputs
+        const backupData = {
+            backup_name: backupName,
+            description: document.getElementById("description").value,
+            backup_type: document.getElementById("backupType").value,
+            retention_days: document.getElementById("retentionDays").value,
+            command: command,
+            devices: JSON.parse(selectedDevices)
+        };
+
+        // Send POST request to create the backup
+        fetch("/backups/create_multiple", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(backupData)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert("Backup created successfully!");
+                    location.reload();
+                } else {
+                    alert("Failed to create backup: " + (data.message || "Unknown error"));
+                }
+            })
+            .catch(error => {
+                console.error("Error creating backup:", error);
+                alert("Error creating backup.");
+            });
+
+        const backupConfigModal = bootstrap.Modal.getInstance(document.getElementById("backupConfigModal"));
+        backupConfigModal.hide();
+    });    
+</script>
+
+<!-- handle backup single device by id -->
+<script>
+    document.querySelectorAll('form[id^="backupForm"]').forEach(form => {
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const deviceId = form.id.replace('backupForm', ''); // Get the device ID from the form ID
+            const backupData = {
+                backup_name: document.getElementById(`backupName${deviceId}`).value,
+                description: document.getElementById(`description${deviceId}`).value,
+                backup_type: document.getElementById(`backupType${deviceId}`).value,
+                command: document.getElementById(`command${deviceId}`).value
+            };
+
+            // Send POST request to the backup endpoint
+            fetch(`/backups/create_single/${deviceId}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(backupData)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("Backup created successfully!");
+                        // Close modal after success
+                        const backupModal = bootstrap.Modal.getInstance(document.getElementById(`backupModal${deviceId}`));
+                        backupModal.hide();
+                    } else {
+                        alert("Failed to create backup: " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error("Error creating backup:", error);
+                    alert("Error creating backup.");
+                });
+        });
     });
 </script>
 {% endblock %}

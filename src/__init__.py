@@ -14,6 +14,7 @@ from src.config import DevelopmentConfig, TestingConfig, ProductionConfig, get_u
 from flask_mail import Mail
 from flask_talisman import Talisman
 import openai
+import os
 
 # Load .env file variable
 load_dotenv()
@@ -48,6 +49,15 @@ def create_app(config_class=None):
     else:
         raise ValueError("Invalid CONFIG_NAME")
 
+    # Ensure the BACKUP_DIR exists
+    backup_dir = app.config["BACKUP_DIR"]
+    try:
+        if not os.path.exists(backup_dir):
+            os.makedirs(backup_dir)
+    except OSError as e:
+        app.logger.error(f"Error creating backup directory: {e}")
+        raise RuntimeError(f"Failed to create backup directory: {backup_dir}")
+
     # Inisiasi pustaka OpenAI dengan API key
     openai_api_key = decouple_config("OPENAI_API_KEY", default=None)
     talita_api_key = decouple_config("TALITA_API_KEY", default=None)
@@ -63,10 +73,10 @@ def create_app(config_class=None):
 
     # Set API key untuk OpenAI
     openai.api_key = openai_api_key
-    
+
     # Simpan TALITA API Key dan URL ke dalam konfigurasi aplikasi
-    app.config['TALITA_API_KEY'] = talita_api_key
-    app.config['TALITA_URL'] = talita_url
+    app.config["TALITA_API_KEY"] = talita_api_key
+    app.config["TALITA_URL"] = talita_url
 
     # Initialize extensions
     bcrypt.init_app(app)

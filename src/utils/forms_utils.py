@@ -7,7 +7,8 @@ from wtforms import (
     SelectField,
     TextAreaField,
     SubmitField,
-    HiddenField,
+    BooleanField,
+    IntegerField,
 )
 from wtforms.validators import (
     DataRequired,
@@ -576,3 +577,14 @@ class TalitaQuestionForm(FlaskForm):
         ],
     )
     submit = SubmitField("Submit")
+
+
+class UpdateBackupForm(FlaskForm):
+    backup_name = StringField("Backup Name", validators=[DataRequired()])
+    description = TextAreaField("Description", validators=[Optional()])
+    retention_days = IntegerField("Retention Period (Days)", validators=[Optional()])
+    is_encrypted = BooleanField("Encrypt Backup", default=False)
+    is_compressed = BooleanField("Compress Backup", default=False)
+    tags = StringField(
+        "Tags (comma-separated)", validators=[Optional()]
+    )  # String field for tags

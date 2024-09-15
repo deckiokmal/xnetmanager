@@ -9,6 +9,7 @@ from flask import current_app
 import uuid
 from src import UUID_TYPE
 import os
+from src.utils.backupUtils import BackupUtils
 
 
 # ------------------------------------------------------------------------
@@ -54,12 +55,7 @@ class User(UserMixin, db.Model):
     backups = db.relationship("BackupData", back_populates="user", lazy=True)
 
     # Relasi ke UserBackupShare untuk mengakses backup yang dibagikan
-    backup_shares = db.relationship(
-        "UserBackupShare",
-        back_populates="user",
-        lazy=True,
-        overlaps="shared_user",
-    )
+    backup_shares = db.relationship("UserBackupShare", back_populates="user", lazy=True)
 
     # Relasi ke ConfigurationManagerShare untuk sharing konfigurasi
     configuration_shares = db.relationship(
@@ -190,6 +186,11 @@ class DeviceManager(db.Model):
         db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
     )
 
+    # Relasi ke BackupData (one-to-many)
+    backups = db.relationship(
+        "BackupData", back_populates="device", cascade="all, delete-orphan"
+    )
+
     def __repr__(self):
         return f"<DeviceManager {self.device_name}>"
 
@@ -269,67 +270,117 @@ class BackupData(db.Model):
     description = db.Column(db.String(255), nullable=True)
     version = db.Column(db.Integer, nullable=False, default=1)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    backup_path = db.Column(db.String(255), nullable=False)  # Valid path required
+    is_encrypted = db.Column(db.Boolean, default=False)
+    is_compressed = db.Column(db.Boolean, default=False)
+    integrity_check = db.Column(db.String(64), nullable=True)
+    backup_type = db.Column(db.String(50), nullable=False, default="full")
+    next_scheduled_backup = db.Column(db.DateTime, nullable=True)
+    retention_period_days = db.Column(db.Integer, nullable=True)
+
+    # Foreign Key for User
     user_id = db.Column(
         db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
     )
+    user = db.relationship("User", back_populates="backups")
 
-    user = db.relationship(
-        "User", back_populates="backups", overlaps="shared_backups,backup_shares"
+    # Foreign Key for DeviceManager
+    device_id = db.Column(
+        db.String(36), db.ForeignKey("device_manager.id"), nullable=False
+    )
+    device = db.relationship("DeviceManager", back_populates="backups")
+
+    # Relationships to other models (e.g., shared, versions, etc.)
+    shared_with = db.relationship(
+        "UserBackupShare", back_populates="backup", cascade="all, delete-orphan"
     )
     git_versions = db.relationship(
         "GitBackupVersion", back_populates="backup", cascade="all, delete-orphan"
     )
-    shared_with = db.relationship(
-        "UserBackupShare", back_populates="backup", cascade="all, delete-orphan"
+    tags = db.relationship(
+        "BackupTag", back_populates="backup", cascade="all, delete-orphan"
+    )
+    audit_logs = db.relationship(
+        "BackupAuditLog", back_populates="backup", cascade="all, delete-orphan"
     )
 
-    def __repr__(self):
-        return f"<BackupData {self.backup_name} v{self.version}>"
-
     @staticmethod
-    def create_backup(backup_name, description, user_id):
+    def create_backup(
+        backup_name,
+        description,
+        user_id,
+        device_id,
+        backup_type="full",
+        retention_days=None,
+        command=None,
+    ):
+        """
+        Method to handle creating a new backup entry in the database and executing the backup.
+
+        :param backup_name: Name of the backup.
+        :param description: Description of the backup.
+        :param user_id: ID of the user performing the backup.
+        :param device_id: ID of the device being backed up.
+        :param backup_type: Type of the backup (full, incremental, differential).
+        :param retention_days: Retention period for the backup.
+        :param command: The command to be executed for the backup.
+        """
         try:
-            # Fetch the latest version of the backup with the same name and user
-            last_backup = (
-                BackupData.query.filter_by(backup_name=backup_name, user_id=user_id)
+            if not backup_name or not backup_name.strip():
+                raise ValueError("Backup name is required.")
+
+            device = DeviceManager.query.get(device_id)
+            if not device:
+                raise ValueError("Device not found.")
+
+            if not command:
+                raise ValueError("Backup command is required.")
+
+            # Get the latest version for this device's backups
+            latest_backup = (
+                BackupData.query.filter_by(device_id=device_id)
                 .order_by(BackupData.version.desc())
                 .first()
             )
-            new_version = last_backup.version + 1 if last_backup else 1
+            new_version = (latest_backup.version + 1) if latest_backup else 1
 
+            # Perform the backup using BackupUtils
+            backup_result = BackupUtils.perform_backup(
+                backup_type,
+                device,
+                user_id=user_id,
+                backup_name=backup_name,
+                description=description,
+                command=command,
+                version=new_version,
+            )
+
+            # Create the new backup record
             new_backup = BackupData(
                 backup_name=backup_name,
                 description=description,
                 version=new_version,
+                backup_path=backup_result["backup_path"],
+                backup_type=backup_type,
                 user_id=user_id,
+                device_id=device_id,
+                retention_period_days=retention_days,
+                integrity_check=backup_result["integrity_hash"],
             )
+
             db.session.add(new_backup)
             db.session.commit()
 
-            current_app.logger.info(
-                f"Backup {new_backup.backup_name} v{new_backup.version} created successfully."
-            )
             return new_backup
-        except IntegrityError as ie:
-            db.session.rollback()
-            current_app.logger.error(
-                f"Integrity error creating backup {backup_name} for user {user_id}: {ie}"
-            )
-            raise ValueError(
-                f"Failed to create backup due to integrity constraints: {ie}"
-            )
-        except SQLAlchemyError as sae:
-            db.session.rollback()
-            current_app.logger.error(
-                f"Database error creating backup {backup_name} for user {user_id}: {sae}"
-            )
-            raise RuntimeError(f"Database error occurred: {sae}")
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(
-                f"Unexpected error creating backup {backup_name} for user {user_id}: {e}"
-            )
+            current_app.logger.error(f"Error creating backup: {e}")
             raise RuntimeError(f"Unexpected error occurred: {e}")
+
+
+# -----------------------------------------------------------------------
+# User Backup Sharing Section
+# -----------------------------------------------------------------------
 
 
 class UserBackupShare(db.Model):
@@ -343,15 +394,24 @@ class UserBackupShare(db.Model):
         db.String(36), db.ForeignKey("backup_data.id"), nullable=False, index=True
     )
 
-    user = db.relationship(
-        "User", back_populates="backup_shares", overlaps="backup_shares,shared_user"
-    )
-    backup = db.relationship(
-        "BackupData", back_populates="shared_with", overlaps="shared_backups"
-    )
+    # Permissions for sharing (read-only, edit, or ownership transfer)
+    permission_level = db.Column(
+        db.String(50), default="read-only"
+    )  # read-only, edit, transfer
+
+    # Relationship to the user with whom the backup is shared
+    user = db.relationship("User", back_populates="backup_shares")
+
+    # Relationship to the backup being shared
+    backup = db.relationship("BackupData", back_populates="shared_with")
 
     def __repr__(self):
-        return f"<UserBackupShare User {self.user_id} -> Backup {self.backup_id}>"
+        return f"<UserBackupShare User {self.user_id} -> Backup {self.backup_id} with {self.permission_level} access>"
+
+
+# -----------------------------------------------------------------------
+# Git Backup Version Control Section
+# -----------------------------------------------------------------------
 
 
 class GitBackupVersion(db.Model):
@@ -366,6 +426,7 @@ class GitBackupVersion(db.Model):
     committed_at = db.Column(db.DateTime, default=datetime.utcnow)
     file_path = db.Column(db.String(255), nullable=False)
 
+    # Relationship to the backup this version belongs to
     backup = db.relationship("BackupData", back_populates="git_versions")
 
     def __repr__(self):
@@ -383,3 +444,49 @@ class GitBackupVersion(db.Model):
             current_app.logger.error(f"Invalid file path: {self.file_path}")
             raise ValueError(f"Invalid file path: {self.file_path}")
         return abs_file_path
+
+
+# -----------------------------------------------------------------------
+# Backup Tagging Section (for search and categorization)
+# -----------------------------------------------------------------------
+
+
+class BackupTag(db.Model):
+    __tablename__ = "backup_tags"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    backup_id = db.Column(
+        db.String(36), db.ForeignKey("backup_data.id"), nullable=False, index=True
+    )
+    tag = db.Column(db.String(50), nullable=False)
+
+    # Relationship to the backup this tag belongs to
+    backup = db.relationship("BackupData", back_populates="tags")
+
+    def __repr__(self):
+        return f"<BackupTag {self.tag} for Backup {self.backup_id}>"
+
+
+# -----------------------------------------------------------------------
+# Backup Audit Logging Section
+# -----------------------------------------------------------------------
+
+
+class BackupAuditLog(db.Model):
+    __tablename__ = "backup_audit_logs"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    backup_id = db.Column(
+        db.String(36), db.ForeignKey("backup_data.id"), nullable=False, index=True
+    )
+    action = db.Column(
+        db.String(50), nullable=False
+    )  # e.g., created, updated, deleted, shared
+    performed_by = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationship to the backup this log belongs to
+    backup = db.relationship("BackupData", back_populates="audit_logs")
+
+    def __repr__(self):
+        return f"<BackupAuditLog {self.action} on Backup {self.backup_id}>"

@@ -2,6 +2,7 @@ from decouple import config, UndefinedValueError
 import logging
 from sqlalchemy.types import String
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
+import os
 
 
 # Validasi variabel lingkungan untuk memastikan semua yang diperlukan tersedia
@@ -48,6 +49,14 @@ class Config(object):
     DEBUG_TB_ENABLED = False
     DEBUG_TB_INTERCEPT_REDIRECTS = False
     APP_NAME = config("APP_NAME")
+
+    # Set BASE_DIR to the project root
+    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+    # In production, use an environment variable for the backup directory (Docker volume)
+    BACKUP_DIR = config(
+        "BACKUP_DIR", default=os.path.join(BASE_DIR, "static", "xmanager", "backups")
+    )
 
     # Pengaturan untuk keamanan cookies
     SESSION_COOKIE_SECURE = True
@@ -114,6 +123,9 @@ class DevelopmentConfig(Config):
     WTF_CSRF_ENABLED = False
     DEBUG_TB_ENABLED = True
 
+    # Set BACKUP_DIR for development (Windows)
+    BACKUP_DIR = "D:/0. MY PROJECT/16. BYOAI PROJECT XNETMANAGER/backups/development"
+
     # Pengaturan Flask-Talisman untuk pengembangan
     TALISMAN_FORCE_HTTPS = False
     TALISMAN_STRICT_TRANSPORT_SECURITY = False
@@ -172,6 +184,9 @@ class ProductionConfig(Config):
 
     DEBUG = False
     DEBUG_TB_ENABLED = False
+
+    # BACKUP_DIR in production set by Docker environment variable
+    BACKUP_DIR = config("BACKUP_DIR", default="/app/backups")
 
     # Pengaturan Flask-Talisman untuk produksi
     TALISMAN_FORCE_HTTPS = True
