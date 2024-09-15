@@ -15,6 +15,9 @@ logging.basicConfig(
 
 
 class ConfigurationManagerUtils:
+    MAX_RETRIES = 3  # Jumlah retry jika koneksi gagal
+    RETRY_DELAY = 5  # Delay dalam detik sebelum melakukan retry
+
     def __init__(
         self, ip_address="0.0.0.0", username="admin", password="admin", ssh=22
     ):
@@ -32,6 +35,39 @@ class ConfigurationManagerUtils:
         self.ssh = ssh
         self.device_status = None
 
+    def _connect_ssh(self):
+        """
+        Membangun koneksi SSH dengan retry otomatis jika gagal.
+        """
+        retries = 0
+        while retries < self.MAX_RETRIES:
+            try:
+                ssh_client = paramiko.SSHClient()
+                ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                ssh_client.connect(
+                    hostname=self.ip_address,
+                    username=self.username,
+                    password=self.password,
+                    port=self.ssh,
+                    timeout=10,
+                )
+                return ssh_client
+            except (paramiko.SSHException, EOFError) as ssh_err:
+                retries += 1
+                logging.error(
+                    f"SSH connection failed for {self.ip_address}. Retrying... ({retries}/{self.MAX_RETRIES})"
+                )
+                time.sleep(self.RETRY_DELAY)
+            except Exception as e:
+                logging.error(
+                    f"Unexpected error while connecting to {self.ip_address}: {e}"
+                )
+                raise e
+
+        raise paramiko.SSHException(
+            f"Unable to establish SSH connection to {self.ip_address} after {self.MAX_RETRIES} retries."
+        )
+
     def configure_device(self, command):
         """
         Mengonfigurasi perangkat melalui SSH dengan perintah yang diberikan.
@@ -42,29 +78,17 @@ class ConfigurationManagerUtils:
         """
         try:
             start_time = time.time()
-            ssh_client = paramiko.SSHClient()
-            ssh_client.load_system_host_keys()
-            ssh_client.set_missing_host_key_policy(
-                paramiko.AutoAddPolicy()
-            )  # Menambahkan kunci otomatis
-            ssh_client.connect(
-                hostname=self.ip_address,
-                username=self.username,
-                password=self.password,
-                port=self.ssh,
-                timeout=5,
-            )
-            stdin, stdout, stderr = ssh_client.exec_command(command)
-            stdout.channel.recv_exit_status()
-            response = stdout.read().decode()
-            ssh_client.close()
-            elapsed_time = time.time() - start_time
-            logging.info(
-                "Konfigurasi berhasil pada %s dalam %.2fs",
-                self.ip_address,
-                elapsed_time,
-            )
-            return json.dumps({"message": response, "status": "success"})
+            with self._connect_ssh() as ssh_client:
+                stdin, stdout, stderr = ssh_client.exec_command(command)
+                stdout.channel.recv_exit_status()
+                response = stdout.read().decode()
+                elapsed_time = time.time() - start_time
+                logging.info(
+                    "Konfigurasi berhasil pada %s dalam %.2fs",
+                    self.ip_address,
+                    elapsed_time,
+                )
+                return json.dumps({"message": response, "status": "success"})
         except paramiko.AuthenticationException:
             error_message = "Autentikasi gagal, periksa kredensial Anda."
             logging.error(
@@ -94,18 +118,11 @@ class ConfigurationManagerUtils:
         :return: Status perangkat dalam format JSON.
         """
         try:
-            # Tentukan perintah ping berdasarkan sistem operasi
-            if platform.system() == "Windows":
-                command = ["ping", "-n", "1", self.ip_address]
-            elif platform.system() == "Linux":
-                command = ["ping", "-c", "1", self.ip_address]
-            else:
-                error_message = "Sistem operasi tidak didukung."
-                logging.error(
-                    "OS tidak didukung untuk %s: %s", self.ip_address, error_message
-                )
-                return json.dumps({"message": error_message, "status": "error"})
-
+            command = (
+                ["ping", "-n", "1", self.ip_address]
+                if platform.system() == "Windows"
+                else ["ping", "-c", "1", self.ip_address]
+            )
             start_time = time.time()
             response = subprocess.run(command, capture_output=True, text=True)
             elapsed_time = time.time() - start_time
@@ -157,11 +174,8 @@ class ConfigurationManagerUtils:
         :return: Konfigurasi yang telah dirender dalam format JSON.
         """
         try:
-            # Parsing parameter YAML
             yaml_params_dict = yaml.safe_load(yaml_params)
-            # Membuat objek Template Jinja2
             template = Template(jinja_template)
-            # Menggabungkan parameter YAML ke dalam template Jinja2
             rendered_config = template.render(yaml_params_dict)
             logging.info("Template berhasil dirender")
             return rendered_config
@@ -178,13 +192,9 @@ class ConfigurationManagerUtils:
         :return: JSON yang berisi status dan pesan hasil eksekusi perintah.
         """
         try:
-            # Jalankan perintah konfigurasi pada perangkat
             result_json = self.configure_device(command)
-
-            # Parse hasil JSON dari perintah konfigurasi
             result_dict = json.loads(result_json)
 
-            # Cek apakah status sukses dan kembalikan pesan dalam format JSON
             if result_dict.get("status") == "success":
                 output = result_dict.get("message")
                 return json.dumps({"status": "success", "message": output})

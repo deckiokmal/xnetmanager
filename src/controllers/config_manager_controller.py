@@ -9,11 +9,11 @@ from flask import (
     flash,
 )
 from flask_login import (
-    login_required, 
+    login_required,
     current_user,
 )
 from .decorators import (
-    role_required, 
+    role_required,
     required_2fa,
 )
 import logging
@@ -220,7 +220,7 @@ def check_status():
             devices_query = DeviceManager.query
         else:
             devices_query = DeviceManager.query.filter_by(user_id=current_user.id)
-        
+
         devices = devices_query.all()
 
         # Batasi jumlah thread
@@ -298,7 +298,9 @@ def push_configs():
 
     # Query perangkat berdasarkan peran user
     if current_user.has_role("Admin"):
-        devices = DeviceManager.query.filter(DeviceManager.ip_address.in_(device_ips)).all()
+        devices = DeviceManager.query.filter(
+            DeviceManager.ip_address.in_(device_ips)
+        ).all()
     else:
         devices = DeviceManager.query.filter(
             DeviceManager.ip_address.in_(device_ips),
@@ -325,7 +327,7 @@ def push_configs():
     # Jika konfigurasi tidak ditemukan
     if not config:
         return jsonify({"success": False, "message": "Selected config not found."}), 404
-    
+
     # Membaca file konfigurasi
     def read_config(filename):
         config_path = os.path.join(
@@ -399,3 +401,108 @@ def push_configs():
                 success = False
 
     return jsonify({"success": success, "results": results})
+
+
+# Endpoint untuk push konfigurasi ke satu perangkat
+@nm_bp.route("/push_config/<device_id>", methods=["POST"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
+)
+def push_config_single_device(device_id):
+    """
+    Mengirimkan konfigurasi ke satu perangkat yang dipilih berdasarkan device_id.
+    Fitur: Memvalidasi input, membaca file konfigurasi, dan push konfigurasi ke satu perangkat.
+    """
+    data = request.get_json()
+    config_id = data.get("config_id")
+
+    # Validasi input
+    if not config_id:
+        return jsonify({"success": False, "message": "No config selected."}), 400
+
+    # Query perangkat berdasarkan device_id dan peran user
+    if current_user.has_role("Admin"):
+        device = DeviceManager.query.filter_by(id=device_id).first()
+    else:
+        device = DeviceManager.query.filter_by(
+            id=device_id, user_id=current_user.id
+        ).first()
+
+    # Jika perangkat tidak ditemukan
+    if not device:
+        return jsonify({"success": False, "message": "Device not found."}), 404
+
+    # Query konfigurasi berdasarkan peran user
+    if current_user.has_role("Admin"):
+        config = ConfigurationManager.query.filter_by(id=config_id).first()
+    else:
+        config = ConfigurationManager.query.filter_by(
+            id=config_id, user_id=current_user.id
+        ).first()
+
+    # Jika konfigurasi tidak ditemukan
+    if not config:
+        return jsonify({"success": False, "message": "Selected config not found."}), 404
+
+    # Membaca file konfigurasi
+    def read_config(filename):
+        config_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
+        )
+        try:
+            with open(config_path, "r") as file:
+                return file.read()
+        except FileNotFoundError:
+            logging.error("Config file not found: %s", config_path)
+            return None
+        except Exception as e:
+            logging.error("Error reading config file: %s", e)
+            return None
+
+    config_content = read_config(config.config_name)
+    if not config_content:
+        return jsonify({"success": False, "message": "Error reading config."}), 500
+
+    # Fungsi untuk mengkonfigurasi perangkat
+    def configure_device(device):
+        try:
+            config_utils = ConfigurationManagerUtils(
+                ip_address=device.ip_address,
+                username=device.username,
+                password=device.password,
+                ssh=device.ssh,
+            )
+            response_json = config_utils.configure_device(config_content)
+            response_dict = json.loads(response_json)
+            message = response_dict.get("message", "Konfigurasi sukses")
+            status = response_dict.get("status", "success")
+            return {
+                "device_name": device.device_name,
+                "ip": device.ip_address,
+                "status": status,
+                "message": message,
+            }
+        except json.JSONDecodeError as e:
+            logging.error("Error decoding JSON response: %s", e)
+            return {
+                "device_name": device.device_name,
+                "ip": device.ip_address,
+                "status": "error",
+                "message": "Error decoding JSON response",
+            }
+        except Exception as e:
+            logging.error("Error configuring device %s: %s", device.ip_address, e)
+            return {
+                "device_name": device.device_name,
+                "ip": device.ip_address,
+                "status": "error",
+                "message": str(e),
+            }
+
+    # Push konfigurasi ke perangkat
+    result = configure_device(device)
+    success = result["status"] == "success"
+
+    return jsonify({"success": success, "result": result}), 200 if success else 500

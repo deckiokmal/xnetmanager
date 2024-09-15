@@ -16,8 +16,8 @@
 {% endblock %}
 {% block button_group3 %}
 <!-- Button to trigger the "Create Backup" modal -->
-<button type="button" class="btn btn-sm btn-danger" id="pushBackupBtn">
-    <i class="fas fa-plus"></i> Create Backup
+<button type="button" class="btn btn-sm btn-danger" id="backupMultipleBtn">
+    <i class="fas fa-plus"></i> Backup Multiple
 </button>
 {% endblock %}
 
@@ -90,21 +90,51 @@
         <div id="statusIndicator{{ device.id }}" class="status-indicator"></div>
     </td>
     <td>
-        <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#configModal{{ device.id }}">
-            Config
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#pushConfigModal{{ device.id }}">
+            Push Config
         </button>
         <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#backupModal{{ device.id }}">
             Backup
         </button>
 
-        <!-- Modal for Backup Configuration -->
+        <!-- Modal for Push Config Single Device -->
+        <div class="modal fade" id="pushConfigModal{{ device.id }}" tabindex="-1"
+            aria-labelledby="pushConfigModalLabel{{ device.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="pushConfigModalLabel{{ device.id }}">Push Config for {{
+                            device.device_name }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="pushConfigForm{{ device.id }}">
+                            <!-- Select Config -->
+                            <div class="mb-3">
+                                <label for="configSelect{{ device.id }}" class="form-label">Select Config</label>
+                                <select class="form-select" id="configSelect{{ device.id }}" required>
+                                    <option value="" disabled selected>Select a config</option>
+                                    {% for config in config_file %}
+                                    <option value="{{ config.id }}">{{ config.config_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Push Config</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal for Backup Single Device for each device -->
         <div class="modal fade" id="backupModal{{ device.id }}" tabindex="-1"
             aria-labelledby="backupModalLabel{{ device.id }}" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="backupModalLabel{{ device.id }}">Create Backup for {{
-                            device.device_name }}</h5>
+                            device.device_name }}
+                        </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
@@ -127,7 +157,7 @@
                                 <select class="form-select" id="backupType{{ device.id }}" name="backup_type" required>
                                     <option value="full">Full Backup</option>
                                     <option value="incremental">Incremental Backup</option>
-                                    <option value="differential">Differential</option>
+                                    <option value="differential">Differential Backup</option>
                                 </select>
                             </div>
                             <!-- Command -->
@@ -213,16 +243,16 @@
 </div>
 
 <!-- Modal to Create Backup -->
-<div class="modal fade" id="backupConfigModal" tabindex="-1" aria-labelledby="backupConfigModalLabel"
+<div class="modal fade" id="createBackupModal" tabindex="-1" aria-labelledby="createBackupModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="backupConfigModalLabel">Create Backup</h5>
+                <h5 class="modal-title" id="createBackupModalLabel">Create Backup for Multiple Devices</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="backupConfigForm">
+                <form id="createBackupForm">
                     <!-- Backup Name Input -->
                     <div class="mb-3">
                         <label for="backupName" class="form-label">Backup Name</label>
@@ -257,17 +287,37 @@
                         </select>
                     </div>
                     <!-- Hidden field to store selected devices -->
-                    <input type="hidden" id="selectedDevices" name="devices">
-                    <button type="submit" class="btn btn-primary" id="confirmBackupConfigBtn">Create Backup</button>
+                    <input type="hidden" id="selectedBackupDevices" name="devices">
+                    <button type="submit" class="btn btn-primary">Create Backup</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Modal for Backup Results -->
+<div class="modal fade" id="backupResultModal" tabindex="-1" aria-labelledby="backupResultModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-black text-light">
+            <div class="modal-header">
+                <h5 class="modal-title" id="backupResultModalLabel">Backup Results</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="backupResultTable">
+                    <!-- Results will be displayed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block script_js %}
-<!-- Script untuk menangani aksi pengguna -->
+
+<!-- Script untuk handle push config multiple devices -->
 <script>
     // Function to show the loading overlay
     function showLoadingOverlay() {
@@ -387,63 +437,36 @@
     });
 </script>
 
+<!-- javascript handle multiple backup action -->
 <script>
-    // Function to show the loading overlay
-    function showLoadingOverlay() {
-        const overlay = document.getElementById('loadingOverlay');
-        if (overlay) {
-            overlay.style.display = 'flex';
-        }
-    }
-
-    // Function to hide the loading overlay
-    function hideLoadingOverlay() {
-        const overlay = document.getElementById('loadingOverlay');
-        if (overlay) {
-            overlay.style.display = 'none';
-        }
-    }
-
-    // Event for Push Backup button
-    document.getElementById("pushBackupBtn").addEventListener("click", function () {
+    document.getElementById("backupMultipleBtn").addEventListener("click", function () {
         const selectedDevices = Array.from(document.querySelectorAll(".btn-check:checked"))
             .map(checkbox => checkbox.getAttribute("data-ip"));
 
         if (selectedDevices.length > 0) {
-            // Open the backup modal
-            const backupConfigModal = new bootstrap.Modal(document.getElementById("backupConfigModal"));
-            backupConfigModal.show();
+            const createBackupModal = new bootstrap.Modal(document.getElementById("createBackupModal"));
+            createBackupModal.show();
 
-            // Populate hidden input field with selected devices
-            document.getElementById("selectedDevices").value = JSON.stringify(selectedDevices);
+            document.getElementById("selectedBackupDevices").value = JSON.stringify(selectedDevices);
         } else {
             alert("Please select at least one device.");
         }
     });
 
-    document.getElementById("backupConfigForm").addEventListener("submit", function (e) {
+    document.getElementById("createBackupForm").addEventListener("submit", function (e) {
         e.preventDefault();
 
-        const backupName = document.getElementById("backupName").value;
-        const command = document.getElementById("command").value;
-        const selectedDevices = document.getElementById("selectedDevices").value;
-
-        if (!backupName || !command || !selectedDevices) {
-            alert("Please fill in all required fields.");
-            return;
-        }
-
-        // Prepare backup data from form inputs
         const backupData = {
-            backup_name: backupName,
+            backup_name: document.getElementById("backupName").value,
             description: document.getElementById("description").value,
             backup_type: document.getElementById("backupType").value,
             retention_days: document.getElementById("retentionDays").value,
-            command: command,
-            devices: JSON.parse(selectedDevices)
+            command: document.getElementById("command").value,
+            devices: JSON.parse(document.getElementById("selectedBackupDevices").value)
         };
 
-        // Send POST request to create the backup
+        showLoadingOverlay(); // Show loading overlay
+
         fetch("/backups/create_multiple", {
             method: "POST",
             headers: {
@@ -453,30 +476,110 @@
         })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    alert("Backup created successfully!");
-                    location.reload();
-                } else {
-                    alert("Failed to create backup: " + (data.message || "Unknown error"));
-                }
+                let resultTableHTML = '<table class="table table-bordered"><thead><tr><th>Device Name</th><th>IP Address</th><th>Status</th><th>Message</th></tr></thead><tbody>';
+                data.results.forEach(result => {
+                    resultTableHTML += `<tr><td>${result.device_name}</td><td>${result.ip}</td><td>${result.status}</td><td>${result.message}</td></tr>`;
+                });
+                resultTableHTML += '</tbody></table>';
+
+                document.getElementById("backupResultTable").innerHTML = resultTableHTML;
+
+                const createBackupModal = bootstrap.Modal.getInstance(document.getElementById("createBackupModal"));
+                createBackupModal.hide();
+
+                const backupResultModal = new bootstrap.Modal(document.getElementById("backupResultModal"));
+                backupResultModal.show();
             })
             .catch(error => {
                 console.error("Error creating backup:", error);
                 alert("Error creating backup.");
+            })
+            .finally(() => {
+                hideLoadingOverlay(); // Hide loading overlay
             });
+    });
 
-        const backupConfigModal = bootstrap.Modal.getInstance(document.getElementById("backupConfigModal"));
-        backupConfigModal.hide();
-    });    
+    // Reload page after closing backup result modal
+    document.getElementById("backupResultModal").addEventListener("hidden.bs.modal", function () {
+        location.reload();
+    });
 </script>
 
-<!-- handle backup single device by id -->
+<!-- javascript untuk handle push config single device -->
 <script>
+    // Fungsi untuk menampilkan loading overlay
+    function showLoadingOverlay() {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+
+    // Fungsi untuk menyembunyikan loading overlay
+    function hideLoadingOverlay() {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    document.querySelectorAll('form[id^="pushConfigForm"]').forEach(form => {
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const deviceId = form.id.replace('pushConfigForm', ''); // Ambil device_id dari form ID
+            const configId = document.getElementById(`configSelect${deviceId}`).value; // Ambil config_id dari select input
+
+            if (!configId) {
+                alert("Please select a config.");
+                return;
+            }
+
+            // Tampilkan loading overlay saat proses dimulai
+            showLoadingOverlay();
+
+            // Kirim request POST untuk push config ke single device
+            fetch(`/push_config/${deviceId}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ config_id: configId })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("Config pushed successfully!");
+                        // Tutup modal setelah sukses
+                        const pushConfigModal = bootstrap.Modal.getInstance(document.getElementById(`pushConfigModal${deviceId}`));
+                        pushConfigModal.hide();
+                    } else {
+                        alert("Failed to push config: " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error("Error pushing config:", error);
+                    alert("Error pushing config.");
+                })
+                .finally(() => {
+                    // Sembunyikan loading overlay setelah proses selesai
+                    hideLoadingOverlay();
+                });
+        });
+    });
+</script>
+
+<!-- Script to Handle Backup Single Device -->
+<script>
+    // Fungsi untuk menampilkan loading overlay
+    function showLoadingOverlay() {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+
+    // Fungsi untuk menyembunyikan loading overlay
+    function hideLoadingOverlay() {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
     document.querySelectorAll('form[id^="backupForm"]').forEach(form => {
         form.addEventListener("submit", function (e) {
             e.preventDefault();
 
-            const deviceId = form.id.replace('backupForm', ''); // Get the device ID from the form ID
+            const deviceId = form.id.replace('backupForm', ''); // Ambil device ID dari form ID
             const backupData = {
                 backup_name: document.getElementById(`backupName${deviceId}`).value,
                 description: document.getElementById(`description${deviceId}`).value,
@@ -484,7 +587,10 @@
                 command: document.getElementById(`command${deviceId}`).value
             };
 
-            // Send POST request to the backup endpoint
+            // Tampilkan loading overlay
+            showLoadingOverlay();
+
+            // Kirim request POST untuk backup ke endpoint
             fetch(`/backups/create_single/${deviceId}`, {
                 method: "POST",
                 headers: {
@@ -496,7 +602,7 @@
                 .then(data => {
                     if (data.success) {
                         alert("Backup created successfully!");
-                        // Close modal after success
+                        // Tutup modal setelah sukses
                         const backupModal = bootstrap.Modal.getInstance(document.getElementById(`backupModal${deviceId}`));
                         backupModal.hide();
                     } else {
@@ -506,6 +612,10 @@
                 .catch(error => {
                     console.error("Error creating backup:", error);
                     alert("Error creating backup.");
+                })
+                .finally(() => {
+                    // Sembunyikan loading overlay setelah proses selesai
+                    hideLoadingOverlay();
                 });
         });
     });
