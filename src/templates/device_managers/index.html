@@ -111,13 +111,12 @@
     Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if
     (page - 1)
     * per_page + per_page < total_devices else total_devices }} dari {{ total_devices }} entri </div>
-</div>
+
 {% endblock %}
 
 {% block pagination %}
-<div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
     {{ pagination.links }}
-</div>
+
 {% endblock %}
 
 {% block modal_data %}

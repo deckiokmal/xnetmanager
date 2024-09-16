@@ -30,12 +30,6 @@
 </div>
 {% endblock %}
 
-{% block button_group2 %}
-<a class="btn btn-sm btn-light" href="{{ url_for('tm.index') }}">
-    <i class="fas fa-arrow-left"></i> Back to Templates
-</a>
-{% endblock %}
-
 {% block table_name %}Daftar File Konfigurasi{% endblock %}
 
 {% block form_filter_row %}
@@ -105,13 +99,12 @@
     Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if
     (page - 1)
     * per_page + per_page < total_configuration_file else total_configuration_file }} dari {{ total_configuration_file }} entri </div>
-</div>
+
 {% endblock %}
 
 {% block pagination %}
-<div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
     {{ pagination.links }}
-</div>
+
 {% endblock %}
 
 {% block modal_data %}

@@ -27,8 +27,7 @@
 <form id="perPageForm" action="{{ url_for('nm.index') }}" method="get">
     <label class="d-flex align-items-center">
         <span>Tampilkan</span>
-        <select name="per_page" aria-controls="dataTable"
-            class="custom-select custom-select-sm form-control form-control-sm mx-2" style="padding-right: 1.75rem;"
+        <select name="per_page" class="form-select form-select-sm mx-2"
             onchange="document.getElementById('perPageForm').submit()">
             <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
             <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
@@ -186,14 +185,13 @@
     Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if
     (page - 1)
     * per_page + per_page < total_devices else total_devices }} dari {{ total_devices }} entri </div>
-</div>
+
 {% endblock %}
 
 {% block pagination %}
-<div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
     <!-- Pagination Links -->
     {{ pagination.links }}
-</div>
+
 {% endblock %}
 
 {% block modal_data %}

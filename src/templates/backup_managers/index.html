@@ -61,7 +61,7 @@
     </td>
     <td>
         <!-- Tombol untuk Detail Backup -->
-        <button class="btn btn-info btn-sm" data-backup-id="{{ backup.id }}" onclick="showBackupDetails(this)">
+        <button class="btn btn-info btn-sm mb-2" data-backup-id="{{ backup.id }}" onclick="showBackupDetails(this)">
             <i class="fas fa-eye"></i>
         </button>
 
@@ -69,23 +69,23 @@
         {% if current_user.has_role('Admin') or backup.user_id == current_user.id %}
 
         <!-- Tombol untuk Update Backup -->
-        <a href="{{ url_for('backup.update_backup', backup_id=backup.id) }}" class="btn btn-success btn-sm">
+        <a href="{{ url_for('backup.update_backup', backup_id=backup.id) }}" class="btn btn-success btn-sm mb-2">
             <i class="fas fa-edit"></i>
         </a>
 
         <!-- Tombol untuk Hapus Backup -->
-        <button class="btn btn-danger btn-sm" onclick="deleteBackup('{{ backup.id }}')">
+        <button class="btn btn-danger btn-sm mb-2" onclick="deleteBackup('{{ backup.id }}')">
             <i class="fas fa-trash"></i>
         </button>
 
         <!-- Tombol untuk Rollback Configuration -->
-        <button class="btn btn-warning btn-sm" data-backup-id="{{ backup.id }}" onclick="initiateRollback(this)">
-            <i class="fas fa-undo-alt"></i> Rollback
+        <button class="btn btn-warning btn-sm mb-2" data-backup-id="{{ backup.id }}" onclick="initiateRollback(this)">
+            <i class="fas fa-undo-alt"></i>
         </button>
 
         <!-- Tombol untuk Share Backup -->
-        <button class="btn btn-info btn-sm" data-backup-id="{{ backup.id }}" onclick="openShareBackupModal(this)">
-            <i class="fas fa-share-alt"></i> Share
+        <button class="btn btn-info btn-sm mb-2" data-backup-id="{{ backup.id }}" onclick="openShareBackupModal(this)">
+            <i class="fas fa-share-alt"></i>
         </button>
         {% endif %}
     </td>
@@ -99,14 +99,13 @@
     Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if
     (page - 1)
     * per_page + per_page < total_backups else total_backups }} dari {{ total_backups }} entri </div>
-</div>
+
 {% endblock %}
 
 {% block pagination %}
-<div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
     <!-- Link Pagination -->
     {{ pagination.links }}
-</div>
+
 {% endblock %}
 
 {% block modal_data %}
