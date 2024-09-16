@@ -41,6 +41,7 @@ class User(UserMixin, db.Model):
     is_2fa_enabled = db.Column(db.Boolean, nullable=False, default=False)
     secret_token = db.Column(db.String, unique=True, nullable=True)
     email_verification_token = db.Column(db.String, nullable=True)
+    force_logout = db.Column(db.Boolean, default=False)
 
     # Relasi ke Role dan Permission
     roles = db.relationship("Role", secondary="user_roles", back_populates="users")

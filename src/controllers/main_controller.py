@@ -49,15 +49,33 @@ def page_not_found(error):
     return render_template("main/404.html"), 404
 
 
-# Middleware untuk autentikasi dan otorisasi
+# Middleware untuk autentikasi dan otorisasi sebelum permintaan.
 @main_bp.before_request
 def before_request_func():
-    exempt_pages = ["main.login", "main.register"]
-    if request.endpoint in exempt_pages:
-        return None
+    """
+    Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
+    Jika pengguna harus logout paksa, lakukan logout dan arahkan ke halaman login.
+    Jika tidak terotentikasi, kembalikan pesan 'Unauthorized access'.
+    """
+
+    # Exempt pages that should not trigger authentication or force logout
+    exempt_pages = [url_for("main.login")]
+
+    if request.path in exempt_pages:
+        return  # Allow access to exempted pages without further checks
 
     if not current_user.is_authenticated:
-        current_app.logger.info(f"Unauthorize Access, Redirect to Login.")
+        current_app.logger.warning(
+            f"Unauthorized access attempt by {request.remote_addr}"
+        )
+        return render_template("main/404.html"), 404
+
+    # If the user is authenticated but needs to be logged out due to force_logout
+    if current_user.force_logout:
+        current_user.force_logout = False  # Reset the flag
+        db.session.commit()
+        logout_user()
+        flash("Your password has been updated. Please log in again.", "info")
         return redirect(url_for("main.login"))
 
 
@@ -160,6 +178,11 @@ def logout():
     return redirect(url_for("main.login"))
 
 
+# --------------------------------------------------------------------------------
+# 2FA Page Section
+# --------------------------------------------------------------------------------
+
+
 # Setup 2FA Google Authenticator dan Scan QR Code
 @main_bp.route("/setup-2fa")
 @login_required
@@ -196,7 +219,7 @@ def setup_2fa():
 @login_required
 def verify_2fa():
     # Get the time zone object for a specific time zone
-    timezone = pytz.timezone('Asia/Jakarta')
+    timezone = pytz.timezone("Asia/Jakarta")
 
     # Get the current time in the specified time zone
     current_time = datetime.now(timezone)

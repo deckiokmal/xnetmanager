@@ -8,7 +8,7 @@ from flask import (
     current_app,
     jsonify,
 )
-from flask_login import login_required, current_user
+from flask_login import login_required, current_user, logout_user
 from src import db, bcrypt
 from src.models.app_models import (
     User,
@@ -53,17 +53,27 @@ def page_not_found(error):
     return render_template("main/404.html"), 404
 
 
+# Middleware untuk autentikasi dan otorisasi sebelum permintaan.
 @users_bp.before_request
 def before_request_func():
     """
     Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
-    Jika tidak, mengembalikan pesan 'Unauthorized access'.
+    Jika pengguna harus logout paksa, lakukan logout dan arahkan ke halaman login.
+    Jika tidak terotentikasi, kembalikan pesan 'Unauthorized access'.
     """
     if not current_user.is_authenticated:
         current_app.logger.warning(
             f"Unauthorized access attempt by {request.remote_addr}"
         )
         return render_template("main/404.html"), 404
+
+    # Jika pengguna terotentikasi dan memiliki flag force_logout, lakukan logout
+    if current_user.force_logout:
+        current_user.force_logout = False  # Reset the flag
+        db.session.commit()
+        logout_user()
+        flash("Your password has been updated. Please log in again.", "info")
+        return redirect(url_for("main.login"))
 
 
 @users_bp.context_processor
@@ -168,7 +178,7 @@ def dashboard():
 
 
 # --------------------------------------------------------------------------------
-# User Management Section
+# User Management Section CRUD Operation
 # --------------------------------------------------------------------------------
 
 
@@ -371,17 +381,18 @@ def update_user(user_id):
             user.title = form.title.data
             user.city = form.city.data
             user.division = form.division.data
-
             user.is_verified = form.is_verified.data == "True"
             user.is_2fa_enabled = form.is_2fa_enabled.data == "True"
             user.is_active = form.is_active.data == "True"
             user.time_zone = form.time_zone.data
 
+            # Track if the password was updated
+            password_changed = False
+
             # Update password if provided
             if form.password.data:
-                user.password_hash = bcrypt.generate_password_hash(
-                    form.password.data
-                ).decode("utf-8")
+                user.password_hash = bcrypt.generate_password_hash(form.password.data).decode("utf-8")
+                password_changed = True  # Mark that the password has been updated
                 current_app.logger.info(f"Password updated for user: {user.email}")
 
             db.session.commit()
@@ -389,7 +400,17 @@ def update_user(user_id):
             current_app.logger.info(
                 f"User {current_user.email} successfully updated user with ID: {user_id}"
             )
+
+            # If password was changed, force the user to log out by setting `force_logout`
+            if password_changed:
+                user.force_logout = True  # Force logout the user on next request
+                db.session.commit()
+                current_app.logger.info(
+                    f"User {user.email} will be forced to log out on next request."
+                )
+
             return redirect(url_for("users.index"))
+
         else:
             for field, errors in form.errors.items():
                 for error in errors:
@@ -407,7 +428,7 @@ def update_user(user_id):
         flash(
             "Terjadi kesalahan saat memperbarui pengguna. Silakan coba lagi.", "danger"
         )
-        db.session.rollback()  # Rollback the session to maintain data integrity
+        db.session.rollback()
 
     return render_template("/users_management/update_user.html", form=form, user=user)
 

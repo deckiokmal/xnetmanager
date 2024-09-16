@@ -8,7 +8,7 @@ from flask import (
     jsonify,
     current_app,
 )
-from flask_login import login_required, current_user
+from flask_login import login_required, current_user, logout_user
 from src import db
 from src.models.app_models import DeviceManager
 from .decorators import login_required, role_required, required_2fa
@@ -46,21 +46,27 @@ def page_not_found(error):
     return render_template("main/404.html"), 404  # Render the custom 404 page
 
 
+# Middleware untuk autentikasi dan otorisasi sebelum permintaan.
 @dm_bp.before_request
 def before_request_func():
     """
-    Ensure that the user is authenticated before processing any requests.
-    If the user is not authenticated, log the attempt and return a 404 error page.
-    This helps secure the application by preventing unauthorized access.
+    Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
+    Jika pengguna harus logout paksa, lakukan logout dan arahkan ke halaman login.
+    Jika tidak terotentikasi, kembalikan pesan 'Unauthorized access'.
     """
     if not current_user.is_authenticated:
         current_app.logger.warning(
-            f"Unauthorized access attempt by {request.remote_addr}"  # Log the IP address of the unauthorized attempt
+            f"Unauthorized access attempt by {request.remote_addr}"
         )
-        return (
-            render_template("main/404.html"),
-            404,
-        )  # Render the 404 page to obscure the existence of the resource
+        return render_template("main/404.html"), 404
+
+    # Jika pengguna terotentikasi dan memiliki flag force_logout, lakukan logout
+    if current_user.force_logout:
+        current_user.force_logout = False  # Reset the flag
+        db.session.commit()
+        logout_user()
+        flash("Your password has been updated. Please log in again.", "info")
+        return redirect(url_for("main.login"))
 
 
 @dm_bp.context_processor

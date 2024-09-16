@@ -11,6 +11,7 @@ from flask import (
 from flask_login import (
     login_required,
     current_user,
+    logout_user,
 )
 from .decorators import (
     role_required,
@@ -26,7 +27,7 @@ import json
 import random
 from datetime import datetime
 import string
-from functools import lru_cache
+from src import db
 import time
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -57,17 +58,27 @@ def page_not_found(error):
     return render_template("main/404.html"), 404
 
 
+# Middleware untuk autentikasi dan otorisasi sebelum permintaan.
 @nm_bp.before_request
 def before_request_func():
     """
     Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
-    Jika tidak, mengembalikan pesan 'Unauthorized access'.
+    Jika pengguna harus logout paksa, lakukan logout dan arahkan ke halaman login.
+    Jika tidak terotentikasi, kembalikan pesan 'Unauthorized access'.
     """
     if not current_user.is_authenticated:
         current_app.logger.warning(
             f"Unauthorized access attempt by {request.remote_addr}"
         )
         return render_template("main/404.html"), 404
+
+    # Jika pengguna terotentikasi dan memiliki flag force_logout, lakukan logout
+    if current_user.force_logout:
+        current_user.force_logout = False  # Reset the flag
+        db.session.commit()
+        logout_user()
+        flash("Your password has been updated. Please log in again.", "info")
+        return redirect(url_for("main.login"))
 
 
 @nm_bp.context_processor

@@ -7,7 +7,7 @@ from flask import (
     flash,
     current_app,
 )
-from flask_login import login_required, current_user
+from flask_login import login_required, current_user, logout_user
 from src.models.app_models import User
 from .decorators import login_required, role_required, required_2fa
 from src import db, bcrypt
@@ -50,17 +50,27 @@ def page_not_found(error):
     return render_template("main/404.html"), 404
 
 
+# Middleware untuk autentikasi dan otorisasi sebelum permintaan.
 @profile_bp.before_request
 def before_request_func():
     """
     Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
-    Jika tidak, mengembalikan pesan 'Unauthorized access'.
+    Jika pengguna harus logout paksa, lakukan logout dan arahkan ke halaman login.
+    Jika tidak terotentikasi, kembalikan pesan 'Unauthorized access'.
     """
     if not current_user.is_authenticated:
         current_app.logger.warning(
             f"Unauthorized access attempt by {request.remote_addr}"
         )
         return render_template("main/404.html"), 404
+
+    # Jika pengguna terotentikasi dan memiliki flag force_logout, lakukan logout
+    if current_user.force_logout:
+        current_user.force_logout = False  # Reset the flag
+        db.session.commit()
+        logout_user()
+        flash("Your password has been updated. Please log in again.", "info")
+        return redirect(url_for("main.login"))
 
 
 # Context processor untuk menambahkan first_name dan last_name ke dalam konteks di semua halaman.
