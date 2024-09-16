@@ -158,24 +158,16 @@ def index():
         raise ValueError("Page and per_page must be positive integers.")
 
     try:
-        if current_user.has_role("Admin"):
-            if search_query:
-                query = TemplateManager.query.filter(
-                    TemplateManager.template_name.ilike(f"%{search_query}%")
-                    | TemplateManager.parameter_name.ilike(f"%{search_query}%")
-                    | TemplateManager.vendor.ilike(f"%{search_query}%")
-                    | TemplateManager.version.ilike(f"%{search_query}%")
-                )
-            else:
-                query = TemplateManager.query
-        else:
-            if search_query:
-                query = TemplateManager.query.filter(
-                    TemplateManager.template_name.ilike(f"%{search_query}%")
-                    | TemplateManager.parameter_name.ilike(f"%{search_query}%")
-                    | TemplateManager.vendor.ilike(f"%{search_query}%")
-                    | TemplateManager.version.ilike(f"%{search_query}%")
-                )
+        # Inisialisasi query default agar selalu ada nilai
+        query = TemplateManager.query
+
+        if search_query:
+            query = query.filter(
+                TemplateManager.template_name.ilike(f"%{search_query}%")
+                | TemplateManager.parameter_name.ilike(f"%{search_query}%")
+                | TemplateManager.vendor.ilike(f"%{search_query}%")
+                | TemplateManager.version.ilike(f"%{search_query}%")
+            )
 
         total_templates = query.count()
         templates = query.limit(per_page).offset(offset).all()
@@ -900,7 +892,7 @@ def index_configuration_file():
                 f"No configuration file found for user {current_user.email} with query '{search_query}'"
             )
             flash("No configuration found matching your search criteria.", "info")
-        
+
         return render_template(
             "/template_managers/index_configuration_file.html",
             formManualConfiguration=formManualConfiguration,

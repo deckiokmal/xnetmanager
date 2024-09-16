@@ -65,19 +65,18 @@
             <i class="fas fa-eye"></i>
         </button>
 
+        <!-- Jika pengguna adalah Admin atau Pemilik, tampilkan semua tombol tambahan -->
+        {% if current_user.has_role('Admin') or backup.user_id == current_user.id %}
+
         <!-- Tombol untuk Update Backup -->
-        {% if backup.user_id == current_user.id %}
         <a href="{{ url_for('backup.update_backup', backup_id=backup.id) }}" class="btn btn-success btn-sm">
             <i class="fas fa-edit"></i>
         </a>
-        {% endif %}
 
         <!-- Tombol untuk Hapus Backup -->
-        {% if backup.user_id == current_user.id %}
         <button class="btn btn-danger btn-sm" onclick="deleteBackup('{{ backup.id }}')">
             <i class="fas fa-trash"></i>
         </button>
-        {% endif %}
 
         <!-- Tombol untuk Rollback Configuration -->
         <button class="btn btn-warning btn-sm" data-backup-id="{{ backup.id }}" onclick="initiateRollback(this)">
@@ -85,7 +84,6 @@
         </button>
 
         <!-- Tombol untuk Share Backup -->
-        {% if backup.user_id == current_user.id %}
         <button class="btn btn-info btn-sm" data-backup-id="{{ backup.id }}" onclick="openShareBackupModal(this)">
             <i class="fas fa-share-alt"></i> Share
         </button>
@@ -134,12 +132,25 @@
                 <!-- Menambahkan Bootstrap class untuk tampilan konten dengan ukuran kecil -->
                 <pre><code id="detailBackupContent" class="text-white bg-dark p-2 small" style="font-size: 0.75rem;"></code></pre>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Rollback Konfiguration -->
+<div class="modal fade" id="rollbackConfirmModal" tabindex="-1" aria-labelledby="rollbackConfirmModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rollbackConfirmModalLabel">Confirm Rollback</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to rollback to this backup version?
+            </div>
             <div class="modal-footer">
-                <!-- Button to Share Backup -->
-                <button class="btn btn-warning" id="shareBackupButton" onclick="openShareBackupModal(this)">
-                    <i class="fas fa-share-alt"></i> Share Backup
-                </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="confirmRollbackBtn">Rollback</button>
             </div>
         </div>
     </div>
@@ -173,26 +184,6 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" id="shareBackupBtn">Share</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Rollback Konfiguration -->
-<div class="modal fade" id="rollbackConfirmModal" tabindex="-1" aria-labelledby="rollbackConfirmModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="rollbackConfirmModalLabel">Confirm Rollback</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to rollback to this backup version?
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-warning" id="confirmRollbackBtn">Rollback</button>
             </div>
         </div>
     </div>
@@ -295,6 +286,7 @@
 
 <!-- JavaScript handle share backup -->
 <script>
+    // Fungsi untuk membuka modal Share Backup dan mengisi hidden input dengan backupId
     function openShareBackupModal(button) {
         const backupId = button.getAttribute("data-backup-id");
         document.getElementById("backupId").value = backupId;
@@ -303,11 +295,19 @@
         shareModal.show();
     }
 
+    // Event listener untuk tombol 'Share' dalam modal
     document.getElementById('shareBackupBtn').addEventListener('click', function () {
         const userEmail = document.getElementById('userEmail').value;
         const permissionLevel = document.getElementById('permissionLevel').value;
         const backupId = document.getElementById('backupId').value;
 
+        // Validasi input email dan backupId
+        if (!userEmail || !backupId) {
+            alert('Please provide a valid email and backup ID');
+            return;
+        }
+
+        // Kirim request POST untuk berbagi backup
         fetch("/share-backup", {
             method: "POST",
             headers: {
@@ -319,11 +319,24 @@
                 permission_level: permissionLevel
             })
         })
-            .then(response => response.json())
-            .then(data => {
-                alert(data.message);
-                const modal = bootstrap.Modal.getInstance(document.getElementById('shareBackupModal'));
-                modal.hide();
+            .then(response => {
+                // Tambahkan log untuk memeriksa status HTTP dari backend
+                console.log(`Response Status: ${response.status}`);
+
+                // Ambil JSON dari respons
+                return response.json().then(data => {
+                    // Cek apakah respons sukses
+                    if (response.ok) {
+                        alert(data.message);  // Tampilkan pesan sukses dari server
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('shareBackupModal'));
+                        modal.hide();  // Tutup modal setelah berhasil
+                        location.reload();  // Reload halaman untuk memperbarui data
+                    } else {
+                        // Tambahkan log untuk pesan error dari server
+                        console.error(`Error Message: ${data.message}`);
+                        alert(data.message || 'Error sharing backup');
+                    }
+                });
             })
             .catch(error => {
                 console.error('Error:', error);

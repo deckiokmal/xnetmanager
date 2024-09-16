@@ -361,12 +361,27 @@ def detail_backup(backup_id):
         return jsonify({"message": "Backup not found"}), 404
 
     # Check if user is Admin or owns the backup
-    if not current_user.has_role("Admin") and backup.user_id != current_user.id:
-        return jsonify({"message": "Unauthorized access"}), 403
+    if current_user.has_role("Admin") or backup.user_id == current_user.id:
+        permission_level = "owner"  # Admins or owners have full access
+    else:
+        # Check if user has been shared this backup
+        shared_access = UserBackupShare.query.filter_by(
+            user_id=current_user.id, backup_id=backup_id
+        ).first()
+        if not shared_access:
+            return jsonify({"message": "Unauthorized access"}), 403
+        permission_level = shared_access.permission_level
 
-    # Read the content of the backup file using BackupUtils
+    # Read the content of the backup file based on permission level
     try:
-        backup_content = BackupUtils.read_backup_file(backup.backup_path)
+        if permission_level == "read-only":
+            # Only read the backup if permission level is read-only
+            backup_content = BackupUtils.read_backup_file(backup.backup_path)
+        elif permission_level in ["edit", "owner"]:
+            # Read and allow more actions if permission is edit or owner
+            backup_content = BackupUtils.read_backup_file(backup.backup_path)
+        else:
+            return jsonify({"message": "Invalid permission level"}), 403
     except FileNotFoundError:
         return jsonify({"message": "Backup file not found"}), 404
     except Exception as e:
@@ -384,7 +399,12 @@ def detail_backup(backup_id):
                 "is_compressed": backup.is_compressed,
                 "tags": [tag.tag for tag in backup.tags],
                 "integrity_check": backup.integrity_check,
-                "file_content": backup_content,
+                "file_content": (
+                    backup_content
+                    if permission_level != "read-only"
+                    else "Content hidden due to read-only access"
+                ),
+                "permission_level": permission_level,
             }
         ),
         200,
@@ -505,7 +525,6 @@ def delete_backup(backup_id):
 # ------------------------------------------------------------
 
 
-# Share Backup
 @backup_bp.route("/share-backup", methods=["POST"])
 @login_required
 @required_2fa
@@ -519,24 +538,34 @@ def share_backup():
     Endpoint untuk berbagi backup dengan pengguna lain.
     """
     data = request.get_json()
-    user_id_to_share = data.get("user_id")
+    user_email_to_share = data.get("user_email")
     backup_id = data.get("backup_id")
-    permission_level = data.get(
-        "permission_level", "read-only"
-    )  # Default permission: read-only
+    permission_level = data.get("permission_level", "read-only")
+
+    # Log untuk memeriksa data yang diterima
+    current_app.logger.info(
+        f"User Email: {user_email_to_share}, Backup ID: {backup_id}, Permission Level: {permission_level}"
+    )
 
     # Validasi input
-    if not user_id_to_share or not backup_id:
-        return jsonify({"message": "User ID and Backup ID are required"}), 400
+    if not user_email_to_share or not backup_id:
+        return jsonify({"message": "User Email and Backup ID are required"}), 400
 
-    # Query user dan backup
-    user_to_share = User.query.get(user_id_to_share)
-    backup = BackupData.query.get(backup_id)
+    if permission_level not in ["read-only", "edit", "transfer"]:
+        return jsonify({"message": "Invalid permission level"}), 400
 
+    # Query user berdasarkan email
+    user_to_share = User.query.filter_by(email=user_email_to_share).first()
     if not user_to_share:
-        return jsonify({"message": "User to share with not found"}), 404
+        return (
+            jsonify({"message": f"User with email {user_email_to_share} not found"}),
+            404,
+        )
+
+    # Query backup berdasarkan backup_id
+    backup = BackupData.query.get(backup_id)
     if not backup:
-        return jsonify({"message": "Backup not found"}), 404
+        return jsonify({"message": f"Backup with ID {backup_id} not found"}), 404
 
     # Pastikan bahwa pengguna memiliki backup ini (jika bukan Admin)
     if not current_user.has_role("Admin") and backup.user_id != current_user.id:
@@ -547,19 +576,46 @@ def share_backup():
 
     # Cek apakah sudah ada share sebelumnya
     existing_share = UserBackupShare.query.filter_by(
-        user_id=user_id_to_share, backup_id=backup_id
+        user_id=user_to_share.id, backup_id=backup_id
     ).first()
+
     if existing_share:
-        return jsonify({"message": "Backup already shared with this user"}), 409
+        # Jika sudah dibagikan, perbarui permission level
+        existing_share.permission_level = permission_level
+
+        # Jika permission level adalah 'transfer', perbarui kepemilikan backup
+        if permission_level == "transfer":
+            backup.user_id = user_to_share.id  # Update pemilik backup
+            current_app.logger.info(
+                f"Backup ownership transferred to {user_to_share.email}"
+            )
+
+        db.session.commit()
+        return (
+            jsonify(
+                {
+                    "message": f"Backup permission updated for user {user_to_share.email} to {permission_level} access"
+                }
+            ),
+            200,
+        )
 
     # Buat record baru di UserBackupShare
     new_share = UserBackupShare(
-        user_id=user_id_to_share,
+        user_id=user_to_share.id,
         backup_id=backup_id,
         permission_level=permission_level,
     )
 
     db.session.add(new_share)
+
+    # Jika permission level adalah 'transfer', perbarui kepemilikan backup
+    if permission_level == "transfer":
+        backup.user_id = user_to_share.id  # Update pemilik backup
+        current_app.logger.info(
+            f"Backup ownership transferred to {user_to_share.email}"
+        )
+
     db.session.commit()
 
     return (
