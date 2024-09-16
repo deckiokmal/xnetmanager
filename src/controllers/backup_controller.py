@@ -491,7 +491,7 @@ def update_backup(backup_id):
 
 
 # Delete Backup
-@backup_bp.route("/delete-backup/<backup_id>", methods=["POST"])
+@backup_bp.route("/delete-backup/<backup_id>", methods=["DELETE"])  # Changed to DELETE
 @login_required
 @required_2fa
 @role_required(

@@ -3,7 +3,7 @@
 
 {% block table_name %}Daftar File Backup{% endblock %}
 
-<!-- Filter row page peritem 10, 25 dan 50 item per table -->
+<!-- Filter row for selecting items per page -->
 {% block form_filter_row %}
 <form id="perPageForm" action="{{ url_for('backup.index') }}" method="get">
     <label class="d-flex align-items-center">
@@ -20,7 +20,7 @@
 </form>
 {% endblock %}
 
-<!-- Search function -->
+<!-- Search functionality -->
 {% block form_search %}
 <form id="searchForm" method="get" action="{{ url_for('backup.index') }}" class="form-inline d-flex">
     <input id="searchInput" type="text" name="search" class="form-control form-control-sm me-2" placeholder="Search..."
@@ -32,6 +32,7 @@
 </form>
 {% endblock %}
 
+<!-- Table headers -->
 {% block table_header %}
 <th>No</th>
 <th onclick="sortTable(0)">Nama Backup <i class="fas fa-sort"></i></th>
@@ -43,6 +44,7 @@
 <th>Aksi</th>
 {% endblock %}
 
+<!-- Table body -->
 {% block table_body %}
 {% for backup in backups %}
 <tr>
@@ -60,293 +62,228 @@
         {% endif %}
     </td>
     <td>
-        <!-- Tombol untuk Detail Backup -->
-        <button class="btn btn-info btn-sm mb-2" data-backup-id="{{ backup.id }}" onclick="showBackupDetails(this)">
-            <i class="fas fa-eye"></i>
-        </button>
+        <!-- Dropdown Menu for Actions -->
+        <div class="dropdown">
+            <button class="btn btn-primary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton"
+                data-bs-toggle="dropdown" aria-expanded="false">
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
 
-        <!-- Jika pengguna adalah Admin atau Pemilik, tampilkan semua tombol tambahan -->
-        {% if current_user.has_role('Admin') or backup.user_id == current_user.id %}
+                <!-- View Details -->
+                <li>
+                    <a class="dropdown-item" href="#" data-backup-id="{{ backup.id }}"
+                        onclick="showBackupDetails(this)">
+                        <i class="fas fa-eye"></i> View Details
+                    </a>
+                </li>
 
-        <!-- Tombol untuk Update Backup -->
-        <a href="{{ url_for('backup.update_backup', backup_id=backup.id) }}" class="btn btn-success btn-sm mb-2">
-            <i class="fas fa-edit"></i>
-        </a>
+                <!-- Show additional actions for Admin or Owner -->
+                {% if current_user.has_role('Admin') or backup.user_id == current_user.id %}
 
-        <!-- Tombol untuk Hapus Backup -->
-        <button class="btn btn-danger btn-sm mb-2" onclick="deleteBackup('{{ backup.id }}')">
-            <i class="fas fa-trash"></i>
-        </button>
+                <!-- Edit Backup -->
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('backup.update_backup', backup_id=backup.id) }}">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                </li>
 
-        <!-- Tombol untuk Rollback Configuration -->
-        <button class="btn btn-warning btn-sm mb-2" data-backup-id="{{ backup.id }}" onclick="initiateRollback(this)">
-            <i class="fas fa-undo-alt"></i>
-        </button>
+                <!-- Delete Backup -->
+                <li>
+                    <a class="dropdown-item text-danger" href="#" onclick="deleteBackup('{{ backup.id }}')">
+                        <i class="fas fa-trash"></i> Delete
+                    </a>
+                </li>
 
-        <!-- Tombol untuk Share Backup -->
-        <button class="btn btn-info btn-sm mb-2" data-backup-id="{{ backup.id }}" onclick="openShareBackupModal(this)">
-            <i class="fas fa-share-alt"></i>
-        </button>
-        {% endif %}
+                <!-- Rollback Configuration -->
+                <li>
+                    <a class="dropdown-item" href="#" data-backup-id="{{ backup.id }}" onclick="initiateRollback(this)">
+                        <i class="fas fa-undo-alt"></i> Rollback
+                    </a>
+                </li>
+
+                <!-- Share Backup -->
+                <li>
+                    <a class="dropdown-item" href="#" data-backup-id="{{ backup.id }}"
+                        onclick="openShareBackupModal(this)">
+                        <i class="fas fa-share-alt"></i> Share
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
     </td>
 </tr>
 {% endfor %}
 {% endblock %}
 
-<!-- Show total data yang ditampilkan dan pagination -->
+<!-- Show total data and pagination -->
 {% block show_total_data %}
 <div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
-    Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if
-    (page - 1)
-    * per_page + per_page < total_backups else total_backups }} dari {{ total_backups }} entri </div>
+    Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if (page - 1) * per_page +
+    per_page < total_backups else total_backups }} dari {{ total_backups }} entri </div>
+        {% endblock %}
 
-{% endblock %}
+        {% block pagination %}
+        <!-- Link Pagination -->
+        {{ pagination.links }}
+        {% endblock %}
 
-{% block pagination %}
-    <!-- Link Pagination -->
-    {{ pagination.links }}
-
-{% endblock %}
-
-{% block modal_data %}
-<!-- Modal Detail Backup -->
-<div class="modal fade" id="backupDetailModal" tabindex="-1" aria-labelledby="backupDetailModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="backupDetailModalLabel">Backup Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p><strong>Nama Backup:</strong> <span id="detailBackupName"></span></p>
-                <p><strong>Description:</strong> <span id="detailBackupDescription"></span></p>
-                <p><strong>Versi:</strong> <span id="detailBackupVersion"></span></p>
-                <p><strong>Tanggal Dibuat:</strong> <span id="detailBackupDate"></span></p>
-                <p><strong>Encrypted:</strong> <span id="detailBackupEncrypted"></span></p>
-                <p><strong>Compressed:</strong> <span id="detailBackupCompressed"></span></p>
-                <p><strong>Integrity Check:</strong> <span id="detailBackupIntegrity"></span></p>
-                <p><strong>Tags:</strong> <span id="detailBackupTags"></span></p>
-                <p><strong>Konten Backup:</strong></p>
-                <!-- Menambahkan Bootstrap class untuk tampilan konten dengan ukuran kecil -->
-                <pre><code id="detailBackupContent" class="text-white bg-dark p-2 small" style="font-size: 0.75rem;"></code></pre>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Rollback Konfiguration -->
-<div class="modal fade" id="rollbackConfirmModal" tabindex="-1" aria-labelledby="rollbackConfirmModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="rollbackConfirmModalLabel">Confirm Rollback</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to rollback to this backup version?
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-warning" id="confirmRollbackBtn">Rollback</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Share Backup -->
-<div class="modal fade" id="shareBackupModal" tabindex="-1" aria-labelledby="shareBackupModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="shareBackupModalLabel">Share Backup</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="shareBackupForm">
-                    <div class="mb-3">
-                        <label for="userEmail" class="form-label">User Email</label>
-                        <input type="email" class="form-control" id="userEmail" required>
+        <!-- Modals for different actions (view, rollback, share) -->
+        {% block modal_data %}
+        <!-- Modal for Backup Details -->
+        <div class="modal fade" id="backupDetailModal" tabindex="-1" aria-labelledby="backupDetailModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="backupDetailModalLabel">Backup Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="mb-3">
-                        <label for="permissionLevel" class="form-label">Permission Level</label>
-                        <select class="form-select" id="permissionLevel">
-                            <option value="read-only">Read-Only</option>
-                            <option value="edit">Edit</option>
-                            <option value="transfer">Transfer Ownership</option>
-                        </select>
+                    <div class="modal-body">
+                        <p><strong>Nama Backup:</strong> <span id="detailBackupName"></span></p>
+                        <p><strong>Description:</strong> <span id="detailBackupDescription"></span></p>
+                        <p><strong>Versi:</strong> <span id="detailBackupVersion"></span></p>
+                        <p><strong>Tanggal Dibuat:</strong> <span id="detailBackupDate"></span></p>
+                        <p><strong>Encrypted:</strong> <span id="detailBackupEncrypted"></span></p>
+                        <p><strong>Compressed:</strong> <span id="detailBackupCompressed"></span></p>
+                        <p><strong>Integrity Check:</strong> <span id="detailBackupIntegrity"></span></p>
+                        <p><strong>Tags:</strong> <span id="detailBackupTags"></span></p>
+                        <p><strong>Konten Backup:</strong></p>
+                        <pre><code id="detailBackupContent" class="text-white bg-dark p-2 small"></code></pre>
                     </div>
-                    <input type="hidden" id="backupId">
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="shareBackupBtn">Share</button>
+                </div>
             </div>
         </div>
-    </div>
-</div>
-{% endblock %}
 
-{% block script_js %}
-<!-- JavaScript handle search input -->
-<script>
-    let timeout = null;
+        <!-- Modal for Rollback Confirmation -->
+        <div class="modal fade" id="rollbackConfirmModal" tabindex="-1" aria-labelledby="rollbackConfirmModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="rollbackConfirmModalLabel">Confirm Rollback</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Are you sure you want to rollback to this backup version?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-warning" id="confirmRollbackBtn">Rollback</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    document.getElementById("searchInput").addEventListener("input", function () {
-        clearTimeout(timeout);
+        <!-- Modal for Sharing Backup -->
+        <div class="modal fade" id="shareBackupModal" tabindex="-1" aria-labelledby="shareBackupModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="shareBackupModalLabel">Share Backup</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="shareBackupForm">
+                            <div class="mb-3">
+                                <label for="userEmail" class="form-label">User Email</label>
+                                <input type="email" class="form-control" id="userEmail" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="permissionLevel" class="form-label">Permission Level</label>
+                                <select class="form-select" id="permissionLevel">
+                                    <option value="read-only">Read-Only</option>
+                                    <option value="edit">Edit</option>
+                                    <option value="transfer">Transfer Ownership</option>
+                                </select>
+                            </div>
+                            <input type="hidden" id="backupId">
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="shareBackupBtn">Share</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        timeout = setTimeout(function () {
-            document.getElementById('searchForm').submit();
-        }, 1000);
-    });
+        {% endblock %}
 
-    document.getElementById("searchInput").addEventListener("input", function () {
-        const query = this.value.toLowerCase();
-        const rows = document.querySelectorAll("#dataTable tbody tr");
+        <!-- JS Scripts for interactivity -->
+        {% block script_js %}
+        <!-- Script for handling search input -->
+        <script>
+            document.getElementById("searchInput").addEventListener("input", function () {
+                clearTimeout(this.timeout);
+                this.timeout = setTimeout(function () {
+                    document.getElementById('searchForm').submit();
+                }, 1000);
+            });
+        </script>
 
-        rows.forEach(row => {
-            const backup_name = row.cells[1].textContent.toLowerCase();
-            const device_name = row.cells[2].textContent.toLowerCase();
-            const backup_type = row.cells[3].textContent.toLowerCase();
+        <!-- Script for handling sorting -->
+        <script>
+            function sortTable(n) {
+                const table = document.getElementById("dataTable");
+                if (!table) return;
+                let rows, switching, i, x, y, shouldSwitch, dir, switchCount = 0;
+                const headers = table.getElementsByTagName("TH");
+                switching = true;
+                dir = "asc";
 
-            if (backup_name.includes(query) || device_name.includes(query) || backup_type.includes(query)) {
-                row.style.display = "";
-            } else {
-                row.style.display = "none";
-            }
-        });
-    });
-</script>
+                for (let header of headers) {
+                    let icon = header.querySelector("i");
+                    if (icon) {
+                        icon.classList.remove("fa-sort-up", "fa-sort-down");
+                        icon.classList.add("fa-sort");
+                    }
+                }
 
-<!-- JavaScript to Fetch Backup Details and Populate Modal -->
-<script>
-    function showBackupDetails(button) {
-        const backupId = button.getAttribute("data-backup-id");
+                while (switching) {
+                    switching = false;
+                    rows = table.rows;
 
-        fetch(`/detail-backup/${backupId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert(data.error);
-                } else {
-                    document.getElementById('detailBackupName').textContent = data.backup_name;
-                    document.getElementById('detailBackupDescription').textContent = data.description;
-                    document.getElementById('detailBackupVersion').textContent = data.version;
-                    document.getElementById('detailBackupDate').textContent = new Date(data.created_at).toLocaleString();
-                    document.getElementById('detailBackupEncrypted').textContent = data.is_encrypted ? "Yes" : "No";
-                    document.getElementById('detailBackupCompressed').textContent = data.is_compressed ? "Yes" : "No";
-                    document.getElementById('detailBackupIntegrity').textContent = data.integrity_check || "N/A";
-                    document.getElementById('detailBackupTags').textContent = data.tags.join(', ') || "None";
+                    for (i = 1; i < (rows.length - 1); i++) {
+                        shouldSwitch = false;
+                        x = rows[i].getElementsByTagName("TD")[n];
+                        y = rows[i + 1].getElementsByTagName("TD")[n];
 
-                    if (data.file_content) {
-                        document.getElementById('detailBackupContent').textContent = data.file_content;
-                    } else {
-                        document.getElementById('detailBackupContent').textContent = "No content available.";
+                        if (dir === "asc") {
+                            if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        } else if (dir === "desc") {
+                            if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        }
                     }
 
-                    var detailModal = new bootstrap.Modal(document.getElementById("backupDetailModal"));
-                    detailModal.show();
+                    if (shouldSwitch) {
+                        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                        switching = true;
+                        switchCount++;
+                    } else {
+                        if (switchCount === 0 && dir === "asc") {
+                            dir = "desc";
+                            switching = true;
+                        }
+                    }
                 }
-            })
-            .catch(error => console.error('Error fetching backup details:', error));
-    }
-</script>
-
-<!-- JavaScript handle rollback configuration -->
-<script>
-    function initiateRollback(button) {
-        const backupId = button.getAttribute("data-backup-id");
-        document.getElementById("confirmRollbackBtn").setAttribute("data-backup-id", backupId);
-
-        var rollbackModal = new bootstrap.Modal(document.getElementById("rollbackConfirmModal"));
-        rollbackModal.show();
-    }
-
-    document.getElementById("confirmRollbackBtn").addEventListener("click", function () {
-        const backupId = this.getAttribute("data-backup-id");
-
-        fetch(`/rollback-backup/${backupId}`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            }
-        })
-            .then(response => response.json())
-            .then(data => {
-                alert(data.message);
-                var rollbackModal = bootstrap.Modal.getInstance(document.getElementById("rollbackConfirmModal"));
-                rollbackModal.hide();
-            })
-            .catch(error => console.error('Error during rollback:', error));
-    });
-</script>
-
-<!-- JavaScript handle share backup -->
-<script>
-    function sortTable(n) {
-        console.log('Sorting column:', n);  // Debugging untuk melihat apakah fungsi dipanggil
-        const table = document.getElementById("dataTable");
-        if (!table) {
-            console.error("Table with ID 'dataTable' not found.");
-            return;  // Stop if table is not found
-        }
-        let rows, switching, i, x, y, shouldSwitch, dir, switchCount = 0;
-        const headers = table.getElementsByTagName("TH");
-        switching = true;
-        dir = "asc"; // Set default sort direction to ascending
-
-        // Reset all header icons
-        for (let header of headers) {
-            let icon = header.querySelector("i");
-            if (icon) {
-                icon.classList.remove("fa-sort-up", "fa-sort-down");
-                icon.classList.add("fa-sort");
-            }
-        }
-
-        while (switching) {
-            switching = false;
-            rows = table.rows;
-
-            for (i = 1; i < (rows.length - 1); i++) {
-                shouldSwitch = false;
-                x = rows[i].getElementsByTagName("TD")[n];
-                y = rows[i + 1].getElementsByTagName("TD")[n];
 
                 if (dir === "asc") {
-                    if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-                        shouldSwitch = true;
-                        break;
-                    }
-                } else if (dir === "desc") {
-                    if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
-                        shouldSwitch = true;
-                        break;
-                    }
+                    headers[n].querySelector("i").classList.remove("fa-sort");
+                    headers[n].querySelector("i").classList.add("fa-sort-up");
+                } else {
+                    headers[n].querySelector("i").classList.remove("fa-sort");
+                    headers[n].querySelector("i").classList.add("fa-sort-down");
                 }
             }
-            if (shouldSwitch) {
-                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                switching = true;
-                switchCount++;
-            } else {
-                if (switchCount === 0 && dir === "asc") {
-                    dir = "desc";
-                    switching = true;
-                }
-            }
-        }
+        </script>
 
-        // Update the clicked column header icon to show sort direction
-        if (dir === "asc") {
-            headers[n].querySelector("i").classList.remove("fa-sort");
-            headers[n].querySelector("i").classList.add("fa-sort-up");
-        } else {
-            headers[n].querySelector("i").classList.remove("fa-sort");
-            headers[n].querySelector("i").classList.add("fa-sort-down");
-        }
-    }
-</script>
-{% endblock %}
+        <script src="{{ url_for('static', filename='js/backup-controller.js') }}"></script>
+        {% endblock %}
