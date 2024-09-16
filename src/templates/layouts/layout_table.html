@@ -20,28 +20,29 @@
     </div>
 </div>
 
-<!-- Tabel Data -->
-<div class="card border-dark shadow mb-4 ">
+<!-- dataTable -->
+<div class="card border-dark shadow mb-4">
     <div class="card-header py-3 bg-custom-table">
         <h6 class="m-0 font-weight-bold white-text-color">{% block table_name %}{% endblock %}</h6>
     </div>
     <div class="card-body bg-custom-main">
-        <div class="table table-dark">
+        <!-- Tabel Responsif -->
+        <div class="table-responsive-md"> <!-- Responsif hanya di layar lebih kecil dari md -->
             <div id="dataTable_wrapper" class="dataTables_wrapper dt-bootstrap4 bg-custom-main">
-                <div class="row mb-3 table-dark">
+                <div class="row mb-3 table-black">
+                    <!-- Filter dan Pencarian -->
                     <div class="col-12 col-md-6 d-flex align-items-center mb-2 mb-md-0">
-                        <!-- Dropdown untuk mengubah jumlah entri yang ditampilkan per halaman -->
                         <div class="dataTables_length" id="dataTable_length">
                             {% block form_filter_row %}{% endblock %}
                         </div>
                     </div>
                     <div class="col-12 col-md-6 d-flex justify-content-md-end">
-                        <!-- Form Pencarian -->
                         {% block form_search %}{% endblock %}
                     </div>
                 </div>
+                <!-- Tabel Utama -->
                 <div class="row table-dark">
-                    <table class="table table-dark table-hover table-responsive-sm table-sm" id="dataTable">
+                    <table class="table table-dark table-hover table-sm" id="dataTable">
                         <thead>
                             <tr>
                                 {% block table_header %}{% endblock %}
@@ -52,10 +53,12 @@
                         </tbody>
                     </table>
                 </div>
+                <!-- Pagination dan Informasi Data -->
                 <div class="row mb-3">
                     <div class="col-12 col-md-5 d-flex align-items-center mb-2 mb-md-0">
-                        <!-- Informasi jumlah data yang ditampilkan -->
                         {% block show_total_data %}{% endblock %}
+                    </div>
+                    <div class="col-12 col-md-7 d-flex justify-content-md-end">
                         {% block pagination %}{% endblock %}
                     </div>
                 </div>
@@ -64,5 +67,6 @@
         {% block modal_data %}{% endblock %}
     </div>
 </div>
+
 {% endblock %}
 {% block script_js %}{% endblock %}

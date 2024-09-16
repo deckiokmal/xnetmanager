@@ -20,10 +20,10 @@
 {% block table_name %}Permissions Management{% endblock %}
 
 {% block table_header %}
-<th scope="col">No</th>
-<th scope="col">Nama</th>
-<th scope="col">Deskripsi</th>
-<th scope="col">Aksi</th>
+<th>No</th>
+<th onclick="sortTable(0)">Nama <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(1)">Deskripsi <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(2)">Aksi <i class="fas fa-sort"></i></th>
 {% endblock %}
 
 {% block table_body %}

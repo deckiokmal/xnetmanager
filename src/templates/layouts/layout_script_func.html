@@ -6,6 +6,7 @@
     }
 </script>
 
+<!-- JavaScript handle darkmode dan lightmode -->
 <script>
     function DarkTheme() {
         var element = document.body;
@@ -14,6 +15,7 @@
     }
 </script>
 
+<!-- JavaScript handle alert delay closing -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // Waktu delay untuk menghilangkan alert (dalam milidetik)
@@ -121,4 +123,67 @@
     }
 
     sendBtn.addEventListener('click', sendMessage);
+</script>
+
+<!-- JavaScript handle sort table -->
+<script>
+    function sortTable(n) {
+        const table = document.getElementById("dataTable");
+        let rows, switching, i, x, y, shouldSwitch, dir, switchCount = 0;
+        const headers = table.getElementsByTagName("TH");
+        switching = true;
+        dir = "asc"; // Set default sort direction to ascending
+
+        // Reset all header icons
+        for (let header of headers) {
+            let icon = header.querySelector("i");
+            if (icon) {
+                icon.classList.remove("fa-sort-up", "fa-sort-down");
+                icon.classList.add("fa-sort");
+            }
+        }
+
+        // Start sorting process
+        while (switching) {
+            switching = false;
+            rows = table.rows;
+
+            for (i = 1; i < (rows.length - 1); i++) {
+                shouldSwitch = false;
+                x = rows[i].getElementsByTagName("TD")[n];
+                y = rows[i + 1].getElementsByTagName("TD")[n];
+
+                if (dir === "asc") {
+                    if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                } else if (dir === "desc") {
+                    if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+            }
+            if (shouldSwitch) {
+                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                switching = true;
+                switchCount++;
+            } else {
+                if (switchCount === 0 && dir === "asc") {
+                    dir = "desc";
+                    switching = true;
+                }
+            }
+        }
+
+        // Update the clicked column header icon to show sort direction
+        if (dir === "asc") {
+            headers[n].querySelector("i").classList.remove("fa-sort");
+            headers[n].querySelector("i").classList.add("fa-sort-up");
+        } else {
+            headers[n].querySelector("i").classList.remove("fa-sort");
+            headers[n].querySelector("i").classList.add("fa-sort-down");
+        }
+    }
 </script>

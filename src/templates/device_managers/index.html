@@ -38,14 +38,14 @@
 {% endblock %}
 
 {% block table_header %}
-<th scope="col">No</th>
-<th scope="col">Nama Perangkat</th>
-<th scope="col">Vendor</th>
-<th scope="col">IP Address</th>
-<th scope="col">Username</th>
-<th scope="col">Password</th>
-<th scope="col">Port SSH</th>
-<th scope="col">Aksi</th>
+<th>No</th>
+<th onclick="sortTable(0)">Nama Perangkat <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(1)">Vendor <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(2)">IP Address <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(3)">Username <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(4)">Password <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(5)">Port SSH <i class="fas fa-sort"></i></th>
+<th>Aksi</th>
 {% endblock %}
 
 {% block table_body %}

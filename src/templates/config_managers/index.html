@@ -59,12 +59,12 @@
         <i class="fas fa-cogs"></i> Select
     </button>
 </th>
-<th scope="col" class="justify-content">No</th>
-<th scope="col">Nama Perangkat</th>
-<th scope="col">Alamat IP</th>
-<th scope="col">Vendor</th>
-<th scope="col">Status</th>
-<th scope="col">Aksi</th>
+<th>No</th>
+<th onclick="sortTable(0)">Nama Perangkat <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(1)">Alamat IP <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(2)">Vendor <i class="fas fa-sort"></i></th>
+<th>Status</th>
+<th>Aksi</th>
 {% endblock %}
 
 {% block table_body %}

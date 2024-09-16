@@ -34,12 +34,12 @@
 
 {% block table_header %}
 <th>No</th>
-<th>Nama Backup</th>
-<th>Nama Device</th>
-<th>Backup Type</th>
-<th>Versi</th>
-<th>Tanggal Dibuat</th>
-<th>Jenis</th>
+<th onclick="sortTable(0)">Nama Backup <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(1)">Nama Device <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(2)">Backup Type <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(3)">Versi <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(4)">Tanggal Dibuat <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(5)">Jenis <i class="fas fa-sort"></i></th>
 <th>Aksi</th>
 {% endblock %}
 
@@ -286,62 +286,68 @@
 
 <!-- JavaScript handle share backup -->
 <script>
-    // Fungsi untuk membuka modal Share Backup dan mengisi hidden input dengan backupId
-    function openShareBackupModal(button) {
-        const backupId = button.getAttribute("data-backup-id");
-        document.getElementById("backupId").value = backupId;
+    function sortTable(n) {
+        console.log('Sorting column:', n);  // Debugging untuk melihat apakah fungsi dipanggil
+        const table = document.getElementById("dataTable");
+        if (!table) {
+            console.error("Table with ID 'dataTable' not found.");
+            return;  // Stop if table is not found
+        }
+        let rows, switching, i, x, y, shouldSwitch, dir, switchCount = 0;
+        const headers = table.getElementsByTagName("TH");
+        switching = true;
+        dir = "asc"; // Set default sort direction to ascending
 
-        const shareModal = new bootstrap.Modal(document.getElementById("shareBackupModal"));
-        shareModal.show();
-    }
-
-    // Event listener untuk tombol 'Share' dalam modal
-    document.getElementById('shareBackupBtn').addEventListener('click', function () {
-        const userEmail = document.getElementById('userEmail').value;
-        const permissionLevel = document.getElementById('permissionLevel').value;
-        const backupId = document.getElementById('backupId').value;
-
-        // Validasi input email dan backupId
-        if (!userEmail || !backupId) {
-            alert('Please provide a valid email and backup ID');
-            return;
+        // Reset all header icons
+        for (let header of headers) {
+            let icon = header.querySelector("i");
+            if (icon) {
+                icon.classList.remove("fa-sort-up", "fa-sort-down");
+                icon.classList.add("fa-sort");
+            }
         }
 
-        // Kirim request POST untuk berbagi backup
-        fetch("/share-backup", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                user_email: userEmail,
-                backup_id: backupId,
-                permission_level: permissionLevel
-            })
-        })
-            .then(response => {
-                // Tambahkan log untuk memeriksa status HTTP dari backend
-                console.log(`Response Status: ${response.status}`);
+        while (switching) {
+            switching = false;
+            rows = table.rows;
 
-                // Ambil JSON dari respons
-                return response.json().then(data => {
-                    // Cek apakah respons sukses
-                    if (response.ok) {
-                        alert(data.message);  // Tampilkan pesan sukses dari server
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('shareBackupModal'));
-                        modal.hide();  // Tutup modal setelah berhasil
-                        location.reload();  // Reload halaman untuk memperbarui data
-                    } else {
-                        // Tambahkan log untuk pesan error dari server
-                        console.error(`Error Message: ${data.message}`);
-                        alert(data.message || 'Error sharing backup');
+            for (i = 1; i < (rows.length - 1); i++) {
+                shouldSwitch = false;
+                x = rows[i].getElementsByTagName("TD")[n];
+                y = rows[i + 1].getElementsByTagName("TD")[n];
+
+                if (dir === "asc") {
+                    if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                        shouldSwitch = true;
+                        break;
                     }
-                });
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error sharing backup');
-            });
-    });
+                } else if (dir === "desc") {
+                    if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+            }
+            if (shouldSwitch) {
+                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                switching = true;
+                switchCount++;
+            } else {
+                if (switchCount === 0 && dir === "asc") {
+                    dir = "desc";
+                    switching = true;
+                }
+            }
+        }
+
+        // Update the clicked column header icon to show sort direction
+        if (dir === "asc") {
+            headers[n].querySelector("i").classList.remove("fa-sort");
+            headers[n].querySelector("i").classList.add("fa-sort-up");
+        } else {
+            headers[n].querySelector("i").classList.remove("fa-sort");
+            headers[n].querySelector("i").classList.add("fa-sort-down");
+        }
+    }
 </script>
 {% endblock %}

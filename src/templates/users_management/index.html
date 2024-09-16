@@ -41,10 +41,10 @@
 
 {% block table_header %}
 <th>No</th>
-<th>Email</th>
-<th>Hash Password</th>
-<th>Company</th>
-<th>2FA Verified</th>
+<th onclick="sortTable(0)">Email <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(1)">Hash Password <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(2)">Company <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(3)">2FA Verified <i class="fas fa-sort"></i></th>
 <th>Aksi</th>
 {% endblock %}
 
