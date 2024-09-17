@@ -1,0 +1,509 @@
+{% extends "/layouts/layout_table.html" %}
+{% block title %}Configuration File Management{% endblock %}
+
+{% block button_group1 %}
+<div class="dropdown">
+    <button class="btn btn-sm btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown"
+        aria-expanded="false">
+        Create New
+    </button>
+    <ul class="dropdown-menu p-3 shadow-lg rounded">
+        <li>
+            <button type="button" class="dropdown-item btn btn-sm btn-outline-primary mb-2 w-100 text-start"
+                data-bs-toggle="modal" data-bs-target="#createModal">
+                Create Config with AI Validated
+            </button>
+        </li>
+        <li>
+            <button type="button" class="dropdown-item btn btn-sm btn-outline-secondary mb-2 w-100 text-start"
+                data-bs-toggle="modal" data-bs-target="#createAiModal">
+                Generate Automate Config with AI
+            </button>
+        </li>
+        <li>
+            <button type="button" class="dropdown-item btn btn-sm btn-outline-secondary w-100 text-start"
+                data-bs-toggle="modal" data-bs-target="#askTalitaModal">
+                Create Automate Config with Talita
+            </button>
+        </li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block table_name %}Daftar File Konfigurasi{% endblock %}
+
+{% block form_filter_row %}
+<form id="perPageForm" action="{{ url_for('config_file.index') }}" method="get">
+    <label class="d-flex align-items-center">
+        <span>Tampilkan</span>
+        <select name="per_page" class="form-select form-select-sm mx-2"
+            onchange="document.getElementById('perPageForm').submit()">
+            <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
+            <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
+            <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
+        </select>
+        <span>entri</span>
+    </label>
+    <input type="hidden" name="search" value="{{ search_query }}">
+</form>
+{% endblock %}
+
+{% block form_search %}
+<form id="searchForm" method="get" action="{{ url_for('config_file.index') }}" class="form-inline d-flex">
+    <input id="searchInput" type="text" name="search" class="form-control form-control-sm me-2" placeholder="Search..."
+        value="{{ search_query }}">
+    <button class="btn btn-outline-success btn-sm" type="submit">
+        <i class="fas fa-search"></i>
+    </button>
+    <input type="hidden" name="per_page" value="{{ per_page }}">
+</form>
+{% endblock %}
+
+{% block table_header %}
+<th>No</th>
+<th onclick="sortTable(0)">Nama File <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(1)">Vendor <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(2)">Deskripsi <i class="fas fa-sort"></i></th>
+<th>Aksi</th>
+{% endblock %}
+
+{% block table_body %}
+{% for data in configurations %}
+<tr>
+    <th scope="row">{{ loop.index + (page - 1) * per_page }}</th>
+    <td>{{ data.config_name }}</td>
+    <td>{{ data.vendor }}</td>
+    <td>{{ data.description }}</td>
+    <td>
+        <button class="btn btn-info btn-sm mb-2" data-config-id="{{ data.id }}" onclick="showConfigDetails(this)">
+            <i class="fas fa-eye"></i>
+        </button>
+        <a href="{{ url_for('config_file.update_configuration', config_id=data.id) }}"
+            class="btn btn-success btn-sm mb-2">
+            <i class="fas fa-edit"></i>
+        </a>
+        <form action="{{ url_for('config_file.delete_configuration', config_id=data.id) }}" method="post"
+            class="d-inline">
+            <button type="submit" class="btn btn-danger btn-sm mb-2"
+                onclick="return confirm('Apakah Anda yakin ingin menghapus ?');">
+                <i class="fas fa-trash"></i>
+            </button>
+        </form>
+    </td>
+</tr>
+{% endfor %}
+{% endblock %}
+
+{% block show_total_data %}
+<div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
+    Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if
+    (page - 1)
+    * per_page + per_page < total_configuration_file else total_configuration_file }} dari {{ total_configuration_file
+        }} entri </div>
+        {% endblock %}
+
+        {% block pagination %}
+        {{ pagination.links }}
+        {% endblock %}
+
+        {% block modal_data %}
+        <!-- Modal for config Details -->
+        <div class="modal fade" id="configDetailModal" tabindex="-1" aria-labelledby="configDetailModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="configDetailModalLabel">Configuration Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Filename:</strong> <span id="config_name"></span></p>
+                        <p><strong>Vendor:</strong> <span id="vendor"></span></p>
+                        <p><strong>Description:</strong> <span id="description"></span></p>
+                        <p><strong>Created by:</strong> <span id="created_by"></span></p>
+                        <p><strong>Config Content:</strong></p>
+                        <pre id="configuration_content" class="content-data"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Create Manual Configuration with AI Validation -->
+        <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="createModalLabel">Buat File Konfigurasi</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="createManualConfigForm" method="post"
+                            action="{{ url_for('config_file.create_configuration_with_ai_validated') }}">
+                            {{ formManualConfiguration.csrf_token }}
+                            <div class="mb-3">
+                                <label for="create_filename" class="form-label">Nama file</label>
+                                {{ formManualConfiguration.filename(class="form-control", id="create_filename") }}
+                                {% if formManualConfiguration.filename.errors %}
+                                {% for error in formManualConfiguration.filename.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <label for="create_vendor" class="form-label">Vendor</label>
+                                {{ formManualConfiguration.vendor(class="form-control", id="create_vendor") }}
+                                {% if formManualConfiguration.vendor.errors %}
+                                {% for error in formManualConfiguration.vendor.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Deskripsi</label>
+                                {{ formManualConfiguration.configuration_description(class="form-control",
+                                id="description") }}
+                                {% if formManualConfiguration.configuration_description.errors %}
+                                {% for error in formManualConfiguration.configuration_description.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <label for="create_configuration_content" class="form-label">File Konfigurasi</label>
+                                {{ formManualConfiguration.configuration_content(class="form-control",
+                                id="create_configuration_content", rows="5") }}
+                                {% if formManualConfiguration.configuration_content.errors %}
+                                {% for error in formManualConfiguration.configuration_content.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-primary ms-2"><i class="fas fa-plus"></i> Create
+                                Configuration</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Create AI Configuration -->
+        <div class="modal fade" id="createAiModal" tabindex="-1" aria-labelledby="createAiModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="createAiModalLabel">Generate Automated Configuration with AI</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="createAiConfigForm" method="post"
+                            action="{{ url_for('config_file.create_configuration_with_ai_automated') }}">
+                            {{ formAIconfiguration.csrf_token }}
+
+                            <!-- Filename Input -->
+                            <div class="mb-3">
+                                <label for="filename" class="form-label">Filename</label>
+                                {{ formAIconfiguration.filename(class="form-control", id="filename") }}
+                                {% if formAIconfiguration.filename.errors %}
+                                {% for error in formAIconfiguration.filename.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <!-- Vendor Input -->
+                            <div class="mb-3">
+                                <label for="vendor" class="form-label">Vendor</label>
+                                {{ formAIconfiguration.vendor(class="form-control", id="vendor") }}
+                                {% if formAIconfiguration.vendor.errors %}
+                                {% for error in formAIconfiguration.vendor.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <!-- Description Input -->
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                {{ formAIconfiguration.description(class="form-control", id="description") }}
+                                {% if formAIconfiguration.description.errors %}
+                                {% for error in formAIconfiguration.description.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <!-- Configuration Requirements Input -->
+                            <div class="mb-3">
+                                <label for="ask_configuration" class="form-label">Configuration Requirements</label>
+                                {{ formAIconfiguration.ask_configuration(class="form-control", id="ask_configuration",
+                                rows="5") }}
+                                {% if formAIconfiguration.ask_configuration.errors %}
+                                {% for error in formAIconfiguration.ask_configuration.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <!-- Submit Button -->
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Generate
+                                Configuration</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal for Asking TALITA -->
+        <div class="modal fade" id="askTalitaModal" tabindex="-1" aria-labelledby="askTalitaModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="askTalitaModalLabel">Ask TALITA a Question</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="createTalitaConfigForm" method="post"
+                            action="{{ url_for('config_file.ask_talita') }}">
+                            {{ formTalita.csrf_token }}
+
+                            <!-- Configuration Name Field -->
+                            <div class="mb-3">
+                                <label for="config_name" class="form-label">Configuration Name</label>
+                                {{ formTalita.config_name(class="form-control", id="config_name") }}
+                                {% if formTalita.config_name.errors %}
+                                {% for error in formTalita.config_name.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <!-- Vendor Field -->
+                            <div class="mb-3">
+                                <label for="vendor" class="form-label">Vendor</label>
+                                {{ formTalita.vendor(class="form-control", id="vendor") }}
+                                {% if formTalita.vendor.errors %}
+                                {% for error in formTalita.vendor.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <!-- Description Field -->
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                {{ formTalita.description(class="form-control", id="description") }}
+                                {% if formTalita.description.errors %}
+                                {% for error in formTalita.description.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <!-- Question Field -->
+                            <div class="mb-3">
+                                <label for="question" class="form-label">Pertanyaan</label>
+                                {{ formTalita.question(class="form-control", id="question", rows="5") }}
+                                {% if formTalita.question.errors %}
+                                {% for error in formTalita.question.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <!-- Submit Button -->
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Submit
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Error Config Generation -->
+        <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="errorModalLabel">Error Generating Configuration</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="errorModalMessage"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endblock %}
+
+        {% block script_js %}
+        <script>
+            // Function to show the loading overlay
+            function showLoadingOverlay() {
+                document.getElementById('loadingOverlay').style.display = 'flex';
+            }
+
+            // Function to hide the loading overlay
+            function hideLoadingOverlay() {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+
+            let timeout = null;
+
+            // Handle search input delay
+            document.getElementById("searchInput").addEventListener("input", function () {
+                clearTimeout(timeout);
+                timeout = setTimeout(function () {
+                    document.getElementById('searchForm').submit();
+                }, 1000);
+            });
+
+            // Handle manual configuration with AI validation
+            document.addEventListener("DOMContentLoaded", function () {
+                // Handle Create Manual Configuration Form Submission
+                document.getElementById("createManualConfigForm").addEventListener('submit', function (event) {
+                    event.preventDefault();  // Prevent the form from submitting the default way
+
+                    const createModal = bootstrap.Modal.getInstance(document.getElementById('createModal'));
+                    createModal.hide();  // Close the modal
+                    showLoadingOverlay();  // Show the loading overlay
+
+                    const formData = new FormData(this);
+                    const actionUrl = this.getAttribute('action');
+
+                    fetch(actionUrl, {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            hideLoadingOverlay();  // Hide the loading overlay
+
+                            if (data.is_valid) {
+                                window.location.reload();  // Reload the page to show flash message
+                            } else {
+                                // Display the error in a modal
+                                document.getElementById('errorModalMessage').textContent = data.error_message;
+                                var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                                errorModal.show();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            hideLoadingOverlay();  // Hide the loading overlay
+                            document.getElementById('errorModalMessage').textContent = "An unexpected error occurred.";
+                            var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                            errorModal.show();
+                        });
+                });
+            });
+
+            // Handle Automate configuration with AI
+            document.addEventListener("DOMContentLoaded", function () {
+                // Handle Create AI Configuration Form Submission
+                document.getElementById("createAiConfigForm").addEventListener('submit', function (event) {
+                    event.preventDefault();  // Prevent the form from submitting the default way
+
+                    const createAiModal = bootstrap.Modal.getInstance(document.getElementById('createAiModal'));
+                    createAiModal.hide();  // Close the modal
+                    showLoadingOverlay();  // Show the loading overlay
+
+                    const formData = new FormData(this);
+                    const actionUrl = this.getAttribute('action');
+
+                    fetch(actionUrl, {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            hideLoadingOverlay();  // Hide the loading overlay
+
+                            if (data.is_valid) {
+                                window.location.reload();  // Reload the page to show flash message
+                            } else {
+                                // Display the error in a modal
+                                document.getElementById('errorModalMessage').textContent = data.error_message;
+                                var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                                errorModal.show();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            hideLoadingOverlay();  // Hide the loading overlay
+                            document.getElementById('errorModalMessage').textContent = "An unexpected error occurred.";
+                            var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                            errorModal.show();
+                        });
+                });
+            });
+
+            // Handle Automate configuration with TALITA AI
+            document.addEventListener("DOMContentLoaded", function () {
+                // Handle Create TALITA Configuration Form Submission
+                document.getElementById("createTalitaConfigForm").addEventListener('submit', function (event) {
+                    event.preventDefault();  // Prevent the form from submitting the default way
+
+                    const askTalitaModal = bootstrap.Modal.getInstance(document.getElementById('askTalitaModal'));
+                    askTalitaModal.hide();  // Close the modal
+                    showLoadingOverlay();  // Show the loading overlay
+
+                    const formData = new FormData(this);
+                    const actionUrl = this.getAttribute('action');
+
+                    fetch(actionUrl, {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            hideLoadingOverlay();  // Hide the loading overlay
+
+                            if (data.is_valid) {
+                                window.location.reload();  // Reload the page to show flash message
+                            } else {
+                                // Display the error in a modal
+                                document.getElementById('errorModalMessage').textContent = data.error_message;
+                                var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                                errorModal.show();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            hideLoadingOverlay();  // Hide the loading overlay
+                            document.getElementById('errorModalMessage').textContent = "An unexpected error occurred.";
+                            var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                            errorModal.show();
+                        });
+                });
+            });
+        </script>
+
+        <!-- handle template detail -->
+        <script>
+            // Handle template detail
+            function showConfigDetails(button) {
+                const configId = button.getAttribute("data-config-id");
+
+                fetch(`/configuration_detail/${configId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert(data.error);
+                        } else {
+                            document.getElementById("config_name").innerText = data.config_name;
+                            document.getElementById("vendor").innerText = data.vendor;
+                            document.getElementById("description").innerText = data.description;
+                            document.getElementById("created_by").innerText = data.created_by;
+                            document.getElementById("configuration_content").innerText = data.configuration_content;
+
+                            var detailModal = new bootstrap.Modal(document.getElementById("configDetailModal"));
+                            detailModal.show();
+                        }
+                    })
+                    .catch(error => console.error('Error fetching config details:', error));
+            }
+        </script>
+        {% endblock %}

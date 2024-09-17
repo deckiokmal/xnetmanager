@@ -99,7 +99,7 @@
         typingIndicator.style.display = 'inline'; // Show typing indicator
 
         try {
-            const response = await fetch('/api/chat', {
+            const response = await fetch('/chatbot/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

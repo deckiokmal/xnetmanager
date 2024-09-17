@@ -508,18 +508,18 @@ class AIConfigurationForm(FlaskForm):
 
 
 class UpdateConfigurationForm(FlaskForm):
-    template_name = StringField(
-        "Template Name",
+    config_name = StringField(
+        "Config Name",
         validators=[
-            DataRequired(message="Template name is required."),
+            DataRequired(message="Config name is required."),
             Length(
                 min=1,
                 max=100,
-                message="Template name must be between 1 and 100 characters.",
+                message="Config name must be between 1 and 100 characters.",
             ),
             Regexp(
                 r"^[\w\-\.]+$",
-                message="Template name can only contain letters, numbers, underscores, dashes, and periods.",
+                message="Config name can only contain letters, numbers, underscores, dashes, and periods.",
             ),
         ],
     )
@@ -538,11 +538,11 @@ class UpdateConfigurationForm(FlaskForm):
             Length(max=500, message="Description must be less than 500 characters.")
         ],
     )
-    template_content = TextAreaField(
-        "Template Content",
+    config_content = TextAreaField(
+        "Config Content",
         validators=[
-            DataRequired(message="Template content is required."),
-            Length(min=1, message="Template content cannot be empty."),
+            DataRequired(message="Config content is required."),
+            Length(min=1, message="Config content cannot be empty."),
         ],
     )
     submit = SubmitField("Update Configuration")
