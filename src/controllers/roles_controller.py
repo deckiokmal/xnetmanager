@@ -236,7 +236,7 @@ def update_role(role_id):
             ]
 
             # Memperbarui asosiasi pengguna
-            role.users = [User.query.get(int(user_id)) for user_id in selected_users]
+            role.users = [User.query.get(user_id) for user_id in selected_users]
 
             db.session.commit()
             current_app.logger.info(
