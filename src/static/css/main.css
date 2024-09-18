@@ -83,3 +83,84 @@ a {
         width: 60%;
     }
 }
+
+
+/* Global Styles */
+body,
+html {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: #f8f9fa;
+    font-family: 'Arial', sans-serif;
+}
+
+#layoutError {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 100vh;
+}
+
+#layoutError_content {
+    flex: 1;
+}
+
+main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    max-width: 100%;
+    padding: 0 15px;
+}
+
+/* Error Image */
+.img-error {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+}
+
+/* Footer Styles */
+footer {
+    background-color: #343a40;
+    color: #ffffff;
+}
+
+footer .small {
+    text-align: center;
+}
+
+footer .text-light {
+    color: #e9ecef;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .col-lg-6 {
+        width: 100%;
+    }
+
+    .img-error {
+        max-width: 300px;
+    }
+
+    footer {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 576px) {
+    .img-error {
+        max-width: 250px;
+    }
+
+    footer {
+        padding: 15px;
+    }
+}
