@@ -599,7 +599,7 @@ body {
     }
 
     .lh-1 h2 {
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         /* Smaller font for mobile */
         text-align: center;
     }
@@ -607,15 +607,33 @@ body {
     .lh-1 p {
         text-align: center;
         /* Center the username for mobile view */
-        font-size: 0.9rem;
+        font-size: 0.7rem;
+    }
+
+    .lh-1 h2, .lh-1 p {
+        margin: 5px 0;
     }
 
     /* Navigation buttons styling */
     .nav-lt-tab {
         display: flex;
-        justify-content: space-around;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
         padding-top: 10px;
         padding-bottom: 10px;
+    }
+
+    .nav-lt-tab .nav-item button {
+        font-size: 10px; /* Smaller font size for precision */
+        flex: 1; /* Make buttons occupy equal space */
+        text-align: center;
+    }
+
+    .nav-lt-tab .nav-item a {
+        font-size: 10px; /* Smaller font size for precision */
+        flex: 1; /* Make buttons occupy equal space */
+        text-align: center;
     }
 
     .btn-profile-edit {
