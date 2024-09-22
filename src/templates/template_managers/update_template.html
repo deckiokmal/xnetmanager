@@ -13,7 +13,7 @@
         <div class="row mb-3">
             <div class="col-md-6">
                 <label for="template_name" class="form-label">Template Name</label>
-                {{ form.template_name(class="form-control bg-dark text-white", id="template_name") }}
+                {{ form.template_name(class="form-control", id="template_name") }}
                 {% if form.template_name.errors %}
                 {% for error in form.template_name.errors %}
                 <div class="invalid-feedback d-block">{{ error }}</div>
@@ -22,7 +22,7 @@
             </div>
             <div class="col-md-6">
                 <label for="parameter_name" class="form-label">Parameter Name</label>
-                {{ form.parameter_name(class="form-control bg-dark text-white", id="parameter_name") }}
+                {{ form.parameter_name(class="form-control", id="parameter_name") }}
                 {% if form.parameter_name.errors %}
                 {% for error in form.parameter_name.errors %}
                 <div class="invalid-feedback d-block">{{ error }}</div>
@@ -33,7 +33,7 @@
         <div class="row mb-3">
             <div class="col-md-6">
                 <label for="vendor" class="form-label">Vendor</label>
-                {{ form.vendor(class="form-control bg-dark text-white", id="vendor") }}
+                {{ form.vendor(class="form-control", id="vendor") }}
                 {% if form.vendor.errors %}
                 {% for error in form.vendor.errors %}
                 <div class="invalid-feedback d-block">{{ error }}</div>
@@ -42,7 +42,7 @@
             </div>
             <div class="col-md-6">
                 <label for="version" class="form-label">Version</label>
-                {{ form.version(class="form-control bg-dark text-white", id="version") }}
+                {{ form.version(class="form-control", id="version") }}
                 {% if form.version.errors %}
                 {% for error in form.version.errors %}
                 <div class="invalid-feedback d-block">{{ error }}</div>
@@ -52,7 +52,7 @@
         </div>
         <div class="mb-3">
             <label for="description" class="form-label">Description</label>
-            {{ form.description(class="form-control bg-dark text-white", id="description") }}
+            {{ form.description(class="form-control", id="description") }}
             {% if form.description.errors %}
             {% for error in form.description.errors %}
             <div class="invalid-feedback d-block">{{ error }}</div>
@@ -61,7 +61,7 @@
         </div>
         <div class="mb-3">
             <label for="template_content" class="form-label">Template Content</label>
-            {{ form.template_content(class="form-control bg-dark text-white", id="template_content", rows="5") }}
+            {{ form.template_content(class="form-control", id="template_content", rows="5") }}
             {% if form.template_content.errors %}
             {% for error in form.template_content.errors %}
             <div class="invalid-feedback d-block">{{ error }}</div>
@@ -70,7 +70,7 @@
         </div>
         <div class="mb-3">
             <label for="parameter_content" class="form-label">Parameter Content</label>
-            {{ form.parameter_content(class="form-control bg-dark text-white", id="parameter_content", rows="5") }}
+            {{ form.parameter_content(class="form-control", id="parameter_content", rows="5") }}
             {% if form.parameter_content.errors %}
             {% for error in form.parameter_content.errors %}
             <div class="invalid-feedback d-block">{{ error }}</div>

@@ -33,7 +33,7 @@
     <!-- Custom styles for Tables -->
     <link href="{{ url_for('static', filename='vendor/datatables/dataTables.bootstrap4.min.css') }}" rel="stylesheet">
 
-    
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/xnetmanager.css') }}" rel="stylesheet">
 </head>
 
@@ -81,11 +81,12 @@
                 {% include '/layouts/topbar.html' %}
 
                 <!-- Begin Page Content -->
-                <div class="container-fluid">
+                <div class="page-banner"></div>
+                <div class="container-fluid container-content">
 
                     <!-- Page Heading -->
-                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">{% block page_heading %}{% endblock %}</h1>
+                    <div class="d-sm-flex align-items-center justify-content-between mb-2">
+                        <h1 class="h3 mb-0 text-white">{% block page_heading %}{% endblock %}</h1>
                     </div>
 
                     <!-- Loading overlay -->
@@ -96,7 +97,9 @@
                     </div>
 
                     <!-- Content Row -->
-                    {% block content %}{% endblock %}
+                    <div class="row mb-3">
+                        {% block content %}{% endblock %}
+                    </div>
 
                 </div>
                 <!-- /.container-fluid -->

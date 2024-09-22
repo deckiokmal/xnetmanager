@@ -1,9 +1,10 @@
 {% extends "/layouts/layout.html" %}
-{% block title %}Profile Update{% endblock %}
+{% block title %}Account setting{% endblock %}
 {% block content %}
+
 <div class="card position-relative py-4 px-4">
         <div class="card-header mb-3">
-                Profile Settings
+                Account Settings
         </div>
         <form action="{{ url_for('profile.update_profile', user_id=user.id) }}" method="post">
                 {{ form.hidden_tag() }}
@@ -62,4 +63,5 @@
                 </a>
         </form>
 </div>
+
 {% endblock %}

@@ -7,6 +7,7 @@ import platform
 import json
 import logging
 import time
+import asyncio
 
 # Konfigurasi logging
 logging.basicConfig(
@@ -110,12 +111,10 @@ class ConfigurationManagerUtils:
             )
             return json.dumps({"message": error_message, "status": "error"})
 
-    def check_device_status(self):
+    async def check_device_status_async(self):
         """
-        Mengecek status perangkat dengan melakukan ping ke alamat IP.
+        Mengecek status perangkat secara asinkron dengan melakukan ping ke alamat IP.
         Mengembalikan status perangkat dalam format JSON.
-
-        :return: Status perangkat dalam format JSON.
         """
         try:
             command = (
@@ -124,10 +123,13 @@ class ConfigurationManagerUtils:
                 else ["ping", "-c", "1", self.ip_address]
             )
             start_time = time.time()
-            response = subprocess.run(command, capture_output=True, text=True)
+            process = await asyncio.create_subprocess_exec(
+                *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await process.communicate()
             elapsed_time = time.time() - start_time
 
-            if "Reply from" in response.stdout or "reply from" in response.stdout:
+            if "Reply from" in stdout.decode() or "reply from" in stdout.decode():
                 self.device_status = True
                 status_message = "Perangkat online"
                 status = "success"
@@ -152,17 +154,12 @@ class ConfigurationManagerUtils:
             )
             return json.dumps({"message": error_message, "status": "error"})
 
-    def check_device_status_threaded(self):
+    def check_device_status(self):
         """
-        Mengecek status perangkat menggunakan threading.
-        Mengembalikan hasil status dalam format JSON.
-
-        :return: Status perangkat dalam format JSON.
+        Mengecek status perangkat secara sinkron dengan menjalankan coroutine `check_device_status_async`
+        menggunakan asyncio.run().
         """
-        thread = threading.Thread(target=self.check_device_status)
-        thread.start()
-        thread.join()
-        return self.check_device_status()
+        return asyncio.run(self.check_device_status_async())
 
     def render_template_config(self, jinja_template, yaml_params):
         """

@@ -1,25 +1,19 @@
 {% extends "/layouts/layout_table.html" %}
+{% block page_heading %}Roles Management{% endblock %}
 {% block title %}Roles Management{% endblock %}
 
 {% block button_group1 %}
 <!-- Tombol tambah role -->
 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#rolecreateModal">
-    <i class="fa-solid fa-plus"></i>
+    Create role
 </button>
 {% endblock %}
 
 {% block button_group2 %}
 <!-- Tombol tambah permission -->
 <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#addUserToRoleModal">
-    <i class="fa-solid fa-user-plus"></i>
+    Assign role user
 </button>
-{% endblock %}
-
-{% block button_group3 %}
-<!-- Tombol navigasi ke halaman Permissions -->
-<a href="{{ url_for('roles.index_permissions') }}" class="btn btn-info">
-    <i class="fa-solid fa-shield"></i>
-</a>
 {% endblock %}
 
 

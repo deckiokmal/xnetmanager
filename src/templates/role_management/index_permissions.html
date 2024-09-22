@@ -1,18 +1,13 @@
 {% extends "/layouts/layout_table.html" %}
+{% block page_heading %}User Permissions{% endblock %}
 {% block title %}Permissions Management{% endblock %}
 
 
 {% block button_group1 %}
 <!-- Tombol untuk menampilkan modal Create Permission -->
 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPermissionModal">
-    <i class="fas fa-plus"></i>
+    Create new
 </button>
-{% endblock %}
-{% block button_group3 %}
-<!-- Tombol untuk Kembali ke Index Page -->
-<a class="btn btn-warning" href="{{ url_for('roles.index') }}">
-    <i class="fa-solid fa-arrow-left"></i>
-</a>
 {% endblock %}
 
 
@@ -34,7 +29,7 @@
     <td>{{ permission.description }}</td>
     <td>
         <!-- Tombol untuk menampilkan modal Update Permission -->
-        <button class="btn btn-success btn-sm" data-bs-toggle="modal"
+        <button class="btn btn-success btn-sm mb-1" data-bs-toggle="modal"
             data-bs-target="#updatePermissionModal{{ permission.id }}">
             <i class="fas fa-edit"></i>
         </button>
@@ -42,7 +37,7 @@
         <!-- Form untuk Menghapus Permission -->
         <form action="{{ url_for('roles.delete_permission', permission_id=permission.id) }}" method="post"
             style="display:inline;">
-            <button type="submit" class="btn btn-danger btn-sm"
+            <button type="submit" class="btn btn-danger btn-sm mb-1"
                 onclick="return confirm('Apakah Anda yakin ingin menghapus permission ini?');">
                 <i class="fas fa-trash"></i>
             </button>

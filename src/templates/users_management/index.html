@@ -1,6 +1,6 @@
 {% extends "/layouts/layout_table.html" %}
-{% block title %}Users Management{% endblock %}
 {% block page_heading %}Users Management{% endblock %}
+{% block title %}Users Management{% endblock %}
 
 {% block button_group1 %}
 <!-- Tombol untuk membuka modal pembuatan perangkat baru -->
@@ -29,7 +29,7 @@
 {% endblock %}
 
 {% block form_search %}
-<form id="searchForm" method="get" action="{{ url_for('users.index') }}" class="form-inline d-flex">
+<form id="searchForm" method="get" action="{{ url_for('users.index') }}" class="form-inline d-flex justify-content-between">
     <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2" placeholder="Search..."
         value="{{ search_query }}">
     <button class="btn btn-outline-success btn-sm" type="submit">
@@ -63,17 +63,17 @@
     <td>{{ 'Yes' if user.is_2fa_enabled else 'No' }}</td>
     <td>
         <!-- Tombol Detail Perangkat -->
-        <button class="btn btn-info btn-sm" data-user-id="{{ user.id }}" onclick="showUserDetails(this)">
+        <button class="btn btn-info btn-sm mb-1" data-user-id="{{ user.id }}" onclick="showUserDetails(this)">
             <i class="fas fa-eye"></i>
         </button>
         <!-- Tombol Edit Perangkat -->
-        <a href="{{url_for('users.update_user', user_id=user.id)}}" class="btn btn-success btn-sm">
+        <a href="{{url_for('users.update_user', user_id=user.id)}}" class="btn btn-success btn-sm mb-1">
             <i class="fas fa-edit"></i>
         </a>
         <!-- Form untuk Menghapus Perangkat -->
         <form action="{{url_for('users.delete_user', user_id=user.id)}}" method="post" style="display:inline;">
             {{ form.csrf_token }} <!-- Adding CSRF token for deletion -->
-            <button type="submit" class="btn btn-danger btn-sm"
+            <button type="submit" class="btn btn-danger btn-sm mb-1"
                 onclick="return confirm('Apakah Anda yakin ingin menghapus pengguna ini?');">
                 <i class="fas fa-trash"></i>
             </button>

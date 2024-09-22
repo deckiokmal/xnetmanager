@@ -1,4 +1,5 @@
 {% extends "/layouts/layout_table.html" %}
+{% block page_heading %}Configuration File Management{% endblock %}
 {% block title %}Configuration File Management{% endblock %}
 
 {% block button_group1 %}
@@ -75,16 +76,16 @@
     <td>{{ data.vendor }}</td>
     <td>{{ data.description }}</td>
     <td>
-        <button class="btn btn-info btn-sm mb-2" data-config-id="{{ data.id }}" onclick="showConfigDetails(this)">
+        <button class="btn btn-info btn-sm mb-1" data-config-id="{{ data.id }}" onclick="showConfigDetails(this)">
             <i class="fas fa-eye"></i>
         </button>
         <a href="{{ url_for('config_file.update_configuration', config_id=data.id) }}"
-            class="btn btn-success btn-sm mb-2">
+            class="btn btn-success btn-sm mb-1">
             <i class="fas fa-edit"></i>
         </a>
         <form action="{{ url_for('config_file.delete_configuration', config_id=data.id) }}" method="post"
             class="d-inline">
-            <button type="submit" class="btn btn-danger btn-sm mb-2"
+            <button type="submit" class="btn btn-danger btn-sm mb-1"
                 onclick="return confirm('Apakah Anda yakin ingin menghapus ?');">
                 <i class="fas fa-trash"></i>
             </button>
@@ -487,7 +488,7 @@
             function showConfigDetails(button) {
                 const configId = button.getAttribute("data-config-id");
 
-                fetch(`/configuration_detail/${configId}`)
+                fetch(`/configuration-file/get-detail/${configId}`)
                     .then(response => response.json())
                     .then(data => {
                         if (data.error) {

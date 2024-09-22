@@ -221,37 +221,44 @@ def set_device_status_cache(device_id, status):
 )
 def check_status():
     """
-    Memeriksa status perangkat dalam database secara paralel dan caching.
-    Mengembalikan status perangkat dalam format JSON untuk setiap perangkat.
+    Memeriksa status perangkat yang ada di halaman tertentu berdasarkan pagination dan search query.
     """
     try:
-        # Jika current_user memiliki peran "Admin", maka query akan mengambil semua data
-        # Jika bukan "Admin", query akan difilter berdasarkan ownership
+        # Ambil parameter page, per_page, dan search_query dari request JSON
+        page = int(request.json.get("page", 1))  # Default halaman 1
+        per_page = int(request.json.get("per_page", 10))  # Default 10 item per halaman
+        search_query = (
+            request.json.get("search_query", "").lower().strip()
+        )  # Default pencarian kosong
+
+        # Query perangkat sesuai dengan peran pengguna
         if current_user.has_role("Admin"):
             devices_query = DeviceManager.query
         else:
             devices_query = DeviceManager.query.filter_by(user_id=current_user.id)
 
-        devices = devices_query.all()
+        # Filter perangkat jika ada search query
+        if search_query:
+            devices_query = devices_query.filter(
+                DeviceManager.device_name.ilike(f"%{search_query}%")
+                | DeviceManager.ip_address.ilike(f"%{search_query}%")
+                | DeviceManager.vendor.ilike(f"%{search_query}%")
+            )
 
-        # Batasi jumlah thread
-        MAX_THREADS = 10
+        # Pagination untuk devices
+        devices = devices_query.limit(per_page).offset((page - 1) * per_page).all()
+
         device_status = {}
 
+        # Fungsi pengecekan status perangkat
         def check_device_status(device):
-            """
-            Fungsi untuk mengecek status perangkat menggunakan ConfigurationManagerUtils
-            """
             cached_status = get_cached_device_status(device.id)
             if cached_status:
                 logging.info(f"Using cached status for device {device.device_name}")
                 return device.id, cached_status
 
-            # Jika tidak ada dalam cache, lakukan pengecekan status
             utils = ConfigurationManagerUtils(ip_address=device.ip_address)
-            status_json = (
-                utils.check_device_status_threaded()
-            )  # Memeriksa status perangkat
+            status_json = utils.check_device_status()
             status_dict = json.loads(status_json)
 
             # Cache hasil status
@@ -259,7 +266,7 @@ def check_status():
             return device.id, status_dict["status"]
 
         # Gunakan ThreadPoolExecutor untuk melakukan pengecekan status secara paralel
-        with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+        with ThreadPoolExecutor(max_workers=10) as executor:
             futures = {
                 executor.submit(check_device_status, device): device
                 for device in devices
