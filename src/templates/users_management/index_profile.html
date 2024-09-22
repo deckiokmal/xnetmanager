@@ -1,127 +1,171 @@
 {% extends "/layouts/layout.html" %}
-{% block title %}My Profile{% endblock %}
+
+{% block title %}My Account{% endblock %}
+
 {% block content %}
+<div class="align-items-center row">
+        <div class="col-xl-12 col-lg-12 col-md-12 col-12">
+                <!-- Background banner section -->
+                <div class="profile-background pt-20 rounded-top"></div>
 
-<div class="container mb-3">
-        <div class="row">
-                <div class="col-md-3 col-12 profile-menu mb-2 text-center">
-                        <!-- Profile Picture Section -->
-                        <div class="text-center position-relative mb-1">
-                                <img src="{{ url_for('static', filename=current_user.profile_picture) if current_user.profile_picture else 'https://via.placeholder.com/100' }}"
-                                        alt="Profile Picture" class="img-fluid rounded-circle mb-3"
-                                        style="width: 100px; height: 100px; object-fit: cover;">
+                <!-- Profile card section -->
+                <div class="bg-white rounded-bottom smooth-shadow-sm position-relative" style="z-index: 1;">
+                        <div class="d-flex align-items-center justify-content-between pt-4 pb-6 px-4">
+                                <!-- Profile picture and information -->
+                                <div class="d-flex align-items-center position-relative">
+                                        <div class="avatar-xxl me-2 position-relative d-flex justify-content-end align-items-end mt-n10"
+                                                style="z-index: 2;">
+                                                <img src="{{ url_for('static', filename=current_user.profile_picture) if current_user.profile_picture else 'https://via.placeholder.com/100' }}"
+                                                        alt="Profile Picture" class="img-fluid rounded-circle mb-3"
+                                                        style="width: 80px; height: 80px; object-fit: cover;">
 
-                                <!-- Button to open the modal upload profile pictures -->
-                                <button type="button"
-                                        class="btn btn-light position-absolute top-0 end-0 mt-2 me-2 rounded-circle"
-                                        data-bs-toggle="modal" data-bs-target="#updateProfilePictureModal">
-                                        <i class="fa-solid fa-pencil-alt"></i>
-                                </button>
+                                                <!-- Edit profile picture button -->
+                                                <button type="button"
+                                                        class="btn btn-light btn-profile-edit position-absolute"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#updateProfilePictureModal">
+                                                        <i class="fa-solid fa-pencil-alt"></i>
+                                                </button>
+
+                                        </div>
+
+                                        <!-- User name and username -->
+                                        <div class="lh-1 ms-3">
+                                                <h2 class="mb-0 text-black">{{ user.first_name }} {{ user.last_name }}
+                                                </h2>
+                                                <p class="mb-0 text-black">{{ user.email }}</p>
+                                        </div>
+                                </div>
+
+                                <!-- Edit profile button -->
+                                <div>
+                                        <a class="btn btn-outline-primary d-none d-md-block"
+                                                href="{{ url_for('profile.update_profile') }}">
+                                                Edit Profile
+                                        </a>
+                                </div>
                         </div>
-                        <button class="btn btn-github btn-block btn-dark mb-3">
-                                <i class="fa-brands fa-square-github"></i>
-                                Connect to Github
-                        </button>
-                        <p>Profile Menu</p>
-                        <!-- button edit profile -->
-                        <a href="{{ url_for('profile.update_profile') }}" class="btn btn-outline-success">
-                                <i class="fas fa-edit"></i>
-                        </a>
-                        <!-- button change password -->
-                        <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal"
-                                data-bs-target="#changePasswordModal">
-                                <i class="fas fa-key"></i>
-                        </button>
-                        <!-- Button untuk membuka modal verifikasi email -->
-                        <a href="#" class="btn btn-outline-info" data-toggle="modal"
-                                data-target="#emailVerificationModal">
-                                <i class="fas fa-envelope"></i>
-                        </a>
-                        <!-- modal button mengaktifkan/nonaktif 2fa -->
-                        <a href="#" class="btn btn-outline-primary" data-bs-toggle="modal"
-                                data-bs-target="#enable2FAModal">
-                                <i class="fas fa-shield-alt"></i>
-                        </a>
-                </div>
 
-                <div class="col-md-9 col-12 profile-card text-light">
-                        <form>
-                                <h3 class="my-3">My Profile</h3>
-                                <div class="row mb-3">
-                                        <div class="col-md-6">
-                                                <div class="card text-light">
-                                                        <div class="card-header">
-                                                                My Account
-                                                        </div>
-                                                        <div class="card-body">
-                                                                <blockquote class="blockquote mb-0">
-                                                                        <p>{{ user.first_name }} {{ user.last_name }}
-                                                                        </p>
-                                                                        <footer class="blockquote-footer">
-                                                                                <cite title="Source Title">{{ user.email
-                                                                                        }}</cite>
-                                                                        </footer>
-                                                                </blockquote>
-                                                        </div>
-                                                </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                                <div class="card text-light">
-                                                        <div class="card-header">
-                                                                Company
-                                                        </div>
-                                                        <div class="card-body">
-                                                                <blockquote class="blockquote mb-0">
-                                                                        <p>{{ user.company }}</p>
-                                                                        <footer class="blockquote-footer">Area:
-                                                                                <cite title="Source Title">{{ user.city
-                                                                                        }}</cite>
-                                                                        </footer>
-                                                                </blockquote>
-                                                        </div>
-                                                </div>
-                                        </div>
-                                </div>
-                                <div class="row mb-3">
-                                        <div class="col-md-6">
-                                                <div class="card text-light">
-                                                        <div class="card-header">
-                                                                Join date
-                                                        </div>
-                                                        <div class="card-body">
-                                                                <blockquote class="blockquote mb-0">
-                                                                        <p></p>
-                                                                        <footer class="blockquote-footer">{{
-                                                                                user.date_joined }}
-                                                                                <cite title="Source Title">.</cite>
-                                                                        </footer>
-                                                                </blockquote>
-                                                        </div>
-                                                </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                                <div class="card text-light">
-                                                        <div class="card-header">
-                                                                Title
-                                                        </div>
-                                                        <div class="card-body">
-                                                                <blockquote class="blockquote mb-0">
-                                                                        <p>{{ user.title }}</p>
-                                                                        <footer class="blockquote-footer">Divisi:
-                                                                                <cite title="Source Title">{{
-                                                                                        user.division }}</cite>
-                                                                        </footer>
-                                                                </blockquote>
-                                                        </div>
-                                                </div>
-                                        </div>
-                                </div>
-                        </form>
+                        <!-- Navigation tabs -->
+                        <ul class="nav nav-lt-tab px-4 py-2" id="pills-tab" role="tablist">
+                                <li class="nav-item">
+                                        <button type="button" class="btn" data-bs-toggle="modal"
+                                                data-bs-target="#changePasswordModal">
+                                                <i class="fas fa-key"></i> Change password
+                                        </button>
+                                </li>
+                                <li class="nav-item">
+                                        <a href="#" class="btn" data-toggle="modal"
+                                                data-target="#emailVerificationModal">
+                                                <i class="fas fa-envelope"></i> Mail Verified
+                                        </a>
+                                </li>
+                                <li class="nav-item">
+                                        <a href="#" class="btn" data-bs-toggle="modal" data-bs-target="#enable2FAModal">
+                                                <i class="fas fa-shield-alt"></i> 2FA Active
+                                        </a>
+                                </li>
+                        </ul>
                 </div>
         </div>
 </div>
 
+<div class="py-6 mt-4">
+        <div class="row">
+                <div class="mb-6 col-xl-6 col-lg-12 col-md-12 col-12 mb-3">
+                        <div class="card smooth-shadow-sm">
+                                <div class="card-body">
+                                        <h4 class="card-title">
+                                                About Me
+                                        </h4>
+                                        <span class="text-uppercase fw-medium text-dark fs-5 ls-2">
+                                                BIO
+                                        </span>
+                                        <p class="mt-2 mb-6">
+                                                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspen disse
+                                                var ius enim in eros elementum tristique. Duis cursus, mi quis viverra
+                                                ornare, eros dolor interdum nulla, ut commodo diam libero vitae erat.
+                                        </p>
+                                        <div class="row">
+                                                <div class="mb-5 col-12">
+                                                        <h6 class="text-uppercase fs-5 ls-2">Position</h6>
+                                                        <p class="mb-0">{{ user.title }}</p>
+                                                </div>
+                                                <div class="mb-5 col-6">
+                                                        <h6 class="text-uppercase fs-5 ls-2">Phone</h6>
+                                                        <p class="mb-0">{{ user.phone_number }}</p>
+                                                </div>
+                                                <div class="mb-5 col-6">
+                                                        <h6 class="text-uppercase fs-5 ls-2">Email</h6>
+                                                        <p class="mb-0">{{ user.email }}</p>
+                                                </div>
+                                                <div class="col-6">
+                                                        <h6 class="text-uppercase fs-5 ls-2">Company</h6>
+                                                        <p class="mb-0">{{ user.company }}</p>
+                                                </div>
+                                                <div class="col-6">
+                                                        <h6 class="text-uppercase fs-5 ls-2">Date Joined</h6>
+                                                        <p class="mb-0">{{ user.date_joined }}</p>
+                                                </div>
+                                        </div>
+                                </div>
+                        </div>
+                </div>
+                <div class="mb-6 col-xl-6 col-lg-12 col-md-12 col-12 mb-3">
+                        <div class="card smooth-shadow-sm">
+                                <div class="card-body">
+                                        <h4 class="card-title">
+                                                Activity Feed
+                                        </h4>
+                                        <div class="d-flex mb-5">
+                                                <div>
+                                                        <img src="{{ url_for('static', filename=current_user.profile_picture) if current_user.profile_picture else 'https://via.placeholder.com/100' }}"
+                                                                alt="Profile Picture" class="rounded-circle avatar-md">
+                                                </div>
+                                                <div class="ms-3">
+                                                        <h5 class="mb-1">{{ user.first_name }} {{ user.last_name }}</h5>
+                                                        <p class="text-muted mb-2">Just create a new Project in
+                                                                Dashui...</p>
+                                                        <p class="fs-5 mb-0">2m ago</p>
+                                                </div>
 
+                                        </div>
+                                        <div class="d-flex mb-5">
+                                                <div>
+                                                        <img src="{{ url_for('static', filename=current_user.profile_picture) if current_user.profile_picture else 'https://via.placeholder.com/100' }}"
+                                                                alt="Profile Picture" class="rounded-circle avatar-md">
+                                                </div>
+                                                <div class="ms-3 ">
+                                                        <h5 class="mb-1">Irene Hargrove</h5>
+                                                        <p class="text-muted mb-2">
+                                                                Comment on Bootstrap Tutorial Says Hi, I m
+                                                                irene...
+                                                        </p>
+                                                        <p class="fs-5 mb-0">1hour ago</p>
+                                                </div>
+                                        </div>
+                                        <div class="d-flex">
+                                                <div>
+                                                        <img src="{{ url_for('static', filename=current_user.profile_picture) if current_user.profile_picture else 'https://via.placeholder.com/100' }}"
+                                                                alt="Profile Picture" class="rounded-circle avatar-md">
+                                                </div>
+                                                <div class="ms-3 ">
+                                                        <h5 class="mb-1">Trevor Bradley</h5>
+                                                        <p class="text-muted mb-2">
+                                                                Just share your article on Social Media..
+                                                        </p>
+                                                        <p class="mb-0 fs-5 text-muted">2month ago</p>
+                                                </div>
+                                        </div>
+                                </div>
+                        </div>
+                </div>
+        </div>
+</div>
+
+{% endblock %}
+
+{% block modal %}
 <!-- Modal Change Password -->
 <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel"
         aria-hidden="true">
@@ -248,5 +292,4 @@
                 </div>
         </div>
 </div>
-
 {% endblock %}
