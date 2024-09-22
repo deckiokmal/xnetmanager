@@ -184,7 +184,7 @@ class DeviceManager(db.Model):
 
     # Relasi ke User
     user_id = db.Column(
-        db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
+        db.String(36), db.ForeignKey("users.id"), nullable=True, index=True
     )
 
     # Relasi ke BackupData (one-to-many)
@@ -222,7 +222,7 @@ class ConfigurationManager(db.Model):
 
     # Relasi ke User
     user_id = db.Column(
-        db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
+        db.String(36), db.ForeignKey("users.id"), nullable=True, index=True
     )
 
     # Relasi ke UserConfigurationShare untuk sharing konfigurasi
@@ -239,7 +239,7 @@ class UserConfigurationShare(db.Model):
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(
-        db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
+        db.String(36), db.ForeignKey("users.id"), nullable=True, index=True
     )
     configuration_id = db.Column(
         db.String(36),
@@ -281,7 +281,7 @@ class BackupData(db.Model):
 
     # Foreign Key for User
     user_id = db.Column(
-        db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
+        db.String(36), db.ForeignKey("users.id"), nullable=True, index=True
     )
     user = db.relationship("User", back_populates="backups")
 
@@ -389,7 +389,7 @@ class UserBackupShare(db.Model):
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(
-        db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
+        db.String(36), db.ForeignKey("users.id"), nullable=True, index=True
     )
     backup_id = db.Column(
         db.String(36), db.ForeignKey("backup_data.id"), nullable=False, index=True
