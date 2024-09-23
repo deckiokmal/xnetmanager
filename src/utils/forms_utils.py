@@ -417,10 +417,6 @@ class ManualConfigurationForm(FlaskForm):
             Length(
                 min=1, max=100, message="Filename must be between 1 and 100 characters."
             ),
-            Regexp(
-                r"^[\w\-\.]+$",
-                message="Filename can only contain letters, numbers, underscores, dashes, and periods.",
-            ),
         ],
     )
     vendor = StringField(
@@ -431,10 +427,6 @@ class ManualConfigurationForm(FlaskForm):
                 min=1,
                 max=20,
                 message="Vendor name must be between 1 and 20 characters.",
-            ),
-            Regexp(
-                r"^[\w\-\.]+$",
-                message="Vendor name can only contain letters, numbers, underscores, dashes, and periods.",
             ),
         ],
     )
@@ -466,10 +458,6 @@ class AIConfigurationForm(FlaskForm):
             Length(
                 min=1, max=100, message="Filename must be between 1 and 100 characters."
             ),
-            Regexp(
-                r"^[\w\-\.]+$",
-                message="Filename can only contain letters, numbers, underscores, dashes, and periods.",
-            ),
         ],
     )
     vendor = StringField(
@@ -480,10 +468,6 @@ class AIConfigurationForm(FlaskForm):
                 min=1,
                 max=20,
                 message="Vendor name must be between 1 and 20 characters.",
-            ),
-            Regexp(
-                r"^[\w\-\.]+$",
-                message="Vendor name can only contain letters, numbers, underscores, dashes, and periods.",
             ),
         ],
     )
@@ -516,10 +500,6 @@ class UpdateConfigurationForm(FlaskForm):
                 min=1,
                 max=100,
                 message="Config name must be between 1 and 100 characters.",
-            ),
-            Regexp(
-                r"^[\w\-\.]+$",
-                message="Config name can only contain letters, numbers, underscores, dashes, and periods.",
             ),
         ],
     )

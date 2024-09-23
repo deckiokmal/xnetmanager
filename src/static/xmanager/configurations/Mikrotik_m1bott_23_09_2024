@@ -1,0 +1,5 @@
+/ip firewall mangle
+add action=mark-routing chain=prerouting dst-address=10.0.0.100 new-routing-mark=to_10.0.0.100 src-address=192.168.100.1
+
+/ip route
+add dst-address=10.0.0.100/32 gateway=<your-gateway-ip> routing-mark=to_10.0.0.100

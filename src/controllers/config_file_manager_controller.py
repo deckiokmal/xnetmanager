@@ -327,7 +327,7 @@ def create_configuration_with_ai_automated():
     else:
         errors = {field: error for field, error in formAIconfiguration.errors.items()}
         current_app.logger.warning(f"Form validation failed: {errors}")
-        return jsonify({"is_valid": False, "errors": errors}), 400
+        return jsonify({"is_valid": False, "error_message": errors}), 400
 
 
 @config_file_bp.route("/configuration-file/get-detail/<config_id>", methods=["GET"])
