@@ -1,0 +1,255 @@
+Berikut adalah sintaks konfigurasi yang tepat untuk IPsec Tunnel SDWAN pada Fortigate:
+
+### Konfigurasi Phase 1 Interface
+```plaintext
+config vpn ipsec phase1-interface
+    edit "Ov-MAIN"
+        set type dynamic
+        set interface "wan1"
+        set ike-version 2
+        set local-gw 172.16.0.1
+        set peertype any
+        set net-device disable
+        set mode-cfg enable
+        set proposal aes256-sha256
+        set add-route disable
+        set dpd on-idle
+        set dhgrp 14
+        set auto-discovery-sender enable
+        set network-overlay enable
+        set network-id 1
+        set ipv4-start-ip 169.251.100.2
+        set ipv4-end-ip 169.251.100.253
+        set ipv4-netmask 255.255.255.0
+        set psksecret S3cr3tKEY-SdWAn!23
+        set dpd-retryinterval 21
+    next
+    edit "Ov-BCKP"
+        set type dynamic
+        set interface "wan2"
+        set ike-version 2
+        set local-gw 123.231.0.1
+        set peertype any
+        set net-device disable
+        set mode-cfg enable
+        set proposal aes256-sha256
+        set add-route disable
+        set dpd on-idle
+        set dhgrp 14
+        set auto-discovery-sender enable
+        set network-overlay enable
+        set network-id 2
+        set ipv4-start-ip 169.251.200.2
+        set ipv4-end-ip 169.251.200.253
+        set ipv4-netmask 255.255.255.0
+        set psksecret S3cr3tKEY-SdWAn!23
+        set dpd-retryinterval 21
+    next
+end
+```
+
+### Konfigurasi Phase 2 Interface
+```plaintext
+config vpn ipsec phase2-interface
+    edit "Ov-MAIN"
+        set phase1name "Ov-MAIN"
+        set proposal aes256-sha256
+        set dhgrp 14
+        set keepalive enable
+    next
+    edit "Ov-BCKP"
+        set phase1name "Ov-BCKP"
+        set proposal aes256-sha256
+        set dhgrp 14
+        set keepalive enable
+    next
+end
+```
+
+### Konfigurasi Interface Tunnel untuk Menerima PING, SSH, dan HTTPS
+```plaintext
+config system interface
+    edit "Ov-MAIN"
+        set vdom "root"
+        set allowaccess ping ssh https
+        set type tunnel
+    next
+    edit "Ov-BCKP"
+        set vdom "root"
+        set allowaccess ping ssh https
+        set type tunnel
+    next
+end
+```
+
+### Konfigurasi SDWAN Interface
+```plaintext
+config system sdwan
+    set status enable
+    config zone
+        edit "DC"
+        next
+        edit "DR"
+        next
+    end
+    config members
+        edit 1
+            set interface "Ov-MAIN"
+            set zone "DC"
+        next
+        edit 2
+            set interface "Ov-BCKP"
+            set zone "DC"
+        next
+    end
+    config health-check
+        edit "INET_LA"
+            set server "8.8.8.8"
+            set update-static-route disable
+            set members 1 2
+            config sla
+                edit 1
+                    set latency-threshold 500
+                    set jitter-threshold 50
+                    set packetloss-threshold 5
+                next
+            end
+        next
+        edit "DC_SLA"
+            set server "1.1.1.1"
+            set update-static-route disable
+            set members 1 2
+            config sla
+                edit 1
+                    set latency-threshold 500
+                    set jitter-threshold 50
+                    set packetloss-threshold 5
+                next
+            end
+        next
+    end
+    config service
+        edit 1
+            set name "RULE_TO_DC"
+            set mode load-balance
+            set route-tag 65500100
+            set src "all"
+            config sla
+                edit "SLA_TO_DC"
+                    set id 1
+                next
+            end
+            set priority-members 1 2
+        next
+    end
+end
+```
+
+### Konfigurasi Firewall Policy
+```plaintext
+config firewall policy
+    edit 1
+        set name "DC-LAN"
+        set srcintf "lan1"
+        set dstintf "DC"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+    next
+    edit 2
+        set name "LAN-DC"
+        set srcintf "DC"
+        set dstintf "lan1"
+        set action accept
+        set srcaddr "all"
+        set dstaddr "all"
+        set schedule "always"
+        set service "ALL"
+    next
+end
+```
+
+### Konfigurasi Routing BGP
+```plaintext
+config router bgp
+    set as 65500
+    set router-id 192.168.19.253
+    set ibgp-multipath enable
+    config neighbor
+        edit "169.251.100.1"
+            set remote-as 65500
+            set route-map-in "IN-FROM-HUB"
+            set route-map-out "OUT-TO-HUB"
+            set connect-timer 1
+        next
+        edit "169.251.200.1"
+            set remote-as 65500
+            set route-map-in "IN-FROM-HUB"
+            set route-map-out "OUT-TO-HUB"
+            set connect-timer 1
+        next
+    end
+    config network
+        edit 1
+            set prefix 192.168.10.0 255.255.255.0
+        next
+    end
+end
+```
+
+### Konfigurasi Prefix List
+```plaintext
+config router prefix-list
+    edit "LAN-SPOKE"
+        config rule
+            edit 1
+                set prefix 192.168.10.0/24
+                unset ge
+                unset le
+            next
+        end
+    next
+end
+```
+
+### Konfigurasi Community List
+```plaintext
+config router community-list
+    edit "65500:100"
+        config rule
+            edit 1
+                set action permit
+                set match "65500:100"
+            next
+        end
+    next
+end
+```
+
+### Konfigurasi Route Map
+```plaintext
+config router route-map
+    edit "IN-FROM-HUB"
+        config rule
+            edit 1
+                set match-community "65500:100"
+                set set-route-tag 65500100
+            next
+        end
+    next
+end
+
+config router route-map
+    edit "OUT-TO-HUB"
+        config rule
+            edit 1
+            edit 10
+                set match-ip-address "LAN-SPOKE"
+                set set-community "65500:111"
+            next
+        end
+    next
+end
+```

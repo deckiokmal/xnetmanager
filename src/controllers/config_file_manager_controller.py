@@ -586,7 +586,9 @@ def ask_talita():
         context = (
             f"Berikan hanya sintaks konfigurasi yang tepat untuk {vendor}.\n"
             f"Hanya sertakan perintah konfigurasi yang spesifik untuk vendor {vendor}.\n"
-            f"Jika permintaan tidak dapat dipenuhi, respons harus dimulai dengan 'Gagal'.\n"
+            f"Hasil response hanya berupa plaintext tanpa adanya text formatting.\n"
+            f"Jawaban harus sesuai context yang telah diberikan. Jika context tidak tersedia jawab dengan 'Gagal'.\n"
+            f"Jika 'Gagal' jelaskan penyebabnya.\n"
             f"Pertanyaan: {question}\n"
         )
 
@@ -612,7 +614,7 @@ def ask_talita():
                     ),
                     400,
                 )
-            elif response.startswith("Gagal"):
+            elif response.startswith.lower("gagal"):
                 return jsonify({"is_valid": False, "error_message": response}), 400
 
             gen_filename = generate_random_filename(config_name)

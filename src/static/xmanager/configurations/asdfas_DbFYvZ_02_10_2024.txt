@@ -1,0 +1,111 @@
+Apakah yang Anda maksud adalah Anda mengalami kegagalan dalam konfigurasi atau implementasi Secure SDWAN+ dengan Fortigate? Jika demikian, ada beberapa langkah yang bisa Anda periksa ulang berdasarkan konteks yang diberikan:
+
+1. **Konfigurasi Firewall Policy:**
+   Pastikan kebijakan firewall sudah diatur dengan benar untuk memungkinkan lalu lintas VPN dari HUB ke LAN SPOKE dan sebaliknya:
+   ```plaintext
+   config firewall policy
+       edit 1
+           set name "DC-LAN"
+           set srcintf "lan1"
+           set dstintf "DC"
+           set action accept
+           set srcaddr "all"
+           set dstaddr "all"
+           set schedule "always"
+           set service "ALL"
+       next
+       edit 2
+           set name "LAN-DC"
+           set srcintf "DC"
+           set dstintf "lan1"
+           set action accept
+           set srcaddr "all"
+           set dstaddr "all"
+           set schedule "always"
+           set service "ALL"
+       next
+   end
+   ```
+
+2. **Konfigurasi BGP:**
+   Periksa konfigurasi BGP Anda, pastikan bahwa route-map dan prefix-list sudah diatur dengan benar:
+   ```plaintext
+   config router bgp
+       set as 65500
+       set router-id 192.168.19.253
+       set ibgp-multipath enable
+       config neighbor
+           edit "169.251.100.1"
+               set remote-as 65500
+               set route-map-in "IN-FROM-HUB"
+               set route-map-out "OUT-TO-HUB"
+               set connect-timer 1
+           next
+           edit "169.251.200.1"
+               set remote-as 65500
+               set route-map-in "IN-FROM-HUB"
+               set route-map-out "OUT-TO-HUB"
+               set connect-timer 1
+           next
+       end
+       config network
+           edit 1
+               set prefix 192.168.10.0 255.255.255.0
+           next
+       end
+   end
+   ```
+
+3. **Prefix List dan Community List:**
+   Pastikan bahwa prefix list dan community list sudah sesuai dengan kebutuhan:
+   ```plaintext
+   config router prefix-list
+       edit "LAN-SPOKE"
+           config rule
+               edit 1
+                   set prefix 192.168.10.0/24
+                   unset ge
+                   unset le
+           next
+       end
+   end
+
+   config router community-list
+       edit "65500:100"
+           config rule
+               edit 1
+                   set action permit
+                   set match "65500:100"
+           next
+       end
+   end
+   ```
+
+4. **Route-Map:**
+   Pastikan route-map sudah diterapkan dengan benar:
+   ```plaintext
+   config router route-map
+       edit "IN-FROM-HUB"
+           config rule
+               edit 1
+                   set match-community "65500:100"
+                   set set-route-tag 65500100
+           next
+       end
+   end
+
+   config router route-map
+       edit "OUT-TO-HUB"
+           config rule
+               edit 10
+                   set match-ip-address "LAN-SPOKE"
+                   set set-community "65500:111"
+           next
+       end
+   end
+   ```
+
+5. **Periksa Koneksi Fisik dan IP:**
+   Pastikan koneksi fisik dan konfigurasi IP dari LAN SPOKE, IP TUNNEL HUB MAIN, dan IP TUNNEL HUB BACKUP sudah benar dan berfungsi sesuai dengan topologi yang direncanakan.
+
+Jika semua langkah di atas sudah benar dan Anda masih menghadapi masalah, bisa jadi ada isu lain yang lebih spesifik yang memerlukan pengecekan lebih lanjut atau bantuan dari tim teknis Fortigate.

@@ -1,0 +1,44 @@
+config vpn ipsec phase1-interface
+    edit "VpnPhase1"
+        set interface "wan1"
+        set keylife 28800
+        set peertype any
+        set proposal aes256-sha1
+        set dhgrp 5
+        set remote-gw 192.0.2.1
+        set psksecret "yourpsksecret"
+next
+end
+
+config vpn ipsec phase2-interface
+    edit "VpnPhase2"
+        set phase1name "VpnPhase1"
+        set proposal aes256-sha1
+        set pfs disable
+        set keepalive enable
+        set keylifeseconds 3600
+        set src-subnet 10.0.0.0/24
+        set dst-subnet 192.168.0.0/24
+next
+end
+
+config system interface
+    edit "vpn0"
+        set vdom "root"
+        set type tunnel
+        set ip 10.200.200.1 255.255.255.252
+        set allowaccess ping ssh http https
+        set tcp-mss 1372
+        set interface "wan1"
+        set vpn-ipsec-phase1 "VpnPhase1"
+        set vpn-ipsec-phase2 "VpnPhase2"
+next
+end
+
+config router static
+    edit 1
+        set dst 192.168.0.0/24
+        set device "vpn0"
+        set gateway 10.200.200.2
+next
+end
