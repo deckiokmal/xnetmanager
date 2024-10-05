@@ -1,0 +1,7 @@
+set profiles url-filtering "Block-YouTube" block-list [ "youtube.com" "www.youtube.com" ]
+set rulebase security rules "Block-YouTube" profile-setting profiles url-filtering "Block-YouTube"
+set rulebase security rules "Block-YouTube" match source-address any
+set rulebase security rules "Block-YouTube" match destination-address any
+set rulebase security rules "Block-YouTube" match application any
+set rulebase security rules "Block-YouTube" match service any
+set rulebase security rules "Block-YouTube" action deny
