@@ -128,6 +128,7 @@ def create_app(config_class=None):
     from .controllers.backup_controller import backup_bp
     from .controllers.ai_chatbot_controller import chatbot_bp
     from .controllers.config_file_manager_controller import config_file_bp
+    from .controllers.restfull_api_controller import restapi_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(users_bp)
@@ -140,6 +141,7 @@ def create_app(config_class=None):
     app.register_blueprint(backup_bp)
     app.register_blueprint(chatbot_bp)
     app.register_blueprint(config_file_bp)
+    app.register_blueprint(restapi_bp)
 
     # Set up user loader
     from .models.app_models import User

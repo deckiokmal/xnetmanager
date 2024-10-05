@@ -149,7 +149,6 @@ def index():
         devices = devices_query.limit(per_page).offset(offset).all()
         pagination = Pagination(page=page, per_page=per_page, total=total_devices)
 
-
         return render_template(
             "/device_managers/index.html",
             form=form,
@@ -401,77 +400,3 @@ def delete_device(device_id):
 
     # Redirect to the device management index page after deletion
     return redirect(url_for("dm.index"))
-
-
-# -----------------------------------------------------------
-# API Devices Section
-# -----------------------------------------------------------
-
-
-@dm_bp.route("/api/get-devices", methods=["GET"])
-@login_required
-@required_2fa
-@role_required(
-    roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
-)
-def get_devices():
-    """Mendapatkan data semua perangkat dalam format JSON yang dimiliki oleh pengguna saat ini"""
-    devices = DeviceManager.query.filter(DeviceManager.user_id == current_user.id).all()
-
-    device_list = [
-        {
-            "id": device.id,
-            "device_name": device.device_name,
-            "vendor": device.vendor,
-            "ip_address": device.ip_address,
-            "username": device.username,
-            "password": device.password,
-            "ssh": device.ssh,
-            "description": device.description,
-            "user_id": device.user_id,
-        }
-        for device in devices
-    ]
-
-    current_app.logger.info(f"User {current_user.email} retrieved their devices data.")
-    return jsonify({"devices": device_list})
-
-
-@dm_bp.route("/api/get-device-data/<device_id>")
-@login_required
-@required_2fa
-@role_required(
-    roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
-)
-def get_device_data(device_id):
-    """Mendapatkan data perangkat berdasarkan ID dalam format JSON jika perangkat tersebut dimiliki oleh pengguna saat ini"""
-    try:
-        device = DeviceManager.query.get_or_404(device_id)
-
-        # Ensure the current user is the owner of the device
-        if device.user_id != current_user.id:
-            current_app.logger.warning(
-                f"User {current_user.email} attempted to access a device they do not own."
-            )
-            return (
-                jsonify({"error": "You do not have permission to access this device."}),
-                403,
-            )
-
-        current_app.logger.info(
-            f"User {current_user.email} accessed data for device ID {device_id}"
-        )
-        return jsonify(
-            {
-                "ip_address": device.ip_address,
-                "username": device.username,
-                "password": device.password,
-                "ssh": device.ssh,
-                "device_name": device.device_name,
-                "vendor": device.vendor,
-                "description": device.description,
-            }
-        )
-    except Exception as e:
-        current_app.logger.error(f"Error retrieving device ID {device_id}: {str(e)}")
-        return jsonify({"error": "Data tidak ditemukan"}), 404
