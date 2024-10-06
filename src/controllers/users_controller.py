@@ -391,7 +391,9 @@ def update_user(user_id):
 
             # Update password if provided
             if form.password.data:
-                user.password_hash = bcrypt.generate_password_hash(form.password.data).decode("utf-8")
+                user.password_hash = bcrypt.generate_password_hash(
+                    form.password.data
+                ).decode("utf-8")
                 password_changed = True  # Mark that the password has been updated
                 current_app.logger.info(f"Password updated for user: {user.email}")
 
@@ -480,20 +482,3 @@ def delete_user(user_id):
         db.session.rollback()  # Rollback session untuk menjaga integritas data
 
     return redirect(url_for("users.index"))
-
-
-# --------------------------------------------------------------------------------
-# API Users Section
-# --------------------------------------------------------------------------------
-
-
-# api endpoint untuk memberikan seluruh data user
-@users_bp.route("/api/users", methods=["GET"])
-@login_required
-@required_2fa
-@role_required(roles=["Admin"], permissions=["Manage Roles"], page="API Users")
-def api_users():
-    users = User.query.all()  # Mengambil semua pengguna
-    users_list = [{"id": u.id, "name": u.email} for u in users]
-    current_app.logger.warning(f"User {current_user.email} access API Users data.")
-    return jsonify(users_list)
