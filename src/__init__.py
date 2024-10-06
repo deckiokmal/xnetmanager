@@ -15,6 +15,8 @@ from flask_mail import Mail
 from flask_talisman import Talisman
 import openai
 import os
+from flask_marshmallow import Marshmallow
+from flask_jwt_extended import JWTManager
 
 # Load .env file variable
 load_dotenv()
@@ -26,6 +28,8 @@ migrate = Migrate()
 login_manager = LoginManager()
 csrf = CSRFProtect()
 mail = Mail()
+ma = Marshmallow()
+jwt = JWTManager()
 
 # Global variable for UUID type
 UUID_TYPE = None
@@ -63,6 +67,9 @@ def create_app(config_class=None):
     talita_api_key = decouple_config("TALITA_API_KEY", default=None)
     talita_url = decouple_config("TALITA_URL", default=None)
 
+    # JWT Secret Key
+    jwt_secret_key = decouple_config("JWT_SECRET_KEY", default=None)
+
     # Pengecekan apakah variabel konfigurasi penting telah dimuat
     if not openai_api_key:
         raise ValueError("Missing required configuration: OPENAI_API_KEY")
@@ -78,6 +85,9 @@ def create_app(config_class=None):
     app.config["TALITA_API_KEY"] = talita_api_key
     app.config["TALITA_URL"] = talita_url
 
+    # set config for JWT Extended Library
+    app.config['JWT_SECRET_KEY'] = jwt_secret_key
+
     # Initialize extensions
     bcrypt.init_app(app)
     db.init_app(app)
@@ -85,6 +95,8 @@ def create_app(config_class=None):
     login_manager.init_app(app)
     csrf.init_app(app)
     mail.init_app(app)
+    ma.init_app(app)
+    jwt.init_app(app)
     talisman = Talisman(
         app,
         force_https=app.config["TALISMAN_FORCE_HTTPS"],
