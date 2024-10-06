@@ -86,7 +86,13 @@ def create_app(config_class=None):
     app.config["TALITA_URL"] = talita_url
 
     # set config for JWT Extended Library
-    app.config['JWT_SECRET_KEY'] = jwt_secret_key
+    app.config["JWT_SECRET_KEY"] = jwt_secret_key
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = (
+        False  # Token akses tidak pernah kedaluwarsa
+    )
+    app.config["JWT_REFRESH_TOKEN_EXPIRES"] = (
+        False  # Token refresh juga tidak pernah kedaluwarsa
+    )
 
     # Initialize extensions
     bcrypt.init_app(app)
