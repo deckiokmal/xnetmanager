@@ -19,10 +19,8 @@ from wtforms.validators import (
     Optional,
     IPAddress,
     Regexp,
-    URL,
 )
-from src.models.app_models import User, TemplateManager
-from src import ma
+from src.models.app_models import User
 
 
 class RegisterForm(FlaskForm):
@@ -569,38 +567,3 @@ class UpdateBackupForm(FlaskForm):
     tags = StringField(
         "Tags (comma-separated)", validators=[Optional()]
     )  # String field for tags
-
-
-#########################################################################
-# Form API Section with Flask-Marshmallow
-#########################################################################
-
-
-class UserSchema(ma.Schema):
-    class Meta:
-        fields = (
-            "id",
-            "first_name",
-            "last_name",
-            "email",
-            "password_hash",
-            "phone_number",
-            "profile_picture",
-            "company",
-            "title",
-            "city",
-            "division",
-            "is_active",
-            "is_verified",
-            "date_joined",
-            "last_login",
-            "time_zone",
-            "is_2fa_enabled",
-            "secret_token",
-            "email_verification_token",
-            "force_logout",
-        )
-
-
-user_schema = UserSchema()
-users_schema = UserSchema(many=True)
