@@ -129,7 +129,8 @@ class ConfigurationManagerUtils:
             stdout, stderr = await process.communicate()
             elapsed_time = time.time() - start_time
 
-            if "Reply from" in stdout.decode() or "reply from" in stdout.decode():
+            if ("Reply from" in stdout.decode() or "reply from" in stdout.decode() or 
+                "bytes from" in stdout.decode().lower()):
                 self.device_status = True
                 status_message = "Perangkat online"
                 status = "success"
