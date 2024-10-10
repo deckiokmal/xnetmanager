@@ -1,5 +1,5 @@
 from decouple import config as decouple_config
-from flask import Flask
+from flask import Flask, Response
 import logging
 from logging import StreamHandler
 from flask_wtf.csrf import CSRFProtect
@@ -129,6 +129,13 @@ def create_app(config_class=None):
 
     # Register context processor
     app.jinja_env.filters["mask_password"] = mask_password
+
+    # Middleware to modify the Server header
+    @app.after_request
+    def hide_server_header(response: Response):
+        # Change the Server header or remove it completely
+        response.headers["Server"] = "Hidden Server"
+        return response
 
     @app.context_processor
     def utility_processor():

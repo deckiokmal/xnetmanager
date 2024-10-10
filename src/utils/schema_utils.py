@@ -55,3 +55,19 @@ class DeviceSchema(ma.Schema):
 
 device_schema = DeviceSchema()
 devices_schema = DeviceSchema(many=True)
+
+
+class TemplateSchema(ma.Schema):
+    class Meta:
+        fields = (
+            "id",
+            "template_name",
+            "parameter_name",
+            "vendor",
+            "version",
+            "description",
+        )
+
+
+template_schema = TemplateSchema()
+templates_schema = TemplateSchema(many=True)

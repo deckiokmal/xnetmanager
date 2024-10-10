@@ -5,13 +5,15 @@ from flask import (
     request,
 )
 from src import db, bcrypt
-from src.models.app_models import DeviceManager, User, Role
+from src.models.app_models import DeviceManager, User, Role, TemplateManager
 import logging
 from src.utils.schema_utils import (
     user_schema,
     users_schema,
     device_schema,
     devices_schema,
+    template_schema,
+    templates_schema,
 )
 from flask_jwt_extended import jwt_required, create_access_token
 
@@ -242,3 +244,16 @@ def delete_device(device_id):
         return jsonify(message=f"Anda menghapus device {device}."), 202
     else:
         return jsonify(message=f"Device tidak ditemukan."), 404
+
+
+# -----------------------------------------------------------
+# API Template Management
+# -----------------------------------------------------------
+
+
+@restapi_bp.route("/api/get-templates", methods=["GET"])
+@jwt_required()
+def get_templates():
+    templates_list = TemplateManager.query.all()
+    result = templates_schema.dump(templates_list)
+    return jsonify(result)
