@@ -39,7 +39,7 @@ def generate_random_filename(vendor_name):
     """
     Menghasilkan nama file acak berdasarkan nama vendor dan tanggal.
     """
-    random_str = "".join(random.choices(string.ascii_letters + string.digits, k=6))
+    random_str = "".join(random.choices(string.ascii_letters + string.digits, k=3))
     date_str = datetime.now().strftime("%d_%m_%Y")
     filename = f"{vendor_name}_{random_str}_{date_str}"
     current_app.logger.info(f"Generated random filename: {filename}")

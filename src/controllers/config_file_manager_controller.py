@@ -273,11 +273,12 @@ def create_configuration_with_ai_automated():
     formAIconfiguration = AIConfigurationForm()
 
     if formAIconfiguration.validate_on_submit():
+        filename = formAIconfiguration.filename.data
         vendor = formAIconfiguration.vendor.data
         description = formAIconfiguration.description.data
         ask_configuration = formAIconfiguration.ask_configuration.data
 
-        gen_filename = generate_random_filename(vendor)
+        gen_filename = f"{filename}_{generate_random_filename(vendor)}"
         file_path = os.path.join(
             current_app.static_folder, CONFIG_DIRECTORY, gen_filename
         )
@@ -304,6 +305,7 @@ def create_configuration_with_ai_automated():
             db.session.add(new_configuration)
             db.session.commit()
 
+            flash("Create file konfigurasi berhasil!", "success")
             return (
                 jsonify(
                     {"is_valid": True, "redirect_url": url_for("config_file.index")}
@@ -485,6 +487,7 @@ def update_configuration(config_id):
                 f"Successfully updated config data in database for ID {config_id}"
             )
 
+            flash("Update file konfigurasi berhasil!", "success")
             return jsonify(
                 {"is_valid": True, "redirect_url": url_for("config_file.index")}
             )
@@ -545,6 +548,7 @@ def delete_configuration(config_id):
         db.session.delete(config)
         db.session.commit()
 
+        flash("Delete file konfigurasi berhasil!", "success")
         jsonify({"success": True, "redirect_url": url_for("config_file.index")})
         return redirect(url_for("config_file.index"))
 
@@ -583,6 +587,7 @@ def ask_talita():
         description = formTalita.description.data
         question = formTalita.question.data
 
+        # Membangun context untuk pertanyaan TALITA
         context = (
             f"Berikan hanya sintaks konfigurasi yang tepat untuk {vendor}.\n"
             f"Hanya sertakan perintah konfigurasi yang spesifik untuk vendor {vendor}.\n"
@@ -599,35 +604,43 @@ def ask_talita():
         )
 
         try:
-            response = talita_chat_completion(context, user_id)
+            # Memanggil fungsi talita_chat_completion yang sudah diperbaiki
+            response, status_code = talita_chat_completion(context, user_id)
 
-            if response is None:
+            if status_code != 200:
                 current_app.logger.warning(
-                    f"Failed to connect to Talita AI for user {current_user.email}"
+                    f"Failed to connect to Talita AI for user {current_user.email}: {response.get('message')}"
                 )
                 return (
                     jsonify(
                         {
                             "is_valid": False,
-                            "error_message": "Tidak dapat terhubung dengan TALITA. Coba lagi nanti.",
+                            "error_message": response.get(
+                                "message", "Unknown error occurred."
+                            ),
                         }
                     ),
-                    400,
+                    status_code,
                 )
-            elif response.startswith.lower("gagal"):
-                return jsonify({"is_valid": False, "error_message": response}), 400
 
+            talita_answer = response.get("message", "")
+
+            if talita_answer.lower().startswith("gagal"):
+                return jsonify({"is_valid": False, "error_message": talita_answer}), 400
+
+            # Membuat nama file untuk konfigurasi
             gen_filename = generate_random_filename(config_name)
             filename = f"{gen_filename}.txt"
             file_path = os.path.join(
                 current_app.static_folder, CONFIG_DIRECTORY, filename
             )
 
+            # Menyimpan jawaban TALITA ke dalam file
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
             with open(file_path, "w", encoding="utf-8") as file:
-                file.write(response)
+                file.write(talita_answer)
 
+            # Menyimpan konfigurasi ke database
             new_configuration = ConfigurationManager(
                 config_name=filename,
                 vendor=vendor,
@@ -661,6 +674,7 @@ def ask_talita():
             )
 
     else:
+        # Menyusun error dari form validasi
         errors = {field: error for field, error in formTalita.errors.items()}
         current_app.logger.warning(f"Form validation failed: {errors}")
         return jsonify({"is_valid": False, "errors": errors}), 400
