@@ -66,6 +66,9 @@ class TemplateSchema(ma.Schema):
             "vendor",
             "version",
             "description",
+            "template_content",
+            "parameter_content",
+            "created_by"
         )
 
 

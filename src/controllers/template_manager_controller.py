@@ -14,9 +14,7 @@ from src.models.app_models import TemplateManager, ConfigurationManager
 from src.utils.config_manager_utils import ConfigurationManagerUtils
 from src.utils.openai_utils import (
     validate_generated_template_with_openai,
-    create_configuration_with_openai,
 )
-from src.utils.talita_ai_utils import talita_chat_completion
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
@@ -29,10 +27,6 @@ from src.utils.forms_utils import (
     TemplateForm,
     TemplateUpdateForm,
     ManualTemplateForm,
-    ManualConfigurationForm,
-    AIConfigurationForm,
-    UpdateConfigurationForm,
-    TalitaQuestionForm,
 )
 
 # Blueprint untuk template manager
