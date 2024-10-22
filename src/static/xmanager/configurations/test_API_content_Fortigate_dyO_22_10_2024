@@ -1,0 +1,11 @@
+config firewall policy
+edit 0
+set srcintf "lan"
+set dstintf "wan1"
+set srcaddr "all"
+set dstaddr "all"
+set schedule "always"
+set service "HTTP"
+set action deny
+next
+end

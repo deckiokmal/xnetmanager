@@ -68,9 +68,27 @@ class TemplateSchema(ma.Schema):
             "description",
             "template_content",
             "parameter_content",
-            "created_by"
+            "created_by",
         )
 
 
 template_schema = TemplateSchema()
 templates_schema = TemplateSchema(many=True)
+
+
+class ConfigfileSchema(ma.Schema):
+    class Meta:
+        fields = (
+            "id",
+            "config_name",
+            "vendor",
+            "description",
+            "created_by",
+            "user_id",
+            "shared_with",
+            "config_content",
+        )
+
+
+configfile_schema = ConfigfileSchema()
+configfiles_schema = ConfigfileSchema(many=True)

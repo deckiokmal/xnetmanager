@@ -5,7 +5,13 @@ from flask import (
     request,
 )
 from src import db, bcrypt
-from src.models.app_models import DeviceManager, User, Role, TemplateManager, ConfigurationManager
+from src.models.app_models import (
+    DeviceManager,
+    User,
+    Role,
+    TemplateManager,
+    ConfigurationManager,
+)
 import logging
 from src.utils.schema_utils import (
     user_schema,
@@ -14,6 +20,8 @@ from src.utils.schema_utils import (
     devices_schema,
     template_schema,
     templates_schema,
+    configfile_schema,
+    configfiles_schema,
 )
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
 from datetime import datetime
@@ -1013,5 +1021,166 @@ def generate_template(template_id):
         )
         return (
             jsonify({"error": f"Gagal menyimpan konfigurasi atau template: {e}"}),
+            500,
+        )
+
+
+# -----------------------------------------------------------
+# API Configuration File Management
+# -----------------------------------------------------------
+
+
+@restapi_bp.route("/api/get-configfiles", methods=["GET"])
+@jwt_required()
+def get_configfiles():
+    configfiles_list = ConfigurationManager.query.all()
+    result = configfiles_schema.dump(configfiles_list)
+    return jsonify(result)
+
+
+@restapi_bp.route("/api/get-configfile/<config_id>", methods=["GET"])
+@jwt_required()
+def get_configfile(config_id):
+    try:
+        # Query the template from the database, or return 404 if not found
+        config = ConfigurationManager.query.filter_by(id=config_id).first_or_404()
+
+        # Read the template and parameter content from file
+        config_content = read_file(
+            os.path.join(
+                current_app.static_folder,
+                GEN_TEMPLATE_FOLDER,
+                config.config_name,
+            )
+        )
+
+        # Check if files exist
+        if config_content is None:
+            current_app.logger.error(
+                f"Config content not found for: {config.config_name}"
+            )
+            return jsonify({"error": "Config content tidak ditemukan."}), 500
+
+        # Add file content to the template object
+        config.config_content = config_content
+
+        # Serialize the template data using Marshmallow
+        result = configfile_schema.dump(config)
+
+        current_app.logger.info(f"Config details retrieved successfully: {config_id}")
+        return jsonify(result), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error retrieving config details: {e}")
+        return (
+            jsonify({"error": "Terjadi kesalahan saat mengambil detail config."}),
+            500,
+        )
+
+
+@restapi_bp.route("/api/create-manual-configfile", methods=["POST"])
+@jwt_required()
+def create_manual_configfile():
+    # Mengambil identitas pengguna dari JWT
+    user_identity = get_jwt_identity()
+
+    current_app.logger.info(f"Attempting API create configfile by {user_identity}")
+
+    try:
+        # Memeriksa apakah request menggunakan form data atau JSON
+        if request.is_json:
+            data = request.get_json()
+            config_name = data.get("config_name")
+            vendor = data.get("vendor")
+            description = data.get("description")
+            config_content = (
+                data.get("config_content", "")
+                .replace("\r\n", "\n")
+                .replace("\r", "\n")
+                .strip()
+            )
+        else:
+            if not all(
+                key in request.form
+                for key in [
+                    "config_name",
+                    "vendor",
+                    "description",
+                    "config_content",
+                ]
+            ):
+                return jsonify({"error": "Data yang diperlukan tidak lengkap."}), 400
+
+            config_name = request.form["config_name"]
+            vendor = request.form["vendor"]
+            description = request.form["description"]
+            config_content = (
+                request.form["config_content"]
+                .replace("\r\n", "\n")
+                .replace("\r", "\n")
+                .strip()
+            )
+
+        # Generate filenames for saving the content
+        gen_filename = generate_random_filename(vendor)
+        config_filename = f"{config_name}_{gen_filename}"
+
+        config_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, config_filename
+        )
+
+        config_validated = validate_generated_template_with_openai(
+            config=config_content, vendor=vendor
+        )
+
+        if config_validated.get("is_valid"):
+            os.makedirs(os.path.dirname(config_path), exist_ok=True)
+            # Simpan config content ke file
+            with open(config_path, "w", encoding="utf-8") as config_file:
+                config_file.write(config_content)
+            current_app.logger.info(
+                f"Successfully saved config content to file: {config_path}"
+            )
+
+            # Simpan template baru ke database
+            new_config = ConfigurationManager(
+                config_name=config_filename,
+                vendor=vendor,
+                description=description,
+                created_by=user_identity,
+                user_id=None,
+            )
+            db.session.add(new_config)
+            db.session.commit()
+
+            current_app.logger.info(
+                f"Successfully added new config by {user_identity} at {datetime.now().strftime('%d:%m:%Y %H:%M:%S')}"
+            )
+            return (
+                jsonify(
+                    {"message": "Config berhasil dibuat.", "config_id": new_config.id}
+                ),
+                201,
+            )
+        else:
+            return (
+                jsonify(
+                    {
+                        "is_valid": False,
+                        "error_message": config_validated.get("error_message"),
+                    }
+                ),
+                400,
+            )
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating config for user {user_identity}: {e}")
+        return (
+            jsonify(
+                {
+                    "error": "Terjadi kesalahan saat membuat configfile. Silakan coba lagi nanti."
+                }
+            ),
             500,
         )
