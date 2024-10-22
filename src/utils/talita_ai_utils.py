@@ -1,5 +1,5 @@
 import requests
-from flask import jsonify, current_app
+from flask import current_app
 
 
 def talita_chat_completion(question, user_id):
@@ -14,8 +14,8 @@ def talita_chat_completion(question, user_id):
     dict, int: Hasil dari TALITA jika permintaan berhasil, atau pesan error dalam format JSON jika gagal, beserta status kode.
     """
 
-    talita_api_key = current_app.config.get("TALITA_API_KEY")
-    talita_url = current_app.config.get("TALITA_URL")
+    talita_api_key = current_app.config["TALITA_API_KEY"]
+    talita_url = current_app.config["TALITA_URL"]
 
     # Header yang ingin ditambahkan
     headers = {
@@ -26,12 +26,12 @@ def talita_chat_completion(question, user_id):
     # Data yang akan dikirim dalam body request, dalam format JSON
     data = {
         "question": question,
-        "user_id": user_id,
+        "user_id": user_id
     }
 
     try:
         # Mengirimkan permintaan POST
-        response = requests.post(talita_url, headers=headers, json=data)
+        response = requests.post(talita_url, headers=headers, json=data, verify=False)
 
         # Mengecek status kode dari respon
         if response.status_code == 200:
@@ -73,8 +73,8 @@ def talita_chatbot(question, user_id):
     dict: Hasil dalam format JSON, termasuk 'success' sebagai boolean dan 'message' sebagai string.
     """
 
-    talita_api_key = current_app.config.get("TALITA_API_KEY")
-    talita_url = current_app.config.get("TALITA_URL")
+    talita_api_key = current_app.config["TALITA_API_KEY"]
+    talita_url = current_app.config["TALITA_URL"]
 
     # Header yang ingin ditambahkan
     headers = {
@@ -90,7 +90,7 @@ def talita_chatbot(question, user_id):
 
     try:
         # Mengirimkan permintaan POST
-        response = requests.post(talita_url, headers=headers, json=data)
+        response = requests.post(talita_url, headers=headers, json=data, verify=False)
 
         # Mengecek status kode dari respon
         if response.status_code == 200:
