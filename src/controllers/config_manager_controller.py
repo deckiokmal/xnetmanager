@@ -117,7 +117,7 @@ def generate_random_filename(filename):
 @login_required
 @required_2fa
 @role_required(
-    roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
+    roles=["Admin", "User"], permissions=["Config and Backup"], page="Config Management"
 )
 def index():
     """
@@ -217,7 +217,7 @@ def set_device_status_cache(device_id, status):
 @login_required
 @required_2fa
 @role_required(
-    roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
+    roles=["Admin", "User"], permissions=["Config and Backup"], page="Config Management"
 )
 def check_status():
     """
@@ -297,7 +297,7 @@ def check_status():
 @login_required
 @required_2fa
 @role_required(
-    roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
+    roles=["Admin", "User"], permissions=["Config and Backup"], page="Config Management"
 )
 def push_configs():
     """
@@ -426,7 +426,7 @@ def push_configs():
 @login_required
 @required_2fa
 @role_required(
-    roles=["Admin", "User"], permissions=["Manage Config"], page="Config Management"
+    roles=["Admin", "User"], permissions=["Config and Backup"], page="Config Management"
 )
 def push_config_single_device(device_id):
     """
