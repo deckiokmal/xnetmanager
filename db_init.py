@@ -19,7 +19,7 @@ def initialize():
                     "Manage Users",
                     "Manage Devices",
                     "Manage Templates",
-                    "Manage Config",
+                    "Manage Configuration File",
                     "View Devices",
                     "View Templates",
                     "Manage Profile",
@@ -28,7 +28,7 @@ def initialize():
                 "User": [
                     "Manage Devices",
                     "Manage Templates",
-                    "Manage Config",
+                    "Manage Configuration File",
                     "View Devices",
                     "View Templates",
                     "Manage Profile",
