@@ -112,25 +112,46 @@ PARAMS_EXTENSIONS = {"yml", "yaml"}
 
 @restapi_bp.route("/api/login", methods=["POST"])
 def login():
+    # Mendapatkan data login dari request
     if request.is_json:
-        email = request.json["email"]
-        password = request.json["password"]
+        email = request.json.get("email")
+        password = request.json.get("password")
     else:
-        email = request.form["email"]
-        password = request.form["password"]
+        email = request.form.get("email")
+        password = request.form.get("password")
 
+    # Mencari pengguna berdasarkan email
     user = User.query.filter_by(email=email).first()
-    user_id = user.id
+
+    # Validasi pengguna dan password
     if user and bcrypt.check_password_hash(user.password_hash, password):
+        # Mengumpulkan role dan permission dari user
+        user_roles = [role.name for role in user.roles]
+        user_permissions = set()
+
+        # Mengumpulkan permissions berdasarkan role yang dimiliki user
+        for role in user.roles:
+            user_permissions.update(permission.name for permission in role.permissions)
+
+        # Membuat token akses dengan additional_claims untuk role dan permission
+        additional_claims = {
+            "roles": user_roles,
+            "permissions": list(
+                user_permissions
+            ),  # Dikonversi ke list untuk JSON serialization
+        }
         access_token = create_access_token(
-            identity={"user_id": user_id, "email": user.email}
+            identity={"user_id": user.id, "email": user.email},
+            additional_claims=additional_claims,
         )
 
+        # Logging aktivitas login
         current_app.logger.info(
-            f"User {email} Login via API at {datetime.now().strftime("%d:%m:%Y")}"
+            f"User {email} Login via API at {datetime.now().strftime('%d:%m:%Y %H:%M:%S')}"
         )
         return jsonify(message="Login Sukses.", access_token=access_token)
     else:
+        # Respon jika login gagal
         return jsonify(message="Email atau Password salah."), 401
 
 
@@ -1589,5 +1610,3 @@ def delete_config(config_id):
 # -----------------------------------------------------------
 # API Push & Backup Configuration
 # -----------------------------------------------------------
-
-
