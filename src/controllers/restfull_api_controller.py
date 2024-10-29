@@ -23,7 +23,12 @@ from src.utils.schema_utils import (
     configfile_schema,
     configfiles_schema,
 )
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
+from flask_jwt_extended import (
+    jwt_required,
+    create_access_token,
+    get_jwt_identity,
+    get_jwt,
+)
 from datetime import datetime
 import random
 import string
@@ -31,7 +36,9 @@ from werkzeug.utils import secure_filename
 import os
 from src.utils.openai_utils import (
     validate_generated_template_with_openai,
+    create_configuration_with_openai,
 )
+from src.utils.talita_ai_utils import talita_chat_completion
 from src.utils.config_manager_utils import ConfigurationManagerUtils
 
 # Create blueprints for the device manager (restapi_bp) and error handling (error_bp)
@@ -113,8 +120,11 @@ def login():
         password = request.form["password"]
 
     user = User.query.filter_by(email=email).first()
+    user_id = user.id
     if user and bcrypt.check_password_hash(user.password_hash, password):
-        access_token = create_access_token(identity=email)
+        access_token = create_access_token(
+            identity={"user_id": user_id, "email": user.email}
+        )
 
         current_app.logger.info(
             f"User {email} Login via API at {datetime.now().strftime("%d:%m:%Y")}"
@@ -315,7 +325,9 @@ def get_device(device_id):
 @jwt_required()
 def create_device():
     # Mengambil identitas pengguna dari JWT
-    user_identity = get_jwt_identity()
+    jwt_data = get_jwt()
+    user_id = jwt_data.get("user_id")
+    user_identity = jwt_data.get("email")
 
     try:
         current_app.logger.info(f"Attempting API create device by {user_identity}")
@@ -375,6 +387,7 @@ def create_device():
             ssh=ssh,
             description=description,
             created_by=user_identity,
+            user_id=user_id,
         )
 
         db.session.add(new_device)
@@ -401,7 +414,9 @@ def create_device():
 @jwt_required()
 def update_device():
     # Mengambil identitas pengguna dari JWT
-    user_identity = get_jwt_identity()
+    jwt_data = get_jwt()
+    user_id = jwt_data.get("user_id")
+    user_identity = jwt_data.get("email")
 
     try:
         current_app.logger.info(f"Attempting API update device by {user_identity}")
@@ -1082,7 +1097,9 @@ def get_configfile(config_id):
 @jwt_required()
 def create_manual_configfile():
     # Mengambil identitas pengguna dari JWT
-    user_identity = get_jwt_identity()
+    jwt_data = get_jwt()
+    user_id = jwt_data.get("user_id")
+    user_identity = jwt_data.get("email")
 
     current_app.logger.info(f"Attempting API create configfile by {user_identity}")
 
@@ -1148,7 +1165,7 @@ def create_manual_configfile():
                 vendor=vendor,
                 description=description,
                 created_by=user_identity,
-                user_id=None,
+                user_id=user_id,
             )
             db.session.add(new_config)
             db.session.commit()
@@ -1184,3 +1201,393 @@ def create_manual_configfile():
             ),
             500,
         )
+
+
+@restapi_bp.route("/api/create-automate-configfile", methods=["POST"])
+@jwt_required()
+def create_automate_configfile():
+    # Mengambil identitas pengguna dari JWT
+    jwt_data = get_jwt()
+    user_id = jwt_data.get("user_id")
+    user_identity = jwt_data.get("email")
+
+    current_app.logger.info(
+        f"Attempting API create automate configfile by {user_identity}"
+    )
+
+    try:
+        # Mengambil data dari request JSON atau form
+        data = request.get_json() if request.is_json else request.form
+
+        # Validasi input
+        required_fields = ["config_name", "vendor", "description", "ask_configuration"]
+        missing_fields = [field for field in required_fields if field not in data]
+
+        if missing_fields:
+            current_app.logger.warning(f"Missing required fields: {missing_fields}")
+            return (
+                jsonify(
+                    {
+                        "is_valid": False,
+                        "error": f"Data yang diperlukan tidak lengkap: {', '.join(missing_fields)}",
+                    }
+                ),
+                400,
+            )
+
+        config_name = data.get("config_name")
+        vendor = data.get("vendor")
+        description = data.get("description")
+        ask_configuration = data.get("ask_configuration")
+
+        # Generate nama file
+        gen_filename = generate_random_filename(vendor)
+        config_filename = f"{config_name}_{gen_filename}"
+        config_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, config_filename
+        )
+
+        # Generate konfigurasi otomatis menggunakan OpenAI
+        configuration_content, error = create_configuration_with_openai(
+            question=ask_configuration, vendor=vendor
+        )
+        if error:
+            current_app.logger.error(f"AI configuration error: {error}")
+            return jsonify({"is_valid": False, "error": error}), 400
+
+        # Simpan konfigurasi ke file
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        with open(config_path, "w", encoding="utf-8") as configuration_file:
+            configuration_file.write(configuration_content)
+
+        # Simpan konfigurasi ke database
+        new_configuration = ConfigurationManager(
+            config_name=config_filename,
+            vendor=vendor,
+            description=description,
+            created_by=user_identity,
+            user_id=user_id,  # Disesuaikan jika ID pengguna relevan
+        )
+        db.session.add(new_configuration)
+        db.session.commit()
+
+        current_app.logger.info(
+            f"Successfully created AI-generated configuration by {user_identity}"
+        )
+        return (
+            jsonify(
+                {
+                    "is_valid": True,
+                    "message": "Konfigurasi berhasil dibuat dengan AI",
+                    "config_id": new_configuration.id,
+                    "configuration_content": configuration_content,
+                }
+            ),
+            201,
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating configuration file: {e}")
+        return (
+            jsonify(
+                {"is_valid": False, "error": "Failed to create configuration file."}
+            ),
+            500,
+        )
+
+
+@restapi_bp.route("/api/create-automate-configfile-talita", methods=["POST"])
+@jwt_required()
+def create_automate_configfile_talita():
+    # Mengambil identitas pengguna dari JWT
+    jwt_data = get_jwt()
+    user_id = jwt_data.get("user_id")
+    user_identity = jwt_data.get("email")
+
+    current_app.logger.info(
+        f"Attempting API create automate configfile with talita by {user_identity}"
+    )
+
+    try:
+        # Mengambil data dari request JSON atau form
+        data = request.get_json() if request.is_json else request.form
+
+        # Validasi input
+        required_fields = ["config_name", "vendor", "description", "ask_configuration"]
+        missing_fields = [field for field in required_fields if field not in data]
+
+        if missing_fields:
+            current_app.logger.warning(f"Missing required fields: {missing_fields}")
+            return (
+                jsonify(
+                    {
+                        "is_valid": False,
+                        "error": f"Data yang diperlukan tidak lengkap: {', '.join(missing_fields)}",
+                    }
+                ),
+                400,
+            )
+
+        # Ekstraksi data input
+        config_name = data.get("config_name")
+        vendor = data.get("vendor")
+        description = data.get("description")
+        ask_configuration = data.get("ask_configuration")
+
+        # Generate nama file
+        gen_filename = generate_random_filename(vendor)
+        config_filename = f"{config_name}_{gen_filename}"
+        config_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, config_filename
+        )
+
+        # Generate konfigurasi otomatis menggunakan Talita
+        context = (
+            f"Berikan hanya sintaks konfigurasi yang tepat untuk {vendor}.\n"
+            f"Hanya sertakan perintah konfigurasi yang spesifik untuk vendor {vendor}.\n"
+            f"Hasil response hanya berupa plaintext tanpa adanya text formatting.\n"
+            f"Jawaban harus sesuai context yang telah diberikan. Jika context tidak tersedia jawab dengan 'Gagal'.\n"
+            f"Jika 'Gagal' jelaskan penyebabnya.\n"
+            f"Pertanyaan: {ask_configuration}\n"
+        )
+
+        # Logging permintaan ke Talita
+        current_app.logger.info(f"User {user_identity} is asking TALITA a question.")
+
+        # Meminta Talita untuk menghasilkan konfigurasi
+        response, status_code = talita_chat_completion(context, str(user_id))
+        if status_code != 200:
+            current_app.logger.warning(
+                f"Failed to connect to Talita AI for user {user_identity}: {response.get('message')}"
+            )
+            return (
+                jsonify(
+                    {
+                        "is_valid": False,
+                        "error": response.get("message", "Unknown error occurred."),
+                    }
+                ),
+                status_code,
+            )
+
+        talita_answer = response.get("message", "")
+
+        # Cek jawaban dari Talita
+        if talita_answer.lower().startswith("gagal"):
+            return jsonify({"is_valid": False, "error": talita_answer}), 400
+
+        # Simpan konfigurasi ke file
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        with open(config_path, "w", encoding="utf-8") as configuration_file:
+            configuration_file.write(talita_answer)
+
+        # Simpan konfigurasi ke database
+        new_configuration = ConfigurationManager(
+            config_name=config_filename,
+            vendor=vendor,
+            description=description,
+            created_by=user_identity,
+            user_id=user_id,
+        )
+        db.session.add(new_configuration)
+        db.session.commit()
+
+        current_app.logger.info(
+            f"Successfully created AI-generated configuration by {user_identity}"
+        )
+        return (
+            jsonify(
+                {
+                    "is_valid": True,
+                    "message": "Konfigurasi berhasil dibuat dengan AI",
+                    "config_id": new_configuration.id,
+                    "configuration_content": talita_answer,
+                }
+            ),
+            201,
+        )
+
+    except Exception as e:
+        # Rollback jika terjadi error
+        db.session.rollback()
+        current_app.logger.error(f"Error creating configuration file: {e}")
+        return (
+            jsonify(
+                {"is_valid": False, "error": "Failed to create configuration file."}
+            ),
+            500,
+        )
+
+
+@restapi_bp.route("/api/update-configfile/<config_id>", methods=["PUT"])
+@jwt_required()
+def update_configfile(config_id):
+    """API Endpoint untuk memperbarui configfile berdasarkan ID, mendukung form data dan JSON."""
+
+    # Mengambil identitas pengguna dari JWT
+    jwt_data = get_jwt()
+    user_id = jwt_data.get("user_id")
+    user_identity = jwt_data.get("email")
+
+    try:
+        # Ambil konfigurasi berdasarkan ID atau kembalikan 404 jika tidak ada
+        config = ConfigurationManager.query.get_or_404(config_id)
+        current_app.logger.info(f"Accessed config update for config_id: {config_id}")
+
+        # Membaca konten konfigurasi file saat ini
+        config_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, config.config_name
+        )
+        config_content = read_file(config_path)
+
+        if config_content is None:
+            current_app.logger.error(f"Config content not found for ID {config_id}")
+            return (
+                jsonify({"is_valid": False, "error": "Gagal memuat konten config."}),
+                500,
+            )
+
+        # Menangani data JSON atau Form Data
+        data = request.get_json() if request.is_json else request.form
+
+        # Validasi input dan pengambilan data baru dari request
+        required_fields = ["config_name", "vendor", "description", "config_content"]
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            current_app.logger.warning(f"Missing fields: {missing_fields}")
+            return (
+                jsonify(
+                    {
+                        "is_valid": False,
+                        "error": f"Data yang diperlukan tidak lengkap: {', '.join(missing_fields)}",
+                    }
+                ),
+                400,
+            )
+
+        new_config_name = secure_filename(data.get("config_name", config.config_name))
+        new_vendor = data.get("vendor", config.vendor)
+        new_description = data.get("description", config.description)
+        new_config_content = (
+            data.get("config_content", config_content).replace("\r\n", "\n").strip()
+        )
+
+        # Cek keunikan nama file konfigurasi
+        existing_config = ConfigurationManager.query.filter(
+            ConfigurationManager.config_name == new_config_name,
+            ConfigurationManager.id != config.id,
+        ).first()
+        if existing_config:
+            current_app.logger.warning(
+                f"Config name '{new_config_name}' already exists."
+            )
+            return (
+                jsonify(
+                    {
+                        "is_valid": False,
+                        "error": f"Nama config '{new_config_name}' sudah ada.",
+                    }
+                ),
+                400,
+            )
+
+        # Perbarui konten file jika berubah
+        if new_config_content != config_content:
+            with open(config_path, "w", encoding="utf-8") as file:
+                file.write(new_config_content)
+            current_app.logger.info(f"Config content updated for ID {config_id}")
+
+        # Perbarui nama file jika berubah
+        if new_config_name != config.config_name:
+            new_path = os.path.join(
+                current_app.static_folder, GEN_TEMPLATE_FOLDER, new_config_name
+            )
+            os.rename(config_path, new_path)
+            config.config_name = new_config_name
+            current_app.logger.info(
+                f"Config filename changed from {config.config_name} to {new_config_name}"
+            )
+
+        # Perbarui field vendor dan description di database
+        config.vendor = new_vendor
+        config.description = new_description
+
+        # Commit perubahan ke database
+        db.session.commit()
+        current_app.logger.info(f"Config updated successfully for ID {config_id}")
+
+        # Return response sukses
+        return (
+            jsonify(
+                {"is_valid": True, "message": "Configuration File berhasil diperbarui."}
+            ),
+            200,
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating config for user {user_identity}: {e}")
+        return jsonify({"is_valid": False, "error": "Gagal memperbarui config."}), 500
+
+
+@restapi_bp.route("/api/delete-config/<config_id>", methods=["DELETE"])
+@jwt_required()
+def delete_config(config_id):
+    """API Endpoint untuk menghapus config berdasarkan ID."""
+
+    # Mengambil identitas pengguna dari JWT
+    jwt_data = get_jwt()
+    user_id = jwt_data.get("user_id")
+    user_identity = jwt_data.get("email")
+
+    try:
+        # Ambil config berdasarkan ID
+        config = ConfigurationManager.query.get_or_404(config_id)
+
+        # Tentukan path untuk file config
+        config_file_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, config.config_name
+        )
+
+        # Hapus file config jika ada
+        if os.path.exists(config_file_path):
+            os.remove(config_file_path)
+            current_app.logger.info(
+                f"config file deleted: {config_file_path} by {user_identity}"
+            )
+        else:
+            current_app.logger.warning(
+                f"config file not found for deletion: {config_file_path} by {user_identity}"
+            )
+
+        # Hapus config dari database
+        db.session.delete(config)
+        db.session.commit()
+        current_app.logger.info(
+            f"config with ID {config_id} successfully deleted by {user_identity}"
+        )
+
+        # Return response sukses
+        return jsonify({"message": "config berhasil dihapus."}), 200
+
+    except OSError as os_error:
+        current_app.logger.error(
+            f"OS error while deleting files for config ID {config_id}: {os_error} by {user_identity}"
+        )
+        db.session.rollback()
+        return jsonify({"error": "Terjadi kesalahan sistem saat menghapus file."}), 500
+
+    except Exception as e:
+        current_app.logger.error(
+            f"Unexpected error while deleting config ID {config_id}: {e} by {user_identity}"
+        )
+        db.session.rollback()
+        return jsonify({"error": "Gagal menghapus config. Silakan coba lagi."}), 500
+
+
+# -----------------------------------------------------------
+# API Push & Backup Configuration
+# -----------------------------------------------------------
+
+
