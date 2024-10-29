@@ -3,6 +3,7 @@ from flask import (
     jsonify,
     current_app,
     request,
+    copy_current_request_context,
 )
 from src import db, bcrypt
 from src.models.app_models import (
@@ -11,6 +12,7 @@ from src.models.app_models import (
     Role,
     TemplateManager,
     ConfigurationManager,
+    BackupData,
 )
 import logging
 from src.utils.schema_utils import (
@@ -40,6 +42,10 @@ from src.utils.openai_utils import (
 )
 from src.utils.talita_ai_utils import talita_chat_completion
 from src.utils.config_manager_utils import ConfigurationManagerUtils
+import time
+from .decorators import jwt_role_required
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import json
 
 # Create blueprints for the device manager (restapi_bp) and error handling (error_bp)
 restapi_bp = Blueprint("restapi", __name__)
@@ -1609,4 +1615,636 @@ def delete_config(config_id):
 
 # -----------------------------------------------------------
 # API Push & Backup Configuration
+# -----------------------------------------------------------
+
+
+# Cache status perangkat untuk menghindari pengecekan berulang
+STATUS_CACHE_TTL = 60  # seconds
+device_status_cache = {}
+
+
+# Fungsi caching sederhana
+def get_cached_device_status(device_id):
+    cached = device_status_cache.get(device_id)
+    if cached and (time.time() - cached["timestamp"]) < STATUS_CACHE_TTL:
+        return cached["status"]
+    return None
+
+
+def set_device_status_cache(device_id, status):
+    device_status_cache[device_id] = {"status": status, "timestamp": time.time()}
+
+
+@restapi_bp.route("/api/check_status", methods=["POST"])
+@jwt_required()
+@jwt_role_required(
+    roles=["Admin", "User"], permissions=["Config and Backup"], page="Config Management"
+)
+def check_status():
+    jwt_data = get_jwt()
+    roles = jwt_data.get("roles", [])
+    user_id = jwt_data.get("user_id")
+
+    try:
+        # Validasi parameter page dan per_page untuk memastikan integer positif
+        page = request.json.get("page", 1)
+        per_page = request.json.get("per_page", 10)
+        if not (isinstance(page, int) and page > 0) or not (
+            isinstance(per_page, int) and per_page > 0
+        ):
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": {
+                            "code": "INVALID_PAGINATION",
+                            "message": "Page and per_page must be positive integers.",
+                        },
+                    }
+                ),
+                400,
+            )
+
+        search_query = request.json.get("search_query", "").lower().strip()
+
+        if "Admin" in roles:
+            devices_query = DeviceManager.query
+        else:
+            devices_query = DeviceManager.query.filter_by(user_id=user_id)
+
+        # Filter perangkat jika ada search query
+        if search_query:
+            devices_query = devices_query.filter(
+                DeviceManager.device_name.ilike(f"%{search_query}%")
+                | DeviceManager.ip_address.ilike(f"%{search_query}%")
+                | DeviceManager.vendor.ilike(f"%{search_query}%")
+            )
+
+        # Pagination untuk devices
+        devices = devices_query.limit(per_page).offset((page - 1) * per_page).all()
+
+        # Menangani kondisi jika tidak ada perangkat yang ditemukan
+        if not devices:
+            return jsonify({"success": False, "message": "Device not found."}), 404
+
+        device_status = {}
+
+        # Fungsi pengecekan status perangkat
+        def check_device_status(device):
+            cached_status = get_cached_device_status(device.id)
+            if cached_status:
+                logging.info(f"Using cached status for device {device.device_name}")
+                return device.id, cached_status
+
+            utils = ConfigurationManagerUtils(ip_address=device.ip_address)
+            status_json = utils.check_device_status()
+            status_dict = json.loads(status_json)
+
+            # Cache hasil status
+            set_device_status_cache(device.id, status_dict["status"])
+            return device.id, status_dict["status"]
+
+        # Gunakan ThreadPoolExecutor untuk pengecekan paralel
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = {
+                executor.submit(check_device_status, device): device
+                for device in devices
+            }
+
+            for future in as_completed(futures):
+                device = futures[
+                    future
+                ]  # Ambil device dari futures untuk konteks error handling
+                try:
+                    device_id, status = future.result()
+                    device_status[device_id] = status
+                except Exception as e:
+                    logging.error(
+                        f"Error checking status for device {device.device_name}: {e}"
+                    )
+                    device_status[device.id] = "error"
+
+        return jsonify({"success": True, "data": device_status})
+
+    except Exception as e:
+        logging.error(f"Error checking device status: {str(e)}")
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "DEVICE_STATUS_ERROR",
+                        "message": "An error occurred while checking device status.",
+                    },
+                }
+            ),
+            500,
+        )
+
+
+from flask_jwt_extended import jwt_required, get_jwt
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+
+@restapi_bp.route("/api/push_configs", methods=["POST"])
+@jwt_required()
+@jwt_role_required(
+    roles=["Admin", "User"], permissions=["Config and Backup"], page="Config Push"
+)
+def push_configs():
+    """
+    Mengirimkan konfigurasi ke perangkat yang dipilih secara paralel.
+    Fitur: Memvalidasi input, membaca file konfigurasi, dan push konfigurasi ke beberapa perangkat.
+    """
+    data = request.get_json()
+    device_ips = data.get("devices", [])
+    config_id = data.get("config_id")
+
+    # Validasi input
+    if not device_ips:
+        return jsonify({"success": False, "message": "No devices selected."}), 400
+    if not config_id:
+        return jsonify({"success": False, "message": "No config selected."}), 400
+
+    # Ambil data JWT untuk peran dan ID pengguna
+    jwt_data = get_jwt()
+    roles = jwt_data.get("roles", [])
+    user_id = jwt_data.get("user_id")
+
+    # Query perangkat berdasarkan peran pengguna
+    if "Admin" in roles:
+        devices = DeviceManager.query.filter(
+            DeviceManager.ip_address.in_(device_ips)
+        ).all()
+    else:
+        devices = DeviceManager.query.filter(
+            DeviceManager.ip_address.in_(device_ips),
+            DeviceManager.user_id == user_id,
+        ).all()
+
+    # Jika tidak ada perangkat yang ditemukan
+    if not devices:
+        return (
+            jsonify(
+                {"success": False, "message": "No devices found for the provided IPs."}
+            ),
+            404,
+        )
+
+    # Query konfigurasi berdasarkan peran pengguna
+    if "Admin" in roles:
+        config = ConfigurationManager.query.filter_by(id=config_id).first()
+    else:
+        config = ConfigurationManager.query.filter_by(
+            id=config_id, user_id=user_id
+        ).first()
+
+    # Jika konfigurasi tidak ditemukan
+    if not config:
+        return jsonify({"success": False, "message": "Selected config not found."}), 404
+
+    # Membaca file konfigurasi
+    def read_config(filename):
+        config_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
+        )
+        try:
+            with open(config_path, "r") as file:
+                return file.read()
+        except FileNotFoundError:
+            logging.error("Config file not found: %s", config_path)
+            return None
+        except Exception as e:
+            logging.error("Error reading config file: %s", e)
+            return None
+
+    config_content = read_config(config.config_name)
+    if not config_content:
+        return jsonify({"success": False, "message": "Error reading config."}), 500
+
+    results = []
+    success = True
+
+    # Fungsi untuk mengkonfigurasi perangkat
+    def configure_device(device):
+        nonlocal success
+        try:
+            config_utils = ConfigurationManagerUtils(
+                ip_address=device.ip_address,
+                username=device.username,
+                password=device.password,
+                ssh=device.ssh,
+            )
+            response_json = config_utils.configure_device(config_content)
+            response_dict = json.loads(response_json)
+            message = response_dict.get("message", "Konfigurasi sukses")
+            status = response_dict.get("status", "success")
+            return {
+                "device_name": device.device_name,
+                "ip": device.ip_address,
+                "status": status,
+                "message": message,
+            }
+        except json.JSONDecodeError as e:
+            logging.error("Error decoding JSON response: %s", e)
+            return {
+                "device_name": device.device_name,
+                "ip": device.ip_address,
+                "status": "error",
+                "message": "Error decoding JSON response",
+            }
+        except Exception as e:
+            logging.error("Error configuring device %s: %s", device.ip_address, e)
+            return {
+                "device_name": device.device_name,
+                "ip": device.ip_address,
+                "status": "error",
+                "message": str(e),
+            }
+
+    # Push konfigurasi ke perangkat secara paralel menggunakan threading
+    max_threads = 10  # Jumlah maksimal thread yang digunakan
+    with ThreadPoolExecutor(max_threads) as executor:
+        futures = {
+            executor.submit(configure_device, device): device for device in devices
+        }
+        for future in as_completed(futures):
+            result = future.result()
+            results.append(result)
+            if result["status"] != "success":
+                success = False
+
+    return jsonify({"success": success, "results": results})
+
+
+@restapi_bp.route("/api/push_config/<device_id>", methods=["POST"])
+@jwt_required()
+@jwt_role_required(
+    roles=["Admin", "User"],
+    permissions=["Config and Backup"],
+    page="Config Push Single Device",
+)
+def push_config_single_device(device_id):
+    """
+    Mengirimkan konfigurasi ke satu perangkat yang dipilih berdasarkan device_id.
+    Fitur: Memvalidasi input, membaca file konfigurasi, dan push konfigurasi ke satu perangkat.
+    """
+    data = request.get_json()
+    config_id = data.get("config_id")
+
+    # Validasi input
+    if not config_id:
+        return jsonify({"success": False, "message": "No config selected."}), 400
+
+    # Ambil data JWT untuk peran dan ID pengguna
+    jwt_data = get_jwt()
+    roles = jwt_data.get("roles", [])
+    user_id = jwt_data.get("user_id")
+
+    # Query perangkat berdasarkan device_id dan peran user
+    if "Admin" in roles:
+        device = DeviceManager.query.filter_by(id=device_id).first()
+    else:
+        device = DeviceManager.query.filter_by(id=device_id, user_id=user_id).first()
+
+    # Jika perangkat tidak ditemukan
+    if not device:
+        return jsonify({"success": False, "message": "Device not found."}), 404
+
+    # Query konfigurasi berdasarkan peran user
+    if "Admin" in roles:
+        config = ConfigurationManager.query.filter_by(id=config_id).first()
+    else:
+        config = ConfigurationManager.query.filter_by(
+            id=config_id, user_id=user_id
+        ).first()
+
+    # Jika konfigurasi tidak ditemukan
+    if not config:
+        return jsonify({"success": False, "message": "Selected config not found."}), 404
+
+    # Membaca file konfigurasi
+    def read_config(filename):
+        config_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
+        )
+        try:
+            with open(config_path, "r") as file:
+                return file.read()
+        except FileNotFoundError:
+            logging.error("Config file not found: %s", config_path)
+            return None
+        except Exception as e:
+            logging.error("Error reading config file: %s", e)
+            return None
+
+    config_content = read_config(config.config_name)
+    if not config_content:
+        return jsonify({"success": False, "message": "Error reading config."}), 500
+
+    # Fungsi untuk mengkonfigurasi perangkat
+    def configure_device(device):
+        try:
+            config_utils = ConfigurationManagerUtils(
+                ip_address=device.ip_address,
+                username=device.username,
+                password=device.password,
+                ssh=device.ssh,
+            )
+            response_json = config_utils.configure_device(config_content)
+            response_dict = json.loads(response_json)
+            message = response_dict.get("message", "Konfigurasi sukses")
+            status = response_dict.get("status", "success")
+            return {
+                "device_name": device.device_name,
+                "ip": device.ip_address,
+                "status": status,
+                "message": message,
+            }
+        except json.JSONDecodeError as e:
+            logging.error("Error decoding JSON response: %s", e)
+            return {
+                "device_name": device.device_name,
+                "ip": device.ip_address,
+                "status": "error",
+                "message": "Error decoding JSON response",
+            }
+        except Exception as e:
+            logging.error("Error configuring device %s: %s", device.ip_address, e)
+            return {
+                "device_name": device.device_name,
+                "ip": device.ip_address,
+                "status": "error",
+                "message": str(e),
+            }
+
+    # Push konfigurasi ke perangkat
+    result = configure_device(device)
+    success = result["status"] == "success"
+
+    return jsonify({"success": success, "result": result}), 200 if success else 500
+
+
+@restapi_bp.route("/api/create_backup_multiple", methods=["POST"])
+@jwt_required()
+@jwt_role_required(
+    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
+)
+def create_backup_multiple():
+    """
+    Membuat backup pada beberapa perangkat yang dipilih.
+    Fitur: Validasi input, pengecekan vendor perangkat, dan backup konfigurasi perangkat secara paralel.
+    """
+    try:
+        data = request.get_json()
+        device_ips = data.get("devices", [])
+        backup_name = data.get("backup_name")
+        description = data.get("description", "")
+        backup_type = data.get("backup_type", "full").lower()  # Konversi ke huruf kecil
+        retention_days = data.get("retention_days")
+        command = data.get("command")
+
+        # Validasi backup_type
+        valid_backup_types = {"full", "incremental", "differential"}
+        if backup_type not in valid_backup_types:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": f"Invalid backup type provided. Supported types are: {', '.join(valid_backup_types)}",
+                    }
+                ),
+                400,
+            )
+
+        # Validasi input awal
+        if not device_ips:
+            return jsonify({"success": False, "message": "No devices selected."}), 400
+
+        # Mengambil data JWT untuk akses user_id
+        jwt_data = get_jwt()
+        user_id = jwt_data.get("user_id")
+
+        # Query perangkat berdasarkan IP yang diberikan
+        devices = DeviceManager.query.filter(
+            DeviceManager.ip_address.in_(device_ips)
+        ).all()
+
+        # Validasi perangkat
+        if not devices:
+            return jsonify({"success": False, "message": "No devices found."}), 404
+
+        # Pengecekan vendor perangkat harus seragam
+        vendors = {device.vendor for device in devices}
+        if len(vendors) > 1:
+            return (
+                jsonify(
+                    {"success": False, "message": "Devices must have the same vendor."}
+                ),
+                400,
+            )
+
+        results = []
+        success = True
+
+        # Fungsi untuk membuat backup perangkat
+        @copy_current_request_context
+        def backup_device(device):
+            nonlocal success
+            try:
+                with app.app_context():
+                    # Jika backup incremental atau differential dan tidak ada backup sebelumnya, gunakan full backup
+                    if backup_type in {"incremental", "differential"}:
+                        previous_backup = (
+                            BackupData.query.filter_by(
+                                device_id=device.id, backup_type=backup_type
+                            )
+                            .order_by(BackupData.timestamp.desc())
+                            .first()
+                        )
+                        if not previous_backup:
+                            logging.info(
+                                f"No previous backup found for device {device.device_name}. Performing full backup instead."
+                            )
+                            backup_type_for_device = "full"
+                        else:
+                            backup_type_for_device = backup_type
+                    else:
+                        backup_type_for_device = backup_type
+
+                    # Lakukan backup
+                    new_backup = BackupData.create_backup(
+                        backup_name=backup_name,
+                        description=description,
+                        user_id=user_id,
+                        device_id=device.id,
+                        backup_type=backup_type_for_device,
+                        retention_days=retention_days,
+                        command=command,
+                    )
+                    results.append(
+                        {
+                            "device_name": device.device_name,
+                            "ip": device.ip_address,
+                            "status": "success",
+                            "message": "Backup successful",
+                            "backup_id": new_backup.id,
+                        }
+                    )
+            except Exception as e:
+                current_app.logger.error(
+                    f"Error during backup for {device.ip_address}: {e}"
+                )
+                success = False
+                results.append(
+                    {
+                        "device_name": device.device_name,
+                        "ip": device.ip_address,
+                        "status": "error",
+                        "message": str(e),
+                    }
+                )
+
+        # Memulai proses backup secara paralel dengan konteks aplikasi di dalam thread
+        app = current_app._get_current_object()
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {
+                executor.submit(backup_device, device): device for device in devices
+            }
+            for future in as_completed(futures):
+                future.result()  # Memastikan semua futures selesai
+
+        return jsonify({"success": success, "results": results}), (
+            200 if success else 500
+        )
+
+    except Exception as e:
+        current_app.logger.error(f"Error creating backup: {e}")
+        return (
+            jsonify({"success": False, "message": f"Error creating backup: {str(e)}"}),
+            500,
+        )
+
+
+@restapi_bp.route("/api/create_backup_single/<int:device_id>", methods=["POST"])
+@jwt_required()
+@jwt_role_required(
+    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
+)
+def create_backup_single(device_id):
+    """
+    Membuat backup untuk satu perangkat yang dipilih berdasarkan device_id.
+    """
+    try:
+        # Mendapatkan payload JSON dari permintaan
+        data = request.get_json()
+        backup_name = data.get("backup_name")
+        description = data.get("description", "")
+        backup_type = data.get("backup_type", "full").lower()  # Konversi ke huruf kecil
+        retention_days = data.get("retention_days")
+        command = data.get("command")
+
+        # Validasi bahwa backup_name disediakan
+        if not backup_name or not backup_name.strip():
+            return (
+                jsonify({"success": False, "message": "Backup name is required."}),
+                400,
+            )
+
+        # Mengambil data JWT untuk akses user_id
+        jwt_data = get_jwt()
+        user_id = jwt_data.get("user_id")
+        roles = jwt_data.get("roles", [])
+
+        # Query perangkat berdasarkan ID perangkat
+        device = DeviceManager.query.get(device_id)
+
+        # Validasi perangkat
+        if not device:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": f"Device with ID {device_id} not found.",
+                    }
+                ),
+                404,
+            )
+
+        # Validasi hak akses pengguna
+        if "Admin" in roles or device.owner_id == user_id:
+            # Validasi backup_type
+            valid_backup_types = {"full", "incremental", "differential"}
+            if backup_type not in valid_backup_types:
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": f"Invalid backup type provided. Supported types are: {', '.join(valid_backup_types)}",
+                        }
+                    ),
+                    400,
+                )
+
+            # Lakukan proses backup
+            try:
+                new_backup = BackupData.create_backup(
+                    backup_name=backup_name,
+                    description=description,
+                    user_id=user_id,
+                    device_id=device_id,
+                    backup_type=backup_type,
+                    retention_days=retention_days,
+                    command=command,
+                )
+
+                return (
+                    jsonify(
+                        {
+                            "success": True,
+                            "message": "Backup created successfully.",
+                            "backup_id": new_backup.id,
+                            "backup_path": new_backup.backup_path,
+                        }
+                    ),
+                    201,
+                )
+
+            except Exception as e:
+                current_app.logger.error(
+                    f"Error creating backup for device {device.ip_address}: {e}"
+                )
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": f"Error creating backup: {str(e)}",
+                        }
+                    ),
+                    500,
+                )
+
+        else:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "You do not have permission to back up this device.",
+                    }
+                ),
+                403,
+            )
+
+    except Exception as e:
+        current_app.logger.error(f"Error processing backup for device {device_id}: {e}")
+        return (
+            jsonify(
+                {"success": False, "message": f"Error processing backup: {str(e)}"}
+            ),
+            500,
+        )
+
+
+# -----------------------------------------------------------
+# API Backup Management
 # -----------------------------------------------------------
