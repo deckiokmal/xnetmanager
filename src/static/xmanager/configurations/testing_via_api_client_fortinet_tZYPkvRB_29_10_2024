@@ -1,0 +1,7 @@
+config router static
+  edit 0
+    set dst 192.0.2.0 255.255.255.0
+    set device "port1"
+    set gateway 198.51.100.1
+  next
+end

@@ -1,7 +1,8 @@
 from functools import wraps
-from flask import flash, redirect, request, url_for, session
+from flask import flash, redirect, request, url_for, session, jsonify
 from flask_login import current_user
 from src.models.app_models import Role
+from flask_jwt_extended import jwt_required, get_jwt
 
 
 # Decorator untuk user yang belum login
@@ -100,3 +101,43 @@ def required_2fa(f):
         return f(*args, **kwargs)
 
     return decorated_function
+
+
+def jwt_role_required(roles, permissions, page=""):
+    """
+    Decorator untuk memeriksa apakah pengguna memiliki salah satu dari beberapa role
+    dan juga wajib memiliki permissions yang diperlukan untuk mengakses route ini.
+
+    :param roles: Daftar nama role yang diperlukan untuk mengakses route ini.
+    :param permissions: Daftar nama permissions yang wajib dimiliki pengguna untuk mengakses route ini.
+    :param page: Nama halaman atau fungsi yang digunakan dalam pesan error (opsional).
+    """
+
+    def decorator(f):
+        @wraps(f)
+        @jwt_required()  # Memastikan endpoint hanya bisa diakses dengan JWT valid
+        def decorated_function(*args, **kwargs):
+            # Mengambil data JWT untuk role dan permission dari token
+            jwt_data = get_jwt()
+            user_roles = jwt_data.get("roles", [])  # Roles pengguna diambil dari JWT
+            user_permissions = jwt_data.get("permissions", [])  # Permissions diambil dari JWT
+
+            # Mengecek apakah pengguna memiliki salah satu role yang diperlukan
+            has_role = any(role in user_roles for role in roles)
+
+            # Mengecek apakah pengguna memiliki semua permission yang diperlukan
+            has_permission = all(permission in user_permissions for permission in permissions)
+
+            # Mengembalikan respons JSON jika pengguna tidak memiliki role atau permission yang sesuai
+            if not has_role or not has_permission:
+                return jsonify({
+                    "error": "Access Denied",
+                    "message": f"You do not have permission to access the {page}."
+                }), 403
+
+            # Memproses fungsi jika pengguna memiliki role dan permission yang dibutuhkan
+            return f(*args, **kwargs)
+
+        return decorated_function
+
+    return decorator
