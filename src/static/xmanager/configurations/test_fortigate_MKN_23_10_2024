@@ -1,0 +1,13 @@
+config firewall policy
+   edit 1
+      set name "Basic Firewall Policy"
+      set srcintf "lan"
+      set dstintf "wan"
+      set srcaddr "all"
+      set dstaddr "all"
+      set action accept
+      set schedule "always"
+      set service "ALL"
+      set logtraffic all
+   next
+end
