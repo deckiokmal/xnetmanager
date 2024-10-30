@@ -92,3 +92,27 @@ class ConfigfileSchema(ma.Schema):
 
 configfile_schema = ConfigfileSchema()
 configfiles_schema = ConfigfileSchema(many=True)
+
+
+class BackupSchema(ma.Schema):
+
+    class Meta:
+        fields = (
+            "id",
+            "backup_name",
+            "description",
+            "version",
+            "created_at",
+            "backup_path",
+            "is_encrypted",
+            "is_compressed",
+            "integrity_check",
+            "backup_type",
+            "next_scheduled_backup",
+            "retention_period,days",
+            "user_id",
+            "device_id",
+        )
+
+backup_schema = BackupSchema()
+backups_schema = BackupSchema(many=True)

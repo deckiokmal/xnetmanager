@@ -13,6 +13,9 @@ from src.models.app_models import (
     TemplateManager,
     ConfigurationManager,
     BackupData,
+    UserBackupShare,
+    BackupTag,
+    BackupAuditLog,
 )
 import logging
 from src.utils.schema_utils import (
@@ -24,6 +27,8 @@ from src.utils.schema_utils import (
     templates_schema,
     configfile_schema,
     configfiles_schema,
+    backup_schema,
+    backups_schema,
 )
 from flask_jwt_extended import (
     jwt_required,
@@ -46,6 +51,7 @@ import time
 from .decorators import jwt_role_required
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
+from src.utils.backupUtils import BackupUtils
 
 # Create blueprints for the device manager (restapi_bp) and error handling (error_bp)
 restapi_bp = Blueprint("restapi", __name__)
@@ -2271,3 +2277,402 @@ def create_backup_single(device_id):
 # -----------------------------------------------------------
 # API Backup Management
 # -----------------------------------------------------------
+
+
+@restapi_bp.route("/api/get-backups", methods=["GET"])
+@jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Backups"], page="Backups Management")
+def get_backups():
+    backups_list = BackupData.query.all()
+    result = backups_schema.dump(backups_list)
+    return jsonify(result)
+
+
+@restapi_bp.route("/api/get-backup/<backup_id>", methods=["GET"])
+@jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management")
+def get_backup(backup_id):
+    """
+    Menampilkan detail backup untuk backup tertentu berdasarkan backup_id.
+    Mengatur izin akses dan mengembalikan detail backup jika pengguna memiliki izin.
+    """
+    # Query backup berdasarkan ID
+    backup = BackupData.query.get(backup_id)
+
+    # Cek apakah backup ada
+    if not backup:
+        return jsonify({"message": "Backup not found"}), 404
+
+    # Mendapatkan level izin akses untuk pengguna
+    jwt_data = get_jwt()
+    user_id = jwt_data.get("user_id")
+    roles = jwt_data.get("roles", [])
+    
+    if "Admin" in roles or backup.user_id == user_id:
+        permission_level = "owner"
+    else:
+        # Cek apakah pengguna memiliki akses berbagi
+        shared_access = UserBackupShare.query.filter_by(
+            user_id=user_id, backup_id=backup_id
+        ).first()
+        if not shared_access:
+            return jsonify({"message": "Unauthorized access"}), 403
+        permission_level = shared_access.permission_level
+
+    # Membaca konten file backup sesuai level izin
+    try:
+        if permission_level == "read-only":
+            # Hanya membaca backup jika level izin adalah read-only
+            backup_content = "Content hidden due to read-only access"
+        else:
+            backup_content = BackupUtils.read_backup_file(backup.backup_path)
+    except FileNotFoundError:
+        return jsonify({"message": "Backup file not found"}), 404
+    except Exception as e:
+        return jsonify({"message": f"Error reading backup: {str(e)}"}), 500
+
+    # Serialisasi data backup dengan Marshmallow
+    backup_data = backup_schema.dump(backup)
+    backup_data["file_content"] = (
+        backup_content if permission_level != "read-only" else "Content hidden due to read-only access"
+    )
+    backup_data["permission_level"] = permission_level
+
+    # Mengembalikan data backup yang di-serialize
+    return jsonify({"success": True, "backup": backup_data}), 200
+
+
+@restapi_bp.route("/api/update_backup/<backup_id>", methods=["PUT"])
+@jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management")
+def update_backup(backup_id):
+    """
+    Mengupdate detail backup tertentu berdasarkan backup_id.
+    Memerlukan izin akses dan melakukan update jika pengguna memiliki izin.
+    """
+    try:
+        # Mendapatkan data backup dari database berdasarkan backup_id
+        backup = BackupData.query.get(backup_id)
+        if not backup:
+            return jsonify({"success": False, "message": "Backup not found"}), 404
+
+        # Memeriksa izin pengguna, hanya Admin atau pemilik yang diizinkan
+        jwt_data = get_jwt()
+        user_id = jwt_data.get("user_id")
+        roles = jwt_data.get("roles", [])
+
+        if "Admin" not in roles and backup.user_id != user_id:
+            return jsonify({"success": False, "message": "Unauthorized access"}), 403
+
+        # Mendapatkan data dari request JSON
+        data = request.get_json()
+        backup_name = data.get("backup_name", backup.backup_name)
+        description = data.get("description", backup.description)
+        retention_days = data.get("retention_days", backup.retention_period_days)
+        is_encrypted = data.get("is_encrypted", backup.is_encrypted)
+        is_compressed = data.get("is_compressed", backup.is_compressed)
+        tags = data.get("tags", "")
+
+        # Update data backup
+        backup.backup_name = backup_name
+        backup.description = description
+        backup.retention_period_days = retention_days
+        backup.is_encrypted = is_encrypted
+        backup.is_compressed = is_compressed
+
+        # Proses pembaruan tags
+        new_tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
+        backup.tags.clear()
+        for tag_text in new_tags:
+            tag_instance = BackupTag.query.filter_by(tag=tag_text).first()
+            if not tag_instance:
+                tag_instance = BackupTag(tag=tag_text)
+            backup.tags.append(tag_instance)
+
+        # Commit perubahan ke database
+        db.session.commit()
+
+        # Serialisasi data backup yang telah diperbarui
+        backup_data = backup_schema.dump(backup)
+
+        # Mengembalikan data backup yang telah diperbarui dalam format JSON
+        return jsonify({"success": True, "message": "Backup updated successfully", "backup": backup_data}), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error updating backup: {e}")
+        db.session.rollback()
+        return jsonify({"success": False, "message": f"Error updating backup: {str(e)}"}), 500
+
+
+@restapi_bp.route("/api/delete_backup/<backup_id>", methods=["DELETE"])
+@jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management")
+def delete_backup(backup_id):
+    """
+    Menghapus backup tertentu berdasarkan backup_id.
+    Memerlukan izin akses dan melakukan penghapusan jika pengguna memiliki izin.
+    """
+    try:
+        # Query backup berdasarkan backup_id
+        backup = BackupData.query.get(backup_id)
+
+        # Validasi apakah backup ditemukan
+        if not backup:
+            return jsonify({"success": False, "message": "Backup not found."}), 404
+
+        # Validasi hak akses pengguna, hanya Admin atau pemilik yang diizinkan
+        jwt_data = get_jwt()
+        user_id = jwt_data.get("user_id")
+        roles = jwt_data.get("roles", [])
+
+        if "Admin" not in roles and backup.user_id != user_id:
+            return jsonify({"success": False, "message": "Unauthorized to delete this backup."}), 403
+
+        # Menghapus data backup dari database
+        db.session.delete(backup)
+        db.session.commit()
+
+        # Menghapus file backup dari sistem file (opsional)
+        try:
+            BackupUtils.delete_backup_file(backup.backup_path)
+        except Exception as e:
+            current_app.logger.error(f"Error deleting backup file: {e}")
+            # Tidak perlu rollback transaksi DB jika penghapusan file gagal, hanya log error
+
+        # Mengembalikan respons sukses
+        return jsonify({"success": True, "message": "Backup successfully deleted."}), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error deleting backup: {e}")
+        db.session.rollback()
+        return jsonify({"success": False, "message": f"Error deleting backup: {str(e)}"}), 500
+
+
+@restapi_bp.route("/api/share_backup", methods=["POST"])
+@jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management")
+def share_backup():
+    """
+    Endpoint untuk berbagi backup dengan pengguna lain.
+    """
+    data = request.get_json()
+    user_email_to_share = data.get("user_email")
+    backup_id = data.get("backup_id")
+    permission_level = data.get("permission_level", "read-only")
+
+    # Log untuk memeriksa data yang diterima
+    current_app.logger.info(
+        f"User Email: {user_email_to_share}, Backup ID: {backup_id}, Permission Level: {permission_level}"
+    )
+
+    # Validasi input
+    if not user_email_to_share or not backup_id:
+        return jsonify({"success": False, "message": "User Email and Backup ID are required"}), 400
+
+    if permission_level not in ["read-only", "edit", "transfer"]:
+        return jsonify({"success": False, "message": "Invalid permission level"}), 400
+
+    # Query user berdasarkan email
+    user_to_share = User.query.filter_by(email=user_email_to_share).first()
+    if not user_to_share:
+        return jsonify({"success": False, "message": f"User with email {user_email_to_share} not found"}), 404
+
+    # Query backup berdasarkan backup_id
+    backup = BackupData.query.get(backup_id)
+    if not backup:
+        return jsonify({"success": False, "message": f"Backup with ID {backup_id} not found"}), 404
+
+    # Pastikan bahwa pengguna memiliki backup ini (jika bukan Admin)
+    jwt_data = get_jwt()
+    user_id = jwt_data.get("user_id")
+    roles = jwt_data.get("roles", [])
+
+    if "Admin" not in roles and backup.user_id != user_id:
+        return jsonify({"success": False, "message": "You do not have permission to share this backup"}), 403
+
+    # Cek apakah sudah ada share sebelumnya
+    existing_share = UserBackupShare.query.filter_by(
+        user_id=user_to_share.id, backup_id=backup_id
+    ).first()
+
+    if existing_share:
+        # Jika sudah dibagikan, perbarui permission level
+        existing_share.permission_level = permission_level
+
+        # Jika permission level adalah 'transfer', perbarui kepemilikan backup
+        if permission_level == "transfer":
+            backup.user_id = user_to_share.id  # Update pemilik backup
+            current_app.logger.info(
+                f"Backup ownership transferred to {user_to_share.email}"
+            )
+
+        db.session.commit()
+        return jsonify({
+            "success": True,
+            "message": f"Backup permission updated for user {user_to_share.email} to {permission_level} access"
+        }), 200
+
+    # Buat record baru di UserBackupShare
+    new_share = UserBackupShare(
+        user_id=user_to_share.id,
+        backup_id=backup_id,
+        permission_level=permission_level,
+    )
+
+    db.session.add(new_share)
+
+    # Jika permission level adalah 'transfer', perbarui kepemilikan backup
+    if permission_level == "transfer":
+        backup.user_id = user_to_share.id  # Update pemilik backup
+        current_app.logger.info(
+            f"Backup ownership transferred to {user_to_share.email}"
+        )
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": f"Backup shared with user {user_to_share.email} with {permission_level} access"
+    }), 200
+
+
+@restapi_bp.route("/api/rollback_backup/<backup_id>", methods=["POST"])
+@jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management")
+def rollback_backup(backup_id):
+    """
+    Melakukan rollback konfigurasi perangkat ke keadaan sebelumnya berdasarkan backup_id.
+    """
+    # Query backup berdasarkan ID
+    backup = BackupData.query.get(backup_id)
+
+    # Validasi apakah backup ada
+    if not backup:
+        return jsonify({"success": False, "message": "Backup not found"}), 404
+
+    # Validasi hak akses pengguna, hanya Admin atau pemilik backup yang diizinkan
+    jwt_data = get_jwt()
+    user_id = jwt_data.get("user_id")
+    roles = jwt_data.get("roles", [])
+
+    if "Admin" not in roles and backup.user_id != user_id:
+        return jsonify({"success": False, "message": "Unauthorized access"}), 403
+
+    # Membaca isi backup dari filesystem
+    try:
+        backup_content = BackupUtils.read_backup_file(backup.backup_path)
+
+        # Melakukan rollback dengan mengirimkan konfigurasi lama ke perangkat
+        device = DeviceManager.query.get(backup.device_id)
+        if not device:
+            return jsonify({"success": False, "message": "Device associated with backup not found"}), 404
+
+        # Menggunakan isi backup sebagai perintah rollback
+        command = backup_content
+        config_utils = ConfigurationManagerUtils(
+            ip_address=device.ip_address,
+            username=device.username,
+            password=device.password,
+            ssh=device.ssh,
+        )
+        
+        # Kirim konfigurasi rollback ke perangkat
+        result = config_utils.configure_device(command)
+        return jsonify({"success": True, "message": "Rollback berhasil", "result": result}), 200
+
+    except FileNotFoundError:
+        return jsonify({"success": False, "message": "Backup file not found"}), 404
+    except Exception as e:
+        current_app.logger.error(f"Error during rollback: {e}")
+        return jsonify({"success": False, "message": f"Error during rollback: {str(e)}"}), 500
+
+############# Utility Backup #####################
+def log_action(backup_id, action, user_id):
+    """Helper function to log actions related to backups."""
+    audit_log = BackupAuditLog(
+        backup_id=backup_id,
+        action=action,
+        performed_by=user_id,
+        timestamp=datetime.utcnow(),
+    )
+    db.session.add(audit_log)
+    db.session.commit()
+############# Utility Backup #####################
+
+@restapi_bp.route("/api/add_tag_to_backup/<backup_id>", methods=["POST"])
+@jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management")
+def add_tag_to_backup(backup_id):
+    """
+    Menambahkan tag ke backup tertentu berdasarkan backup_id.
+    Memerlukan izin akses dari pemilik backup atau Admin.
+    """
+    # Query backup berdasarkan backup_id
+    backup = BackupData.query.get(backup_id)
+
+    # Validasi apakah backup ada dan pengguna memiliki hak akses
+    jwt_data = get_jwt()
+    user_id = jwt_data.get("user_id")
+    roles = jwt_data.get("roles", [])
+
+    if not backup or ("Admin" not in roles and backup.user_id != user_id):
+        return jsonify({"success": False, "message": "Backup not found or unauthorized"}), 404
+
+    # Mendapatkan data tag dari request JSON
+    data = request.get_json()
+    tag_text = data.get("tag")
+    if not tag_text or not tag_text.strip():
+        return jsonify({"success": False, "message": "Tag is required"}), 400
+
+    try:
+        # Tambahkan tag baru ke backup
+        existing_tag = BackupTag.query.filter_by(tag=tag_text, backup_id=backup.id).first()
+        if existing_tag:
+            return jsonify({"success": False, "message": "Tag already exists for this backup"}), 400
+
+        new_tag = BackupTag(backup_id=backup.id, tag=tag_text.strip())
+        db.session.add(new_tag)
+        db.session.commit()
+
+        # Catat tindakan di audit log
+        log_action(backup.id, "tag_added", user_id)
+
+        return jsonify({"success": True, "message": "Tag added to backup"}), 201
+    except Exception as e:
+        current_app.logger.error(f"Error adding tag to backup: {e}")
+        db.session.rollback()
+        return jsonify({"success": False, "message": f"Error adding tag: {str(e)}"}), 500
+
+
+@restapi_bp.route("/api/get_audit_logs/<backup_id>", methods=["GET"])
+@jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management")
+def get_audit_logs(backup_id):
+    """
+    Mengambil log audit dari backup tertentu berdasarkan backup_id.
+    Memerlukan izin akses dari pemilik backup atau Admin.
+    """
+    # Query backup berdasarkan backup_id
+    backup = BackupData.query.get(backup_id)
+
+    # Validasi apakah backup ada dan pengguna memiliki hak akses
+    jwt_data = get_jwt()
+    user_id = jwt_data.get("user_id")
+    roles = jwt_data.get("roles", [])
+
+    if not backup or ("Admin" not in roles and backup.user_id != user_id):
+        return jsonify({"success": False, "message": "Backup not found or unauthorized"}), 404
+
+    # Mengambil log audit terkait backup_id
+    audit_logs = BackupAuditLog.query.filter_by(backup_id=backup_id).all()
+    logs_list = [
+        {
+            "action": log.action,
+            "timestamp": log.timestamp.isoformat(),
+            "performed_by": log.performed_by,
+        }
+        for log in audit_logs
+    ]
+
+    # Mengembalikan daftar log audit dalam format JSON
+    return jsonify({"success": True, "audit_logs": logs_list}), 200
