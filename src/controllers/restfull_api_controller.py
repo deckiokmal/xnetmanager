@@ -168,6 +168,7 @@ def login():
 
 @restapi_bp.route("/api/get-users", methods=["GET"])
 @jwt_required()
+@jwt_role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
 def get_users():
     users_list = User.query.all()
     result = users_schema.dump(users_list)
@@ -176,6 +177,7 @@ def get_users():
 
 @restapi_bp.route("/api/get-user/<user_id>", methods=["GET"])
 @jwt_required()
+@jwt_role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
 def get_user(user_id):
     user = User.query.filter_by(id=user_id).first()
     if user:
@@ -187,6 +189,7 @@ def get_user(user_id):
 
 @restapi_bp.route("/api/create-user", methods=["POST"])
 @jwt_required()
+@jwt_role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
 def create_user():
     # Mengambil identitas pengguna dari JWT
     user_identity = get_jwt_identity()
@@ -249,6 +252,7 @@ def create_user():
 
 @restapi_bp.route("/api/update-user", methods=["PUT"])
 @jwt_required()
+@jwt_role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
 def update_user():
     # Mengambil identitas pengguna dari JWT
     user_identity = get_jwt_identity()
@@ -296,6 +300,7 @@ def update_user():
 
 @restapi_bp.route("/api/delete-user/<user_id>", methods=["DELETE"])
 @jwt_required()
+@jwt_role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
 def delete_user(user_id):
     # Mengambil identitas pengguna dari JWT
     user_identity = get_jwt_identity()
@@ -331,6 +336,7 @@ def delete_user(user_id):
 
 @restapi_bp.route("/api/get-devices", methods=["GET"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User", "View"], permissions=["Manage Devices","View Devices"], page="Devices Management")
 def get_devices():
     devices_list = DeviceManager.query.all()
     result = devices_schema.dump(devices_list)
@@ -339,6 +345,7 @@ def get_devices():
 
 @restapi_bp.route("/api/get-device/<device_id>", methods=["GET"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User", "View"], permissions=["Manage Devices","View Devices"], page="Devices Management")
 def get_device(device_id):
     device = DeviceManager.query.filter_by(id=device_id).first()
     if device:
@@ -350,6 +357,7 @@ def get_device(device_id):
 
 @restapi_bp.route("/api/create-device", methods=["POST"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management")
 def create_device():
     # Mengambil identitas pengguna dari JWT
     jwt_data = get_jwt()
@@ -439,6 +447,7 @@ def create_device():
 
 @restapi_bp.route("/api/update-device", methods=["PUT"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management")
 def update_device():
     # Mengambil identitas pengguna dari JWT
     jwt_data = get_jwt()
@@ -516,6 +525,7 @@ def update_device():
 
 @restapi_bp.route("/api/delete-device/<device_id>", methods=["DELETE"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management")
 def delete_device(device_id):
     # Mengambil identitas pengguna dari JWT
     user_identity = get_jwt_identity()
@@ -559,6 +569,7 @@ def delete_device(device_id):
 
 @restapi_bp.route("/api/get-templates", methods=["GET"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User", "View"], permissions=["Manage Templates", "View Templates"], page="Templates Management")
 def get_templates():
     templates_list = TemplateManager.query.all()
     result = templates_schema.dump(templates_list)
@@ -567,6 +578,7 @@ def get_templates():
 
 @restapi_bp.route("/api/get-template/<template_id>", methods=["GET"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User", "View"], permissions=["Manage Templates", "View Templates"], page="Templates Management")
 def get_template(template_id):
     try:
         # Query the template from the database, or return 404 if not found
@@ -623,6 +635,7 @@ def get_template(template_id):
 
 @restapi_bp.route("/api/create-template", methods=["POST"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management")
 def create_template():
     # Mengambil identitas pengguna dari JWT
     user_identity = get_jwt_identity()
@@ -742,6 +755,7 @@ def create_template():
 
 @restapi_bp.route("/api/update-template/<template_id>", methods=["PUT"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management")
 def update_template(template_id):
     """API Endpoint untuk memperbarui template berdasarkan ID, mendukung form data dan JSON."""
 
@@ -888,6 +902,7 @@ def update_template(template_id):
 
 @restapi_bp.route("/api/delete-template/<template_id>", methods=["DELETE"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management")
 def delete_template(template_id):
     """API Endpoint untuk menghapus template berdasarkan ID."""
 
@@ -955,6 +970,7 @@ def delete_template(template_id):
 
 @restapi_bp.route("/api/generate-template/<template_id>", methods=["POST"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management")
 def generate_template(template_id):
     """API Endpoint untuk generate, render, dan menyimpan template berdasarkan ID."""
 
@@ -1074,6 +1090,7 @@ def generate_template(template_id):
 
 @restapi_bp.route("/api/get-configfiles", methods=["GET"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Configuration File"], page="Configuration File Management")
 def get_configfiles():
     configfiles_list = ConfigurationManager.query.all()
     result = configfiles_schema.dump(configfiles_list)
@@ -1082,6 +1099,7 @@ def get_configfiles():
 
 @restapi_bp.route("/api/get-configfile/<config_id>", methods=["GET"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Configuration File"], page="Configuration File Management")
 def get_configfile(config_id):
     try:
         # Query the template from the database, or return 404 if not found
@@ -1122,6 +1140,7 @@ def get_configfile(config_id):
 
 @restapi_bp.route("/api/create-manual-configfile", methods=["POST"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Configuration File"], page="Configuration File Management")
 def create_manual_configfile():
     # Mengambil identitas pengguna dari JWT
     jwt_data = get_jwt()
@@ -1232,6 +1251,7 @@ def create_manual_configfile():
 
 @restapi_bp.route("/api/create-automate-configfile", methods=["POST"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Configuration File"], page="Configuration File Management")
 def create_automate_configfile():
     # Mengambil identitas pengguna dari JWT
     jwt_data = get_jwt()
@@ -1326,6 +1346,7 @@ def create_automate_configfile():
 
 @restapi_bp.route("/api/create-automate-configfile-talita", methods=["POST"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Configuration File"], page="Configuration File Management")
 def create_automate_configfile_talita():
     # Mengambil identitas pengguna dari JWT
     jwt_data = get_jwt()
@@ -1449,6 +1470,7 @@ def create_automate_configfile_talita():
 
 @restapi_bp.route("/api/update-configfile/<config_id>", methods=["PUT"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Configuration File"], page="Configuration File Management")
 def update_configfile(config_id):
     """API Endpoint untuk memperbarui configfile berdasarkan ID, mendukung form data dan JSON."""
 
@@ -1560,6 +1582,7 @@ def update_configfile(config_id):
 
 @restapi_bp.route("/api/delete-config/<config_id>", methods=["DELETE"])
 @jwt_required()
+@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Configuration File"], page="Configuration File Management")
 def delete_config(config_id):
     """API Endpoint untuk menghapus config berdasarkan ID."""
 
