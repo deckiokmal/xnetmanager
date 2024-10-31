@@ -7,12 +7,12 @@ import os
 
 # Validasi variabel lingkungan untuk memastikan semua yang diperlukan tersedia
 def validate_config():
-    """Validasi variabel lingkungan untuk memastikan semua yang diperlukan tersedia."""
+    """Validasi environment variabel untuk memastikan semua yang diperlukan tersedia."""
     try:
-        secret_key = config("SECRET_KEY")
-        database_url = config("DATABASE_URL")
-        app_name = config("APP_NAME")
-        bcrypt_log_rounds = config("BCRYPT_LOG_ROUNDS")
+        config("SECRET_KEY")
+        config("DATABASE_URL")
+        config("APP_NAME")
+        config("BCRYPT_LOG_ROUNDS")
     except UndefinedValueError as e:
         raise RuntimeError(f"Missing environment variable: {e}")
 
@@ -41,7 +41,7 @@ class Config(object):
     DEBUG = False
     TESTING = False
     CSRF_ENABLED = True
-    SECRET_KEY = config("SECRET_KEY", default="guess-me")
+    SECRET_KEY = config("SECRET_KEY")
     SQLALCHEMY_DATABASE_URI = DATABASE_URI
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     BCRYPT_LOG_ROUNDS = int(config("BCRYPT_LOG_ROUNDS", default=13))
@@ -54,9 +54,9 @@ class Config(object):
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
     # In production, use an environment variable for the backup directory (Docker volume)
-    BACKUP_DIR = config(
-        "BACKUP_DIR", default=os.path.join(BASE_DIR, "static", "xmanager", "backups")
-    )
+    BACKUP_DIR = config("BACKUP_DIR", default=os.path.join(BASE_DIR, "static", "xmanager", "backups"))
+    CONFIG_DIR = config("CONFIG_DIR", default=os.path.join(BASE_DIR, "static", "xmanager", "configurations"))
+    TEMPLATE_DIR = config("TEMPLATE_DIR", default=os.path.join(BASE_DIR, "static", "xmanager", "templates"))
 
     # Pengaturan untuk keamanan cookies
     SESSION_COOKIE_SECURE = True
@@ -65,17 +65,17 @@ class Config(object):
     SESSION_COOKIE_SAMESITE = "Lax"
 
     # Pengaturan logging
-    LOGGING_LEVEL = logging.DEBUG
+    LOGGING_LEVEL = logging.DEBUG if DEBUG else logging.INFO
     LOGGING_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     LOGGING_LOCATION = "app.log"
 
     # Pengaturan untuk email
     MAIL_SERVER = config("MAIL_SERVER", default="smtp.gmail.com")
-    MAIL_PORT = int(config("MAIL_PORT", default=587))
-    MAIL_USERNAME = config("MAIL_USERNAME", default="")
-    MAIL_PASSWORD = config("MAIL_PASSWORD", default="")
+    MAIL_USERNAME = config("MAIL_USERNAME")
+    MAIL_PASSWORD = config("MAIL_PASSWORD")
     MAIL_USE_TLS = config("MAIL_USE_TLS", default=True, cast=bool)
     MAIL_USE_SSL = config("MAIL_USE_SSL", default=False, cast=bool)
+    MAIL_PORT = 465 if MAIL_USE_SSL else 587
 
     # Pengaturan Flask-Talisman
     TALISMAN_FORCE_HTTPS = True
@@ -122,9 +122,6 @@ class DevelopmentConfig(Config):
     DEBUG = True
     WTF_CSRF_ENABLED = False
     DEBUG_TB_ENABLED = True
-
-    # Set BACKUP_DIR for development (Windows)
-    BACKUP_DIR = "D:/0. MY PROJECT/16. BYOAI PROJECT XNETMANAGER/backups/development"
 
     # Pengaturan Flask-Talisman untuk pengembangan
     TALISMAN_FORCE_HTTPS = False
@@ -174,7 +171,7 @@ class TestingConfig(Config):
 
     TESTING = True
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = "sqlite:///testing.sqlite"
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     BCRYPT_LOG_ROUNDS = 1
     WTF_CSRF_ENABLED = False
 
@@ -184,9 +181,6 @@ class ProductionConfig(Config):
 
     DEBUG = False
     DEBUG_TB_ENABLED = False
-
-    # BACKUP_DIR in production set by Docker environment variable
-    BACKUP_DIR = config("BACKUP_DIR", default="/app/backups")
 
     # Pengaturan Flask-Talisman untuk produksi
     TALISMAN_FORCE_HTTPS = True

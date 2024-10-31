@@ -53,14 +53,21 @@ def create_app(config_class=None):
     else:
         raise ValueError("Invalid CONFIG_NAME")
 
-    # Ensure the BACKUP_DIR exists
-    backup_dir = app.config["BACKUP_DIR"]
-    try:
-        if not os.path.exists(backup_dir):
-            os.makedirs(backup_dir)
-    except OSError as e:
-        app.logger.error(f"Error creating backup directory: {e}")
-        raise RuntimeError(f"Failed to create backup directory: {backup_dir}")
+    # Pastikan semua direktori yang dibutuhkan ada
+    for directory in [
+        app.config["BACKUP_DIR"],
+        app.config["CONFIG_DIR"],
+        app.config["TEMPLATE_DIR"],
+    ]:
+        try:
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+                app.logger.info(f"Created missing directory: {directory}")
+            else:
+                app.logger.info(f"Directory already exists: {directory}")
+        except OSError as e:
+            app.logger.error(f"Error creating directory {directory}: {e}")
+            raise RuntimeError(f"Failed to create directory: {directory}")
 
     # Inisiasi pustaka OpenAI dengan API key
     openai_api_key = decouple_config("OPENAI_API_KEY", default=None)
