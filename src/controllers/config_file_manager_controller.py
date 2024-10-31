@@ -456,6 +456,9 @@ def create_configuration_with_talita():
             current_app.logger.info(
                 f"Configuration '{filename}' saved successfully for user {current_user.email}."
             )
+            flash(
+                "Configuration created successfully and saved to database.", "success"
+            )
             return (
                 jsonify(
                     {"is_valid": True, "message": "Configuration created successfully."}
@@ -469,7 +472,7 @@ def create_configuration_with_talita():
                 f"Database error while saving configuration: {str(e)}"
             )
             if os.path.exists(file_path):
-                os.remove(file_path)  # Menghapus file jika database commit gagal
+                os.remove(file_path)
             return (
                 jsonify(
                     {"is_valid": False, "error_message": "Database error occurred."}
@@ -480,7 +483,7 @@ def create_configuration_with_talita():
         except Exception as e:
             current_app.logger.error(f"Unexpected error: {str(e)}")
             if os.path.exists(file_path):
-                os.remove(file_path)  # Pastikan file tidak tersisa jika ada error
+                os.remove(file_path)
             return (
                 jsonify(
                     {

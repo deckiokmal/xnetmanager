@@ -1,0 +1,59 @@
+config vpn ipsec phase1-interface
+    edit "Ov-MAIN"
+        set type dynamic
+        set interface "wan1"
+        set ike-version 2
+        set local-gw 172.16.0.1
+        set peertype any
+        set net-device disable
+        set mode-cfg enable
+        set proposal aes256-sha256
+        set add-route disable
+        set dpd on-idle
+        set dhgrp 14
+        set auto-discovery-sender enable
+        set network-overlay enable
+        set network-id 1
+        set ipv4-start-ip 169.251.100.2
+        set ipv4-end-ip 169.251.100.253
+        set ipv4-netmask 255.255.255.0
+        set psksecret S3cr3tKEY-SdWAn!23
+        set dpd-retryinterval 21
+    next
+    edit "Ov-BCKP"
+        set type dynamic
+        set interface "wan2"
+        set ike-version 2
+        set local-gw 123.231.0.1
+        set peertype any
+        set net-device disable
+        set mode-cfg enable
+        set proposal aes256-sha256
+        set add-route disable
+        set dpd on-idle
+        set dhgrp 14
+        set auto-discovery-sender enable
+        set network-overlay enable
+        set network-id 2
+        set ipv4-start-ip 169.251.200.2
+        set ipv4-end-ip 169.251.200.253
+        set ipv4-netmask 255.255.255.0
+        set psksecret S3cr3tKEY-SdWAn!23
+        set dpd-retryinterval 21
+    next
+end
+
+config vpn ipsec phase2-interface
+    edit "Ov-MAIN"
+        set phase1name "Ov-MAIN"
+        set proposal aes256-sha256
+        set dhgrp 14
+        set keepalive enable
+    next
+    edit "Ov-BCKP"
+        set phase1name "Ov-BCKP"
+        set proposal aes256-sha256
+        set dhgrp 14
+        set keepalive enable
+    next
+end

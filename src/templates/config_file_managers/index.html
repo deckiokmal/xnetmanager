@@ -443,13 +443,12 @@
 
             // Handle Automate configuration with TALITA AI
             document.addEventListener("DOMContentLoaded", function () {
-                // Handle Create TALITA Configuration Form Submission
                 document.getElementById("createTalitaConfigForm").addEventListener('submit', function (event) {
-                    event.preventDefault();  // Prevent the form from submitting the default way
+                    event.preventDefault();
 
                     const askTalitaModal = bootstrap.Modal.getInstance(document.getElementById('askTalitaModal'));
-                    askTalitaModal.hide();  // Close the modal
-                    showLoadingOverlay();  // Show the loading overlay
+                    askTalitaModal.hide();
+                    showLoadingOverlay();
 
                     const formData = new FormData(this);
                     const actionUrl = this.getAttribute('action');
@@ -460,20 +459,18 @@
                     })
                         .then(response => response.json())
                         .then(data => {
-                            hideLoadingOverlay();  // Hide the loading overlay
-
+                            hideLoadingOverlay();
                             if (data.is_valid) {
-                                window.location.reload();  // Reload the page to show flash message
+                                window.location.reload();
                             } else {
-                                // Display the error in a modal
-                                document.getElementById('errorModalMessage').textContent = data.error_message;
+                                document.getElementById('errorModalMessage').textContent = data.error_message || "An unexpected error occurred.";
                                 var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
                                 errorModal.show();
                             }
                         })
                         .catch(error => {
                             console.error('Error:', error);
-                            hideLoadingOverlay();  // Hide the loading overlay
+                            hideLoadingOverlay();
                             document.getElementById('errorModalMessage').textContent = "An unexpected error occurred.";
                             var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
                             errorModal.show();

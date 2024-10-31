@@ -1,0 +1,27 @@
+config system sdwan
+    set status enable
+    config zone
+        edit "DC"
+        next
+        edit "DR"
+        next
+    end
+    config members
+        edit 1
+            set interface "DC-MAIN"
+            set zone "DC"
+        next
+        edit 2
+            set interface "DC-BCKP"
+            set zone "DC"
+        next
+        edit 3
+            set interface "DR-MAIN"
+            set zone "DR"
+        next
+        edit 4
+            set interface "DR-BCKP"
+            set zone "DR"
+        next
+    end
+end
