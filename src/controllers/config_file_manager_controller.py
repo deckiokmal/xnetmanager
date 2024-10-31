@@ -22,21 +22,19 @@ from src.utils.ConfigurationFileUtils import (
     is_safe_path,
     delete_file_safely,
 )
-from src.utils.talita_ai_utils import talita_chat_completion
+from src.utils.talita_ai_utils import generate_configfile_talita
 from werkzeug.utils import secure_filename
 import os
-from datetime import datetime
 from .decorators import login_required, role_required, required_2fa
-import random
-import string
 from flask_paginate import Pagination, get_page_args
-import logging
 from src.utils.forms_utils import (
     ManualConfigurationForm,
     AIConfigurationForm,
     UpdateConfigurationForm,
     TalitaQuestionForm,
 )
+from sqlalchemy.exc import SQLAlchemyError
+
 
 # Blueprint untuk config manager
 config_file_bp = Blueprint("config_file", __name__)
@@ -163,6 +161,49 @@ def index():
             ),
             500,
         )
+
+
+@config_file_bp.route("/configuration-file/get-detail/<config_id>", methods=["GET"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Configuration File"],
+    page="Configuration File Management",
+)
+def get_detail_configuration(config_id):
+    configuration = ConfigurationManager.query.get_or_404(config_id)
+
+    if not check_ownership(configuration, current_user):
+        return jsonify({"error": "Unauthorized access to configuration."}), 403
+
+    try:
+        configuration_file_path = os.path.join(
+            current_app.static_folder, CONFIG_DIRECTORY, configuration.config_name
+        )
+        if not is_safe_path(configuration_file_path, current_app.static_folder):
+            return jsonify({"error": "Unauthorized access to file path."}), 403
+
+        configuration_content = read_file(configuration_file_path)
+        if configuration_content is None:
+            return jsonify({"error": "Configuration file not found."}), 404
+
+        return (
+            jsonify(
+                {
+                    "config_name": configuration.config_name,
+                    "vendor": configuration.vendor,
+                    "description": configuration.description,
+                    "created_by": configuration.created_by,
+                    "configuration_content": configuration_content,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        current_app.logger.error(f"Unexpected error: {str(e)}")
+        return jsonify({"error": "An error occurred. Please try again later."}), 500
 
 
 @config_file_bp.route(
@@ -332,7 +373,7 @@ def create_configuration_with_ai_automated():
         return jsonify({"is_valid": False, "error_message": errors}), 400
 
 
-@config_file_bp.route("/configuration-file/get-detail/<config_id>", methods=["GET"])
+@config_file_bp.route("/create-configuration-with-talita", methods=["GET", "POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -340,39 +381,121 @@ def create_configuration_with_ai_automated():
     permissions=["Manage Configuration File"],
     page="Configuration File Management",
 )
-def get_detail_configuration(config_id):
-    configuration = ConfigurationManager.query.get_or_404(config_id)
+def create_configuration_with_talita():
+    current_app.logger.info(
+        f"User {current_user.email} initiated TALITA configuration request."
+    )
 
-    if not check_ownership(configuration, current_user):
-        return jsonify({"error": "Unauthorized access to configuration."}), 403
+    formTalita = TalitaQuestionForm()
 
-    try:
-        configuration_file_path = os.path.join(
-            current_app.static_folder, CONFIG_DIRECTORY, configuration.config_name
-        )
-        if not is_safe_path(configuration_file_path, current_app.static_folder):
-            return jsonify({"error": "Unauthorized access to file path."}), 403
+    # Validasi form sebelum proses dimulai
+    if formTalita.validate_on_submit():
+        config_name = formTalita.config_name.data
+        vendor = formTalita.vendor.data
+        description = formTalita.description.data
+        question = formTalita.question.data
 
-        configuration_content = read_file(configuration_file_path)
-        if configuration_content is None:
-            return jsonify({"error": "Configuration file not found."}), 404
-
-        return (
-            jsonify(
-                {
-                    "config_name": configuration.config_name,
-                    "vendor": configuration.vendor,
-                    "description": configuration.description,
-                    "created_by": configuration.created_by,
-                    "configuration_content": configuration_content,
-                }
-            ),
-            200,
+        # Menyusun context untuk API TALITA
+        context = (
+            f"Berikan hanya sintaks konfigurasi yang tepat untuk {vendor}.\n"
+            f"Hanya sertakan perintah konfigurasi yang spesifik untuk vendor {vendor}.\n"
+            f"Hasil response hanya berupa plaintext tanpa adanya text formatting.\n"
+            f"Jawaban harus sesuai context yang telah diberikan. Jika context tidak tersedia jawab dengan 'Gagal'.\n"
+            f"Jika 'Gagal' jelaskan penyebabnya.\n"
+            f"Pertanyaan: {question}\n"
         )
 
-    except Exception as e:
-        current_app.logger.error(f"Unexpected error: {str(e)}")
-        return jsonify({"error": "An error occurred. Please try again later."}), 500
+        user_id = str(current_user.id)
+
+        try:
+            # Menggunakan utility generate_configfile_talita
+            result = generate_configfile_talita(context, user_id)
+            if not result["success"]:
+                current_app.logger.warning(
+                    f"Failed to get response from TALITA for user {current_user.email}: {result['message']}"
+                )
+                return (
+                    jsonify({"is_valid": False, "error_message": result["message"]}),
+                    502,
+                )
+
+            talita_answer = result["message"]
+
+            # Periksa jawaban jika "Gagal"
+            if talita_answer.lower().startswith("gagal"):
+                current_app.logger.warning(
+                    f"TALITA returned 'Gagal' response for user {current_user.email}."
+                )
+                return jsonify({"is_valid": False, "error_message": talita_answer}), 400
+
+            # Menentukan nama file dan path
+            gen_filename = generate_random_filename(config_name)
+            filename = f"{gen_filename}.txt"
+            file_path = os.path.join(
+                current_app.static_folder, CONFIG_DIRECTORY, secure_filename(filename)
+            )
+
+            # Membuat direktori jika belum ada
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+            # Menyimpan jawaban TALITA ke file
+            with open(file_path, "w", encoding="utf-8") as file:
+                file.write(talita_answer)
+
+            # Menyimpan informasi konfigurasi ke database
+            new_configuration = ConfigurationManager(
+                config_name=filename,
+                vendor=vendor,
+                description=description,
+                created_by=current_user.email,
+                user_id=current_user.id,
+            )
+            db.session.add(new_configuration)
+            db.session.commit()
+
+            current_app.logger.info(
+                f"Configuration '{filename}' saved successfully for user {current_user.email}."
+            )
+            return (
+                jsonify(
+                    {"is_valid": True, "message": "Configuration created successfully."}
+                ),
+                200,
+            )
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.error(
+                f"Database error while saving configuration: {str(e)}"
+            )
+            if os.path.exists(file_path):
+                os.remove(file_path)  # Menghapus file jika database commit gagal
+            return (
+                jsonify(
+                    {"is_valid": False, "error_message": "Database error occurred."}
+                ),
+                500,
+            )
+
+        except Exception as e:
+            current_app.logger.error(f"Unexpected error: {str(e)}")
+            if os.path.exists(file_path):
+                os.remove(file_path)  # Pastikan file tidak tersisa jika ada error
+            return (
+                jsonify(
+                    {
+                        "is_valid": False,
+                        "error_message": "An unexpected error occurred.",
+                    }
+                ),
+                500,
+            )
+
+    else:
+        # Kesalahan validasi form
+        errors = {field: error for field, error in formTalita.errors.items()}
+        current_app.logger.warning(f"Form validation failed: {errors}")
+        return jsonify({"is_valid": False, "errors": errors}), 400
 
 
 @config_file_bp.route("/configuration-file/update/<config_id>", methods=["GET", "POST"])
@@ -559,122 +682,3 @@ def delete_configuration(config_id):
             jsonify({"error": "Failed to delete configuration due to an error."}),
             500,
         )
-
-
-# --------------------------------------------------------------------------------
-# Talita Lintasarta Section
-# --------------------------------------------------------------------------------
-
-
-@config_file_bp.route("/ask_talita", methods=["GET", "POST"])
-@login_required
-@required_2fa
-@role_required(
-    roles=["Admin", "User"],
-    permissions=["Manage Configuration File"],
-    page="Configuration File Management",
-)
-def ask_talita():
-    current_app.logger.warning(
-        f"User {current_user.email} is attempting to use Talita AI Endpoint."
-    )
-
-    formTalita = TalitaQuestionForm()
-
-    if formTalita.validate_on_submit():
-        config_name = formTalita.config_name.data
-        vendor = formTalita.vendor.data
-        description = formTalita.description.data
-        question = formTalita.question.data
-
-        # Membangun context untuk pertanyaan TALITA
-        context = (
-            f"Berikan hanya sintaks konfigurasi yang tepat untuk {vendor}.\n"
-            f"Hanya sertakan perintah konfigurasi yang spesifik untuk vendor {vendor}.\n"
-            f"Hasil response hanya berupa plaintext tanpa adanya text formatting.\n"
-            f"Jawaban harus sesuai context yang telah diberikan. Jika context tidak tersedia jawab dengan 'Gagal'.\n"
-            f"Jika 'Gagal' jelaskan penyebabnya.\n"
-            f"Pertanyaan: {question}\n"
-        )
-
-        user_id = str(current_user.id)
-
-        current_app.logger.info(
-            f"User {current_user.email} is asking TALITA a question."
-        )
-
-        try:
-            # Memanggil fungsi talita_chat_completion yang sudah diperbaiki
-            response, status_code = talita_chat_completion(context, user_id)
-
-            if status_code != 200:
-                current_app.logger.warning(
-                    f"Failed to connect to Talita AI for user {current_user.email}: {response.get('message')}"
-                )
-                return (
-                    jsonify(
-                        {
-                            "is_valid": False,
-                            "error_message": response.get(
-                                "message", "Unknown error occurred."
-                            ),
-                        }
-                    ),
-                    status_code,
-                )
-
-            talita_answer = response.get("message", "")
-
-            if talita_answer.lower().startswith("gagal"):
-                return jsonify({"is_valid": False, "error_message": talita_answer}), 400
-
-            # Membuat nama file untuk konfigurasi
-            gen_filename = generate_random_filename(config_name)
-            filename = f"{gen_filename}.txt"
-            file_path = os.path.join(
-                current_app.static_folder, CONFIG_DIRECTORY, filename
-            )
-
-            # Menyimpan jawaban TALITA ke dalam file
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            with open(file_path, "w", encoding="utf-8") as file:
-                file.write(talita_answer)
-
-            # Menyimpan konfigurasi ke database
-            new_configuration = ConfigurationManager(
-                config_name=filename,
-                vendor=vendor,
-                description=description,
-                created_by=current_user.email,
-                user_id=current_user.id,
-            )
-            db.session.add(new_configuration)
-            db.session.commit()
-
-            current_app.logger.info(
-                f"User {current_user.email} successfully saved response from TALITA to {filename}."
-            )
-            return (
-                jsonify(
-                    {"is_valid": True, "message": "Configuration created successfully."}
-                ),
-                200,
-            )
-
-        except Exception as e:
-            current_app.logger.error(f"Error processing TALITA request: {str(e)}")
-            return (
-                jsonify(
-                    {
-                        "is_valid": False,
-                        "error_message": "Terjadi kesalahan saat memproses permintaan.",
-                    }
-                ),
-                500,
-            )
-
-    else:
-        # Menyusun error dari form validasi
-        errors = {field: error for field, error in formTalita.errors.items()}
-        current_app.logger.warning(f"Form validation failed: {errors}")
-        return jsonify({"is_valid": False, "errors": errors}), 400

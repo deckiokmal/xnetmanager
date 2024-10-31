@@ -2,7 +2,6 @@ from datetime import datetime
 from flask_login import UserMixin
 import pyotp
 from src import bcrypt, db
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from src.config import Config
 from itsdangerous import URLSafeTimedSerializer as Serializer, SignatureExpired
 from flask import current_app

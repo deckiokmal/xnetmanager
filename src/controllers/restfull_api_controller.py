@@ -45,7 +45,7 @@ from src.utils.openai_utils import (
     validate_generated_template_with_openai,
     create_configuration_with_openai,
 )
-from src.utils.talita_ai_utils import talita_chat_completion
+from src.utils.talita_ai_utils import generate_configfile_talita
 from src.utils.config_manager_utils import ConfigurationManagerUtils
 import time
 from .decorators import jwt_role_required
@@ -174,7 +174,9 @@ def login():
 
 @restapi_bp.route("/api/get-users", methods=["GET"])
 @jwt_required()
-@jwt_role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
+@jwt_role_required(
+    roles=["Admin"], permissions=["Manage Users"], page="Users Management"
+)
 def get_users():
     users_list = User.query.all()
     result = users_schema.dump(users_list)
@@ -183,7 +185,9 @@ def get_users():
 
 @restapi_bp.route("/api/get-user/<user_id>", methods=["GET"])
 @jwt_required()
-@jwt_role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
+@jwt_role_required(
+    roles=["Admin"], permissions=["Manage Users"], page="Users Management"
+)
 def get_user(user_id):
     user = User.query.filter_by(id=user_id).first()
     if user:
@@ -195,7 +199,9 @@ def get_user(user_id):
 
 @restapi_bp.route("/api/create-user", methods=["POST"])
 @jwt_required()
-@jwt_role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
+@jwt_role_required(
+    roles=["Admin"], permissions=["Manage Users"], page="Users Management"
+)
 def create_user():
     # Mengambil identitas pengguna dari JWT
     user_identity = get_jwt_identity()
@@ -258,7 +264,9 @@ def create_user():
 
 @restapi_bp.route("/api/update-user", methods=["PUT"])
 @jwt_required()
-@jwt_role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
+@jwt_role_required(
+    roles=["Admin"], permissions=["Manage Users"], page="Users Management"
+)
 def update_user():
     # Mengambil identitas pengguna dari JWT
     user_identity = get_jwt_identity()
@@ -306,7 +314,9 @@ def update_user():
 
 @restapi_bp.route("/api/delete-user/<user_id>", methods=["DELETE"])
 @jwt_required()
-@jwt_role_required(roles=["Admin"], permissions=["Manage Users"], page="Users Management")
+@jwt_role_required(
+    roles=["Admin"], permissions=["Manage Users"], page="Users Management"
+)
 def delete_user(user_id):
     # Mengambil identitas pengguna dari JWT
     user_identity = get_jwt_identity()
@@ -342,7 +352,11 @@ def delete_user(user_id):
 
 @restapi_bp.route("/api/get-devices", methods=["GET"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User", "View"], permissions=["Manage Devices","View Devices"], page="Devices Management")
+@jwt_role_required(
+    roles=["Admin", "User", "View"],
+    permissions=["Manage Devices", "View Devices"],
+    page="Devices Management",
+)
 def get_devices():
     devices_list = DeviceManager.query.all()
     result = devices_schema.dump(devices_list)
@@ -351,7 +365,11 @@ def get_devices():
 
 @restapi_bp.route("/api/get-device/<device_id>", methods=["GET"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User", "View"], permissions=["Manage Devices","View Devices"], page="Devices Management")
+@jwt_role_required(
+    roles=["Admin", "User", "View"],
+    permissions=["Manage Devices", "View Devices"],
+    page="Devices Management",
+)
 def get_device(device_id):
     device = DeviceManager.query.filter_by(id=device_id).first()
     if device:
@@ -363,7 +381,9 @@ def get_device(device_id):
 
 @restapi_bp.route("/api/create-device", methods=["POST"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management")
+@jwt_role_required(
+    roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
+)
 def create_device():
     # Mengambil identitas pengguna dari JWT
     jwt_data = get_jwt()
@@ -453,7 +473,9 @@ def create_device():
 
 @restapi_bp.route("/api/update-device", methods=["PUT"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management")
+@jwt_role_required(
+    roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
+)
 def update_device():
     # Mengambil identitas pengguna dari JWT
     jwt_data = get_jwt()
@@ -531,7 +553,9 @@ def update_device():
 
 @restapi_bp.route("/api/delete-device/<device_id>", methods=["DELETE"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management")
+@jwt_role_required(
+    roles=["Admin", "User"], permissions=["Manage Devices"], page="Devices Management"
+)
 def delete_device(device_id):
     # Mengambil identitas pengguna dari JWT
     user_identity = get_jwt_identity()
@@ -575,7 +599,11 @@ def delete_device(device_id):
 
 @restapi_bp.route("/api/get-templates", methods=["GET"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User", "View"], permissions=["Manage Templates", "View Templates"], page="Templates Management")
+@jwt_role_required(
+    roles=["Admin", "User", "View"],
+    permissions=["Manage Templates", "View Templates"],
+    page="Templates Management",
+)
 def get_templates():
     templates_list = TemplateManager.query.all()
     result = templates_schema.dump(templates_list)
@@ -584,7 +612,11 @@ def get_templates():
 
 @restapi_bp.route("/api/get-template/<template_id>", methods=["GET"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User", "View"], permissions=["Manage Templates", "View Templates"], page="Templates Management")
+@jwt_role_required(
+    roles=["Admin", "User", "View"],
+    permissions=["Manage Templates", "View Templates"],
+    page="Templates Management",
+)
 def get_template(template_id):
     try:
         # Query the template from the database, or return 404 if not found
@@ -641,7 +673,11 @@ def get_template(template_id):
 
 @restapi_bp.route("/api/create-template", methods=["POST"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management")
+@jwt_role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Templates"],
+    page="Templates Management",
+)
 def create_template():
     # Mengambil identitas pengguna dari JWT
     user_identity = get_jwt_identity()
@@ -761,7 +797,11 @@ def create_template():
 
 @restapi_bp.route("/api/update-template/<template_id>", methods=["PUT"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management")
+@jwt_role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Templates"],
+    page="Templates Management",
+)
 def update_template(template_id):
     """API Endpoint untuk memperbarui template berdasarkan ID, mendukung form data dan JSON."""
 
@@ -908,7 +948,11 @@ def update_template(template_id):
 
 @restapi_bp.route("/api/delete-template/<template_id>", methods=["DELETE"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management")
+@jwt_role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Templates"],
+    page="Templates Management",
+)
 def delete_template(template_id):
     """API Endpoint untuk menghapus template berdasarkan ID."""
 
@@ -976,7 +1020,11 @@ def delete_template(template_id):
 
 @restapi_bp.route("/api/generate-template/<template_id>", methods=["POST"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Templates"], page="Templates Management")
+@jwt_role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Templates"],
+    page="Templates Management",
+)
 def generate_template(template_id):
     """API Endpoint untuk generate, render, dan menyimpan template berdasarkan ID."""
 
@@ -1096,7 +1144,11 @@ def generate_template(template_id):
 
 @restapi_bp.route("/api/get-configfiles", methods=["GET"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Configuration File"], page="Configuration File Management")
+@jwt_role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Configuration File"],
+    page="Configuration File Management",
+)
 def get_configfiles():
     configfiles_list = ConfigurationManager.query.all()
     result = configfiles_schema.dump(configfiles_list)
@@ -1105,7 +1157,11 @@ def get_configfiles():
 
 @restapi_bp.route("/api/get-configfile/<config_id>", methods=["GET"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Configuration File"], page="Configuration File Management")
+@jwt_role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Configuration File"],
+    page="Configuration File Management",
+)
 def get_configfile(config_id):
     try:
         # Query the template from the database, or return 404 if not found
@@ -1146,7 +1202,11 @@ def get_configfile(config_id):
 
 @restapi_bp.route("/api/create-manual-configfile", methods=["POST"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Configuration File"], page="Configuration File Management")
+@jwt_role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Configuration File"],
+    page="Configuration File Management",
+)
 def create_manual_configfile():
     # Mengambil identitas pengguna dari JWT
     jwt_data = get_jwt()
@@ -1257,7 +1317,11 @@ def create_manual_configfile():
 
 @restapi_bp.route("/api/create-automate-configfile", methods=["POST"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Configuration File"], page="Configuration File Management")
+@jwt_role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Configuration File"],
+    page="Configuration File Management",
+)
 def create_automate_configfile():
     # Mengambil identitas pengguna dari JWT
     jwt_data = get_jwt()
@@ -1350,9 +1414,19 @@ def create_automate_configfile():
         )
 
 
+from flask import jsonify, current_app, request
+from werkzeug.utils import secure_filename
+from sqlalchemy.exc import SQLAlchemyError
+import os
+
+
 @restapi_bp.route("/api/create-automate-configfile-talita", methods=["POST"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Configuration File"], page="Configuration File Management")
+@jwt_role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Configuration File"],
+    page="Configuration File Management",
+)
 def create_automate_configfile_talita():
     # Mengambil identitas pengguna dari JWT
     jwt_data = get_jwt()
@@ -1360,17 +1434,16 @@ def create_automate_configfile_talita():
     user_identity = jwt_data.get("email")
 
     current_app.logger.info(
-        f"Attempting API create automate configfile with talita by {user_identity}"
+        f"User {user_identity} initiated TALITA configuration creation via API."
     )
 
     try:
         # Mengambil data dari request JSON atau form
         data = request.get_json() if request.is_json else request.form
 
-        # Validasi input
+        # Validasi input dan cek kelengkapan field
         required_fields = ["config_name", "vendor", "description", "ask_configuration"]
         missing_fields = [field for field in required_fields if field not in data]
-
         if missing_fields:
             current_app.logger.warning(f"Missing required fields: {missing_fields}")
             return (
@@ -1389,14 +1462,7 @@ def create_automate_configfile_talita():
         description = data.get("description")
         ask_configuration = data.get("ask_configuration")
 
-        # Generate nama file
-        gen_filename = generate_random_filename(vendor)
-        config_filename = f"{config_name}_{gen_filename}"
-        config_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, config_filename
-        )
-
-        # Generate konfigurasi otomatis menggunakan Talita
+        # Membuat konteks pertanyaan untuk API TALITA
         context = (
             f"Berikan hanya sintaks konfigurasi yang tepat untuk {vendor}.\n"
             f"Hanya sertakan perintah konfigurasi yang spesifik untuk vendor {vendor}.\n"
@@ -1406,37 +1472,40 @@ def create_automate_configfile_talita():
             f"Pertanyaan: {ask_configuration}\n"
         )
 
-        # Logging permintaan ke Talita
-        current_app.logger.info(f"User {user_identity} is asking TALITA a question.")
+        current_app.logger.info(
+            f"Requesting TALITA API for configuration generation by user {user_identity}."
+        )
 
-        # Meminta Talita untuk menghasilkan konfigurasi
-        response, status_code = talita_chat_completion(context, str(user_id))
-        if status_code != 200:
+        # Meminta TALITA untuk menghasilkan konfigurasi
+        result = generate_configfile_talita(context, str(user_id))
+        if not result["success"]:
             current_app.logger.warning(
-                f"Failed to connect to Talita AI for user {user_identity}: {response.get('message')}"
+                f"TALITA API request failed for {user_identity}: {result['message']}"
             )
-            return (
-                jsonify(
-                    {
-                        "is_valid": False,
-                        "error": response.get("message", "Unknown error occurred."),
-                    }
-                ),
-                status_code,
-            )
+            return jsonify({"is_valid": False, "error": result["message"]}), 502
 
-        talita_answer = response.get("message", "")
+        talita_answer = result["message"]
 
-        # Cek jawaban dari Talita
+        # Cek jika TALITA mengembalikan pesan "Gagal"
         if talita_answer.lower().startswith("gagal"):
+            current_app.logger.warning(
+                f"TALITA response 'Gagal' for user {user_identity}."
+            )
             return jsonify({"is_valid": False, "error": talita_answer}), 400
 
-        # Simpan konfigurasi ke file
+        # Membuat nama file dan path penyimpanan
+        gen_filename = generate_random_filename(config_name)
+        config_filename = secure_filename(f"{config_name}_{gen_filename}.txt")
+        config_path = os.path.join(
+            current_app.static_folder, GEN_TEMPLATE_FOLDER, config_filename
+        )
+
+        # Menyimpan konfigurasi ke file
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
         with open(config_path, "w", encoding="utf-8") as configuration_file:
             configuration_file.write(talita_answer)
 
-        # Simpan konfigurasi ke database
+        # Menyimpan informasi konfigurasi ke database
         new_configuration = ConfigurationManager(
             config_name=config_filename,
             vendor=vendor,
@@ -1448,7 +1517,7 @@ def create_automate_configfile_talita():
         db.session.commit()
 
         current_app.logger.info(
-            f"Successfully created AI-generated configuration by {user_identity}"
+            f"Configuration '{config_filename}' created successfully by {user_identity}."
         )
         return (
             jsonify(
@@ -1462,13 +1531,36 @@ def create_automate_configfile_talita():
             201,
         )
 
-    except Exception as e:
-        # Rollback jika terjadi error
+    except SQLAlchemyError as e:
+        # Rollback jika terjadi error database dan log kesalahan
         db.session.rollback()
-        current_app.logger.error(f"Error creating configuration file: {e}")
+        current_app.logger.error(f"Database error for {user_identity}: {str(e)}")
+        # Hapus file jika terjadi error setelah penulisan file
+        if os.path.exists(config_path):
+            os.remove(config_path)
         return (
             jsonify(
-                {"is_valid": False, "error": "Failed to create configuration file."}
+                {
+                    "is_valid": False,
+                    "error": "Database error occurred. Unable to save configuration.",
+                }
+            ),
+            500,
+        )
+
+    except Exception as e:
+        # Penanganan error umum dan log kesalahan
+        db.session.rollback()
+        current_app.logger.error(f"Unexpected error for {user_identity}: {str(e)}")
+        # Hapus file jika terjadi error setelah penulisan file
+        if os.path.exists(config_path):
+            os.remove(config_path)
+        return (
+            jsonify(
+                {
+                    "is_valid": False,
+                    "error": "An unexpected error occurred. Failed to create configuration file.",
+                }
             ),
             500,
         )
@@ -1476,7 +1568,11 @@ def create_automate_configfile_talita():
 
 @restapi_bp.route("/api/update-configfile/<config_id>", methods=["PUT"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Configuration File"], page="Configuration File Management")
+@jwt_role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Configuration File"],
+    page="Configuration File Management",
+)
 def update_configfile(config_id):
     """API Endpoint untuk memperbarui configfile berdasarkan ID, mendukung form data dan JSON."""
 
@@ -1588,7 +1684,11 @@ def update_configfile(config_id):
 
 @restapi_bp.route("/api/delete-config/<config_id>", methods=["DELETE"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Configuration File"], page="Configuration File Management")
+@jwt_role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Configuration File"],
+    page="Configuration File Management",
+)
 def delete_config(config_id):
     """API Endpoint untuk menghapus config berdasarkan ID."""
 
@@ -2281,7 +2381,9 @@ def create_backup_single(device_id):
 
 @restapi_bp.route("/api/get-backups", methods=["GET"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Backups"], page="Backups Management")
+@jwt_role_required(
+    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backups Management"
+)
 def get_backups():
     backups_list = BackupData.query.all()
     result = backups_schema.dump(backups_list)
@@ -2290,7 +2392,9 @@ def get_backups():
 
 @restapi_bp.route("/api/get-backup/<backup_id>", methods=["GET"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management")
+@jwt_role_required(
+    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
+)
 def get_backup(backup_id):
     """
     Menampilkan detail backup untuk backup tertentu berdasarkan backup_id.
@@ -2307,7 +2411,7 @@ def get_backup(backup_id):
     jwt_data = get_jwt()
     user_id = jwt_data.get("user_id")
     roles = jwt_data.get("roles", [])
-    
+
     if "Admin" in roles or backup.user_id == user_id:
         permission_level = "owner"
     else:
@@ -2334,7 +2438,9 @@ def get_backup(backup_id):
     # Serialisasi data backup dengan Marshmallow
     backup_data = backup_schema.dump(backup)
     backup_data["file_content"] = (
-        backup_content if permission_level != "read-only" else "Content hidden due to read-only access"
+        backup_content
+        if permission_level != "read-only"
+        else "Content hidden due to read-only access"
     )
     backup_data["permission_level"] = permission_level
 
@@ -2344,7 +2450,9 @@ def get_backup(backup_id):
 
 @restapi_bp.route("/api/update_backup/<backup_id>", methods=["PUT"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management")
+@jwt_role_required(
+    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
+)
 def update_backup(backup_id):
     """
     Mengupdate detail backup tertentu berdasarkan backup_id.
@@ -2396,17 +2504,31 @@ def update_backup(backup_id):
         backup_data = backup_schema.dump(backup)
 
         # Mengembalikan data backup yang telah diperbarui dalam format JSON
-        return jsonify({"success": True, "message": "Backup updated successfully", "backup": backup_data}), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Backup updated successfully",
+                    "backup": backup_data,
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         current_app.logger.error(f"Error updating backup: {e}")
         db.session.rollback()
-        return jsonify({"success": False, "message": f"Error updating backup: {str(e)}"}), 500
+        return (
+            jsonify({"success": False, "message": f"Error updating backup: {str(e)}"}),
+            500,
+        )
 
 
 @restapi_bp.route("/api/delete_backup/<backup_id>", methods=["DELETE"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management")
+@jwt_role_required(
+    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
+)
 def delete_backup(backup_id):
     """
     Menghapus backup tertentu berdasarkan backup_id.
@@ -2426,7 +2548,12 @@ def delete_backup(backup_id):
         roles = jwt_data.get("roles", [])
 
         if "Admin" not in roles and backup.user_id != user_id:
-            return jsonify({"success": False, "message": "Unauthorized to delete this backup."}), 403
+            return (
+                jsonify(
+                    {"success": False, "message": "Unauthorized to delete this backup."}
+                ),
+                403,
+            )
 
         # Menghapus data backup dari database
         db.session.delete(backup)
@@ -2440,17 +2567,25 @@ def delete_backup(backup_id):
             # Tidak perlu rollback transaksi DB jika penghapusan file gagal, hanya log error
 
         # Mengembalikan respons sukses
-        return jsonify({"success": True, "message": "Backup successfully deleted."}), 200
+        return (
+            jsonify({"success": True, "message": "Backup successfully deleted."}),
+            200,
+        )
 
     except Exception as e:
         current_app.logger.error(f"Error deleting backup: {e}")
         db.session.rollback()
-        return jsonify({"success": False, "message": f"Error deleting backup: {str(e)}"}), 500
+        return (
+            jsonify({"success": False, "message": f"Error deleting backup: {str(e)}"}),
+            500,
+        )
 
 
 @restapi_bp.route("/api/share_backup", methods=["POST"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management")
+@jwt_role_required(
+    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
+)
 def share_backup():
     """
     Endpoint untuk berbagi backup dengan pengguna lain.
@@ -2467,7 +2602,12 @@ def share_backup():
 
     # Validasi input
     if not user_email_to_share or not backup_id:
-        return jsonify({"success": False, "message": "User Email and Backup ID are required"}), 400
+        return (
+            jsonify(
+                {"success": False, "message": "User Email and Backup ID are required"}
+            ),
+            400,
+        )
 
     if permission_level not in ["read-only", "edit", "transfer"]:
         return jsonify({"success": False, "message": "Invalid permission level"}), 400
@@ -2475,12 +2615,25 @@ def share_backup():
     # Query user berdasarkan email
     user_to_share = User.query.filter_by(email=user_email_to_share).first()
     if not user_to_share:
-        return jsonify({"success": False, "message": f"User with email {user_email_to_share} not found"}), 404
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": f"User with email {user_email_to_share} not found",
+                }
+            ),
+            404,
+        )
 
     # Query backup berdasarkan backup_id
     backup = BackupData.query.get(backup_id)
     if not backup:
-        return jsonify({"success": False, "message": f"Backup with ID {backup_id} not found"}), 404
+        return (
+            jsonify(
+                {"success": False, "message": f"Backup with ID {backup_id} not found"}
+            ),
+            404,
+        )
 
     # Pastikan bahwa pengguna memiliki backup ini (jika bukan Admin)
     jwt_data = get_jwt()
@@ -2488,7 +2641,15 @@ def share_backup():
     roles = jwt_data.get("roles", [])
 
     if "Admin" not in roles and backup.user_id != user_id:
-        return jsonify({"success": False, "message": "You do not have permission to share this backup"}), 403
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "You do not have permission to share this backup",
+                }
+            ),
+            403,
+        )
 
     # Cek apakah sudah ada share sebelumnya
     existing_share = UserBackupShare.query.filter_by(
@@ -2507,10 +2668,15 @@ def share_backup():
             )
 
         db.session.commit()
-        return jsonify({
-            "success": True,
-            "message": f"Backup permission updated for user {user_to_share.email} to {permission_level} access"
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": f"Backup permission updated for user {user_to_share.email} to {permission_level} access",
+                }
+            ),
+            200,
+        )
 
     # Buat record baru di UserBackupShare
     new_share = UserBackupShare(
@@ -2530,15 +2696,22 @@ def share_backup():
 
     db.session.commit()
 
-    return jsonify({
-        "success": True,
-        "message": f"Backup shared with user {user_to_share.email} with {permission_level} access"
-    }), 200
+    return (
+        jsonify(
+            {
+                "success": True,
+                "message": f"Backup shared with user {user_to_share.email} with {permission_level} access",
+            }
+        ),
+        200,
+    )
 
 
 @restapi_bp.route("/api/rollback_backup/<backup_id>", methods=["POST"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management")
+@jwt_role_required(
+    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
+)
 def rollback_backup(backup_id):
     """
     Melakukan rollback konfigurasi perangkat ke keadaan sebelumnya berdasarkan backup_id.
@@ -2565,7 +2738,15 @@ def rollback_backup(backup_id):
         # Melakukan rollback dengan mengirimkan konfigurasi lama ke perangkat
         device = DeviceManager.query.get(backup.device_id)
         if not device:
-            return jsonify({"success": False, "message": "Device associated with backup not found"}), 404
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Device associated with backup not found",
+                    }
+                ),
+                404,
+            )
 
         # Menggunakan isi backup sebagai perintah rollback
         command = backup_content
@@ -2575,16 +2756,25 @@ def rollback_backup(backup_id):
             password=device.password,
             ssh=device.ssh,
         )
-        
+
         # Kirim konfigurasi rollback ke perangkat
         result = config_utils.configure_device(command)
-        return jsonify({"success": True, "message": "Rollback berhasil", "result": result}), 200
+        return (
+            jsonify(
+                {"success": True, "message": "Rollback berhasil", "result": result}
+            ),
+            200,
+        )
 
     except FileNotFoundError:
         return jsonify({"success": False, "message": "Backup file not found"}), 404
     except Exception as e:
         current_app.logger.error(f"Error during rollback: {e}")
-        return jsonify({"success": False, "message": f"Error during rollback: {str(e)}"}), 500
+        return (
+            jsonify({"success": False, "message": f"Error during rollback: {str(e)}"}),
+            500,
+        )
+
 
 ############# Utility Backup #####################
 def log_action(backup_id, action, user_id):
@@ -2597,11 +2787,16 @@ def log_action(backup_id, action, user_id):
     )
     db.session.add(audit_log)
     db.session.commit()
+
+
 ############# Utility Backup #####################
+
 
 @restapi_bp.route("/api/add_tag_to_backup/<backup_id>", methods=["POST"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management")
+@jwt_role_required(
+    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
+)
 def add_tag_to_backup(backup_id):
     """
     Menambahkan tag ke backup tertentu berdasarkan backup_id.
@@ -2616,7 +2811,10 @@ def add_tag_to_backup(backup_id):
     roles = jwt_data.get("roles", [])
 
     if not backup or ("Admin" not in roles and backup.user_id != user_id):
-        return jsonify({"success": False, "message": "Backup not found or unauthorized"}), 404
+        return (
+            jsonify({"success": False, "message": "Backup not found or unauthorized"}),
+            404,
+        )
 
     # Mendapatkan data tag dari request JSON
     data = request.get_json()
@@ -2626,9 +2824,16 @@ def add_tag_to_backup(backup_id):
 
     try:
         # Tambahkan tag baru ke backup
-        existing_tag = BackupTag.query.filter_by(tag=tag_text, backup_id=backup.id).first()
+        existing_tag = BackupTag.query.filter_by(
+            tag=tag_text, backup_id=backup.id
+        ).first()
         if existing_tag:
-            return jsonify({"success": False, "message": "Tag already exists for this backup"}), 400
+            return (
+                jsonify(
+                    {"success": False, "message": "Tag already exists for this backup"}
+                ),
+                400,
+            )
 
         new_tag = BackupTag(backup_id=backup.id, tag=tag_text.strip())
         db.session.add(new_tag)
@@ -2641,12 +2846,17 @@ def add_tag_to_backup(backup_id):
     except Exception as e:
         current_app.logger.error(f"Error adding tag to backup: {e}")
         db.session.rollback()
-        return jsonify({"success": False, "message": f"Error adding tag: {str(e)}"}), 500
+        return (
+            jsonify({"success": False, "message": f"Error adding tag: {str(e)}"}),
+            500,
+        )
 
 
 @restapi_bp.route("/api/get_audit_logs/<backup_id>", methods=["GET"])
 @jwt_required()
-@jwt_role_required(roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management")
+@jwt_role_required(
+    roles=["Admin", "User"], permissions=["Manage Backups"], page="Backup Management"
+)
 def get_audit_logs(backup_id):
     """
     Mengambil log audit dari backup tertentu berdasarkan backup_id.
@@ -2661,7 +2871,10 @@ def get_audit_logs(backup_id):
     roles = jwt_data.get("roles", [])
 
     if not backup or ("Admin" not in roles and backup.user_id != user_id):
-        return jsonify({"success": False, "message": "Backup not found or unauthorized"}), 404
+        return (
+            jsonify({"success": False, "message": "Backup not found or unauthorized"}),
+            404,
+        )
 
     # Mengambil log audit terkait backup_id
     audit_logs = BackupAuditLog.query.filter_by(backup_id=backup_id).all()
