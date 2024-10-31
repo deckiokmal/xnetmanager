@@ -85,8 +85,6 @@ def inject_user():
     return dict(first_name="", last_name="")
 
 
-CONFIG_DIRECTORY = "xmanager/configurations"
-
 # --------------------------------------------------------------------------------
 # CRUD Operation Section
 # --------------------------------------------------------------------------------
@@ -178,10 +176,11 @@ def get_detail_configuration(config_id):
         return jsonify({"error": "Unauthorized access to configuration."}), 403
 
     try:
+        config_dir = current_app.config["CONFIG_DIR"]
         configuration_file_path = os.path.join(
-            current_app.static_folder, CONFIG_DIRECTORY, configuration.config_name
+            config_dir, configuration.config_name
         )
-        if not is_safe_path(configuration_file_path, current_app.static_folder):
+        if not is_safe_path(configuration_file_path, config_dir):
             return jsonify({"error": "Unauthorized access to file path."}), 403
 
         configuration_content = read_file(configuration_file_path)
@@ -229,14 +228,15 @@ def create_configuration_with_ai_validated():
         configuration_description = (
             formManualConfiguration.configuration_description.data
         )
+
         configuration_content = (
             formManualConfiguration.configuration_content.data.strip()
         )
+        processed_content = "\n".join(line.rstrip() for line in configuration_content.splitlines())
 
-        gen_filename = generate_random_filename(vendor)
-        file_path = os.path.join(
-            current_app.static_folder, CONFIG_DIRECTORY, gen_filename
-        )
+        gen_filename = generate_random_filename(f"{filename}_{vendor}")
+        config_dir = current_app.config["CONFIG_DIR"]
+        file_path = os.path.join(config_dir, gen_filename)
 
         try:
             config_validated = validate_generated_template_with_openai(
@@ -245,7 +245,7 @@ def create_configuration_with_ai_validated():
             if config_validated.get("is_valid"):
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
                 with open(file_path, "w", encoding="utf-8") as configuration_file:
-                    configuration_file.write(configuration_content)
+                    configuration_file.write(processed_content)
 
                 new_configuration = ConfigurationManager(
                     config_name=gen_filename,
@@ -257,6 +257,10 @@ def create_configuration_with_ai_validated():
                 db.session.add(new_configuration)
                 db.session.commit()
 
+                flash(
+                    "Configuration created successfully and saved to database.",
+                    "success",
+                )
                 return (
                     jsonify(
                         {"is_valid": True, "redirect_url": url_for("config_file.index")}
@@ -319,9 +323,11 @@ def create_configuration_with_ai_automated():
         description = formAIconfiguration.description.data
         ask_configuration = formAIconfiguration.ask_configuration.data
 
-        gen_filename = f"{filename}_{generate_random_filename(vendor)}"
+        gen_filename = generate_random_filename(f"{filename}_{vendor}")
+
+        config_dir = current_app.config["CONFIG_DIR"]
         file_path = os.path.join(
-            current_app.static_folder, CONFIG_DIRECTORY, gen_filename
+            config_dir, gen_filename
         )
 
         try:
@@ -429,10 +435,11 @@ def create_configuration_with_talita():
                 return jsonify({"is_valid": False, "error_message": talita_answer}), 400
 
             # Menentukan nama file dan path
-            gen_filename = generate_random_filename(config_name)
-            filename = f"{gen_filename}.txt"
+            gen_filename = generate_random_filename(f"{config_name}_{vendor}")
+
+            config_dir = current_app.config["CONFIG_DIR"]
             file_path = os.path.join(
-                current_app.static_folder, CONFIG_DIRECTORY, secure_filename(filename)
+                config_dir, secure_filename(gen_filename)
             )
 
             # Membuat direktori jika belum ada
@@ -444,7 +451,7 @@ def create_configuration_with_talita():
 
             # Menyimpan informasi konfigurasi ke database
             new_configuration = ConfigurationManager(
-                config_name=filename,
+                config_name=gen_filename,
                 vendor=vendor,
                 description=description,
                 created_by=current_user.email,
@@ -454,7 +461,7 @@ def create_configuration_with_talita():
             db.session.commit()
 
             current_app.logger.info(
-                f"Configuration '{filename}' saved successfully for user {current_user.email}."
+                f"Configuration '{gen_filename}' saved successfully for user {current_user.email}."
             )
             flash(
                 "Configuration created successfully and saved to database.", "success"
@@ -528,8 +535,9 @@ def update_configuration(config_id):
         return jsonify({"error": "Unauthorized access to configuration."}), 403
 
     # Reading the content from the file
+    config_dir = current_app.config["CONFIG_DIR"]
     config_content = read_file(
-        os.path.join(current_app.static_folder, CONFIG_DIRECTORY, config.config_name)
+        os.path.join(config_dir, config.config_name)
     )
     if config_content is None:
         current_app.logger.error(
@@ -543,6 +551,7 @@ def update_configuration(config_id):
         new_vendor = form.vendor.data
         new_description = form.description.data
         new_config_content = form.config_content.data.strip()
+        processed_content = "\n".join(line.rstrip() for line in new_config_content.splitlines())
 
         # If no changes are detected, redirect silently to the index page
         if (
@@ -579,12 +588,13 @@ def update_configuration(config_id):
 
         try:
             # Update file content if changed
+            config_dir = current_app.config["CONFIG_DIR"]
             if new_config_content != config_content:
                 config_path = os.path.join(
-                    current_app.static_folder, CONFIG_DIRECTORY, config.config_name
+                    config_dir, config.config_name
                 )
                 with open(config_path, "w", encoding="utf-8") as file:
-                    file.write(new_config_content)
+                    file.write(processed_content)
                 current_app.logger.info(
                     f"Successfully updated config content by user {current_user.email}"
                 )
@@ -592,10 +602,10 @@ def update_configuration(config_id):
             # Rename the file if necessary
             if new_config_name != config.config_name:
                 old_path = os.path.join(
-                    current_app.static_folder, CONFIG_DIRECTORY, config.config_name
+                    config_dir, config.config_name
                 )
                 new_path = os.path.join(
-                    current_app.static_folder, CONFIG_DIRECTORY, new_config_name
+                    config_dir, new_config_name
                 )
 
                 os.makedirs(os.path.dirname(new_path), exist_ok=True)
@@ -664,8 +674,9 @@ def delete_configuration(config_id):
         return jsonify({"error": "Unauthorized access to configuration."}), 403
 
     try:
+        config_dir = current_app.config["CONFIG_DIR"]
         file_path = os.path.join(
-            current_app.static_folder, CONFIG_DIRECTORY, config.config_name
+            config_dir, config.config_name
         )
         success, message = delete_file_safely(file_path)
         if not success:

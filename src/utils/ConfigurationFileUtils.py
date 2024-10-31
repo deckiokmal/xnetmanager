@@ -51,22 +51,38 @@ def is_safe_path(file_path, base_directory):
     """
     Memastikan bahwa file_path berada di dalam base_directory dan aman untuk diakses.
     """
-    return os.path.commonpath([file_path, base_directory]) == base_directory
+    # Konversi ke path absolut sebelum perbandingan
+    abs_file_path = os.path.abspath(file_path)
+    abs_base_directory = os.path.abspath(base_directory)
+
+    return os.path.commonpath([abs_file_path, abs_base_directory]) == abs_base_directory
 
 
 # Utility untuk menghapus file dengan pengecekan keamanan
-def delete_file_safely(file_path):
+def delete_file_safely(file_path, base_directory=None):
     """
     Menghapus file dari sistem dengan memastikan file path aman.
+    :param file_path: Path file yang akan dihapus.
+    :param base_directory: Direktori dasar yang diizinkan, default ke `CONFIG_DIR` dari konfigurasi aplikasi.
+    :return: Tuple (status: bool, message: str)
     """
-    if not is_safe_path(file_path, current_app.static_folder):
-        current_app.logger.warning(f"Unauthorized file access attempt.")
+    # Tentukan base_directory dari konfigurasi aplikasi jika tidak diberikan
+    base_directory = base_directory or current_app.config.get("CONFIG_DIR")
+
+    # Periksa keamanan file path sebelum menghapus
+    if not is_safe_path(file_path, base_directory):
+        current_app.logger.warning(f"Unauthorized file access attempt to {file_path}.")
         return False, "Unauthorized file access."
 
-    if os.path.exists(file_path):
-        os.remove(file_path)
-        current_app.logger.info(f"File deleted: {file_path}")
-        return True, "File deleted successfully."
+    # Hapus file jika ada
+    if os.path.isfile(file_path):
+        try:
+            os.remove(file_path)
+            current_app.logger.info(f"File successfully deleted: {file_path}")
+            return True, "File deleted successfully."
+        except Exception as e:
+            current_app.logger.error(f"Error deleting file {file_path}: {e}")
+            return False, f"Error deleting file: {e}"
 
-    current_app.logger.warning(f"File not found: {file_path}")
+    current_app.logger.warning(f"File not found or is not a file: {file_path}")
     return False, "File not found."
