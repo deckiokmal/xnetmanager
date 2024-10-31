@@ -49,7 +49,7 @@ def page_not_found(error):
     Menangani error 404 dan menampilkan halaman 404.
     """
     current_app.logger.error(f"Error 404: {error}")
-    return render_template("main/404.hconfig_filel"), 404
+    return render_template("main/404.html"), 404
 
 
 # Middleware untuk autentikasi dan otorisasi sebelum permintaan.
@@ -64,7 +64,7 @@ def before_request_func():
         current_app.logger.warning(
             f"Unauthorized access attempt by {request.remote_addr}"
         )
-        return render_template("main/404.hconfig_filel"), 404
+        return render_template("main/404.html"), 404
 
     # Jika pengguna terotentikasi dan memiliki flag force_logout, lakukan logout
     if current_user.force_logout:
