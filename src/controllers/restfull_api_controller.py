@@ -111,8 +111,6 @@ def generate_random_filename(vendor_name):
     return filename
 
 
-RAW_TEMPLATE_FOLDER = "xmanager/templates"
-GEN_TEMPLATE_FOLDER = "xmanager/configurations"
 TEMPLATE_EXTENSIONS = {"j2"}
 PARAMS_EXTENSIONS = {"yml", "yaml"}
 
@@ -623,17 +621,16 @@ def get_template(template_id):
         template = TemplateManager.query.filter_by(id=template_id).first_or_404()
 
         # Read the template and parameter content from file
+        template_dir = current_app.config["TEMPLATE_DIR"]
         template_content = read_file(
             os.path.join(
-                current_app.static_folder,
-                RAW_TEMPLATE_FOLDER,
+                template_dir,
                 template.template_name,
             )
         )
         parameter_content = read_file(
             os.path.join(
-                current_app.static_folder,
-                RAW_TEMPLATE_FOLDER,
+                template_dir,
                 template.parameter_name,
             )
         )
@@ -737,11 +734,12 @@ def create_template():
         template_filename = f"{gen_filename}.j2"
         parameter_filename = f"{gen_filename}.yml"
 
+        template_dir = current_app.config["TEMPLATE_DIR"]
         template_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, template_filename
+            template_dir, template_filename
         )
         parameter_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, parameter_filename
+            template_dir, parameter_filename
         )
 
         # Simpan template content ke file
@@ -816,14 +814,15 @@ def update_template(template_id):
         )
 
         # Membaca konten template dan parameter saat ini dari file
+        template_dir = current_app.config["TEMPLATE_DIR"]
         template_content = read_file(
             os.path.join(
-                current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
+                template_dir, template.template_name
             )
         )
         parameter_content = read_file(
             os.path.join(
-                current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
+                template_dir, template.parameter_name
             )
         )
 
@@ -880,8 +879,9 @@ def update_template(template_id):
 
         # Simpan perubahan konten file jika ada perubahan
         if new_template_content != template_content:
+            template_dir = current_app.config["TEMPLATE_DIR"]
             template_path = os.path.join(
-                current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
+                template_dir, template.template_name
             )
             with open(template_path, "w", encoding="utf-8") as file:
                 file.write(new_template_content)
@@ -890,8 +890,9 @@ def update_template(template_id):
             )
 
         if new_parameter_content != parameter_content:
+            template_dir = current_app.config["TEMPLATE_DIR"]
             parameter_path = os.path.join(
-                current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
+                template_dir, template.parameter_name
             )
             with open(parameter_path, "w", encoding="utf-8") as file:
                 file.write(new_parameter_content)
@@ -902,10 +903,10 @@ def update_template(template_id):
         # Ganti nama file jika nama template atau parameter berubah
         if new_template_name != template.template_name:
             new_path_template = os.path.join(
-                current_app.static_folder, RAW_TEMPLATE_FOLDER, new_template_name
+                template_dir, new_template_name
             )
             old_path_template = os.path.join(
-                current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
+                template_dir, template.template_name
             )
             os.rename(old_path_template, new_path_template)
             template.template_name = new_template_name
@@ -914,11 +915,12 @@ def update_template(template_id):
             )
 
         if new_parameter_name != template.parameter_name:
+            template_dir = current_app.config["TEMPLATE_DIR"]
             new_path_parameter = os.path.join(
-                current_app.static_folder, RAW_TEMPLATE_FOLDER, new_parameter_name
+                template_dir, new_parameter_name
             )
             old_path_parameter = os.path.join(
-                current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
+                template_dir, template.parameter_name
             )
             os.rename(old_path_parameter, new_path_parameter)
             template.parameter_name = new_parameter_name
@@ -964,11 +966,12 @@ def delete_template(template_id):
         template = TemplateManager.query.get_or_404(template_id)
 
         # Tentukan path untuk file template dan parameter
+        template_dir = current_app.config["TEMPLATE_DIR"]
         template_file_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
+            template_dir, template.template_name
         )
         parameter_file_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
+            template_dir, template.parameter_name
         )
 
         # Hapus file template jika ada
@@ -1037,11 +1040,12 @@ def generate_template(template_id):
         vendor = template.vendor
 
         # Tentukan path untuk file Jinja template dan YAML parameter
+        template_dir = current_app.config["TEMPLATE_DIR"]
         jinja_template_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
+            template_dir, template.template_name
         )
         yaml_params_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
+            template_dir, template.parameter_name
         )
 
         # Membaca konten file Jinja template dan YAML parameter
@@ -1095,8 +1099,9 @@ def generate_template(template_id):
     try:
         # Generate filename untuk menyimpan hasil template yang digenerate
         gen_filename = generate_random_filename(template.vendor)
+        config_dir = current_app.config["CONFIG_DIR"]
         new_file_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, f"{gen_filename}.txt"
+            config_dir, f"{gen_filename}.txt"
         )
 
         # Simpan konfigurasi yang sudah dirender ke dalam file
@@ -1168,10 +1173,10 @@ def get_configfile(config_id):
         config = ConfigurationManager.query.filter_by(id=config_id).first_or_404()
 
         # Read the template and parameter content from file
+        config_dir = current_app.config["CONFIG_DIR"]
         config_content = read_file(
             os.path.join(
-                current_app.static_folder,
-                GEN_TEMPLATE_FOLDER,
+                config_dir,
                 config.config_name,
             )
         )
@@ -1251,12 +1256,10 @@ def create_manual_configfile():
             )
 
         # Generate filenames for saving the content
-        gen_filename = generate_random_filename(vendor)
-        config_filename = f"{config_name}_{gen_filename}"
+        gen_filename = generate_random_filename(f"{config_name}_{vendor}")
 
-        config_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, config_filename
-        )
+        config_dir = current_app.config["CONFIG_DIR"]
+        config_path = os.path.join(config_dir, gen_filename)
 
         config_validated = validate_generated_template_with_openai(
             config=config_content, vendor=vendor
@@ -1273,7 +1276,7 @@ def create_manual_configfile():
 
             # Simpan template baru ke database
             new_config = ConfigurationManager(
-                config_name=config_filename,
+                config_name=gen_filename,
                 vendor=vendor,
                 description=description,
                 created_by=user_identity,
@@ -1358,11 +1361,10 @@ def create_automate_configfile():
         ask_configuration = data.get("ask_configuration")
 
         # Generate nama file
-        gen_filename = generate_random_filename(vendor)
-        config_filename = f"{config_name}_{gen_filename}"
-        config_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, config_filename
-        )
+        gen_filename = generate_random_filename(f"{config_name}_{vendor}")
+
+        config_dir = current_app.config["CONFIG_DIR"]
+        config_path = os.path.join(config_dir, gen_filename)
 
         # Generate konfigurasi otomatis menggunakan OpenAI
         configuration_content, error = create_configuration_with_openai(
@@ -1379,7 +1381,7 @@ def create_automate_configfile():
 
         # Simpan konfigurasi ke database
         new_configuration = ConfigurationManager(
-            config_name=config_filename,
+            config_name=gen_filename,
             vendor=vendor,
             description=description,
             created_by=user_identity,
@@ -1494,11 +1496,10 @@ def create_automate_configfile_talita():
             return jsonify({"is_valid": False, "error": talita_answer}), 400
 
         # Membuat nama file dan path penyimpanan
-        gen_filename = generate_random_filename(config_name)
-        config_filename = secure_filename(f"{config_name}_{gen_filename}.txt")
-        config_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, config_filename
-        )
+        gen_filename = generate_random_filename(f"{config_name}_{vendor}")
+
+        config_dir = current_app.config["CONFIG_DIR"]
+        config_path = os.path.join(config_dir, gen_filename)
 
         # Menyimpan konfigurasi ke file
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
@@ -1507,7 +1508,7 @@ def create_automate_configfile_talita():
 
         # Menyimpan informasi konfigurasi ke database
         new_configuration = ConfigurationManager(
-            config_name=config_filename,
+            config_name=gen_filename,
             vendor=vendor,
             description=description,
             created_by=user_identity,
@@ -1587,8 +1588,9 @@ def update_configfile(config_id):
         current_app.logger.info(f"Accessed config update for config_id: {config_id}")
 
         # Membaca konten konfigurasi file saat ini
+        config_dir = current_app.config["CONFIG_DIR"]
         config_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, config.config_name
+            config_dir, config.config_name
         )
         config_content = read_file(config_path)
 
@@ -1651,8 +1653,9 @@ def update_configfile(config_id):
 
         # Perbarui nama file jika berubah
         if new_config_name != config.config_name:
+            config_dir = current_app.config["CONFIG_DIR"]
             new_path = os.path.join(
-                current_app.static_folder, GEN_TEMPLATE_FOLDER, new_config_name
+                config_dir, new_config_name
             )
             os.rename(config_path, new_path)
             config.config_name = new_config_name
@@ -1702,8 +1705,9 @@ def delete_config(config_id):
         config = ConfigurationManager.query.get_or_404(config_id)
 
         # Tentukan path untuk file config
+        config_dir = current_app.config["CONFIG_DIR"]
         config_file_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, config.config_name
+            config_dir, config.config_name
         )
 
         # Hapus file config jika ada
@@ -1934,8 +1938,9 @@ def push_configs():
 
     # Membaca file konfigurasi
     def read_config(filename):
+        config_dir = current_app.config["CONFIG_DIR"]
         config_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
+            config_dir, filename
         )
         try:
             with open(config_path, "r") as file:
@@ -2054,8 +2059,9 @@ def push_config_single_device(device_id):
 
     # Membaca file konfigurasi
     def read_config(filename):
+        config_dir = current_app.config["CONFIG_DIR"]
         config_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
+            config_dir, filename
         )
         try:
             with open(config_path, "r") as file:
