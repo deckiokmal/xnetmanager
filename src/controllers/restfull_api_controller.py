@@ -1518,7 +1518,7 @@ def create_automate_configfile_talita():
         db.session.commit()
 
         current_app.logger.info(
-            f"Configuration '{config_filename}' created successfully by {user_identity}."
+            f"Configuration '{gen_filename}' created successfully by {user_identity}."
         )
         return (
             jsonify(
