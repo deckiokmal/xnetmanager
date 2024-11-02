@@ -3,11 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    environment:
-      - FLASK_ENV=production
-      - BACKUP_DIR=/app/data/backups
-      - CONFIG_DIR=/app/data/configurations
-      - TEMPLATE_DIR=/app/data/templates
+    env_file:
+      - ./.env
     volumes:
       - ./data/backups:/app/data/backups
       - ./data/configurations:/app/data/configurations
