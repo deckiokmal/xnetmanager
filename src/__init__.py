@@ -1,5 +1,5 @@
 from decouple import config as decouple_config
-from flask import Flask, Response
+from flask import Flask
 import logging
 from logging import StreamHandler
 from flask_wtf.csrf import CSRFProtect
@@ -35,13 +35,13 @@ jwt = JWTManager()
 UUID_TYPE = None
 
 
-def create_app(config_class=None):
+def create_app():
     global UUID_TYPE
 
     app = Flask(__name__)
 
     # Membaca konfigurasi dari file .env
-    config_name = decouple_config("CONFIG_NAME", default="Development")
+    config_name = decouple_config("CONFIG_NAME", default="Production")
 
     # Memilih konfigurasi berdasarkan nama
     if config_name == "Development":
@@ -51,7 +51,9 @@ def create_app(config_class=None):
     elif config_name == "Production":
         app.config.from_object(ProductionConfig)
     else:
-        raise ValueError("Invalid CONFIG_NAME")
+        raise ValueError(
+            "Invalid CONFIG_NAME. Expected 'Development', 'Testing', or 'Production'."
+        )
 
     # Pastikan semua direktori yang dibutuhkan ada
     for directory in [
@@ -94,12 +96,8 @@ def create_app(config_class=None):
 
     # set config for JWT Extended Library
     app.config["JWT_SECRET_KEY"] = jwt_secret_key
-    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = (
-        False  # Token akses tidak pernah kedaluwarsa
-    )
-    app.config["JWT_REFRESH_TOKEN_EXPIRES"] = (
-        False  # Token refresh juga tidak pernah kedaluwarsa
-    )
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = False
+    app.config["JWT_REFRESH_TOKEN_EXPIRES"] = False
 
     # Initialize extensions
     bcrypt.init_app(app)
@@ -110,15 +108,7 @@ def create_app(config_class=None):
     mail.init_app(app)
     ma.init_app(app)
     jwt.init_app(app)
-    talisman = Talisman(
-        app,
-        force_https=app.config["TALISMAN_FORCE_HTTPS"],
-        strict_transport_security=app.config["TALISMAN_STRICT_TRANSPORT_SECURITY"],
-        strict_transport_security_max_age=app.config[
-            "TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE"
-        ],
-        content_security_policy=app.config["TALISMAN_CONTENT_SECURITY_POLICY"],
-    )
+    talisman = Talisman(app)  # Init Talisman di sini
 
     # Set UUID type based on database type
     UUID_TYPE = get_uuid_type(app.config["SQLALCHEMY_DATABASE_URI"])
@@ -139,8 +129,7 @@ def create_app(config_class=None):
 
     # Middleware to modify the Server header
     @app.after_request
-    def hide_server_header(response: Response):
-        # Change the Server header or remove it completely
+    def hide_server_header(response):
         response.headers["Server"] = "Hidden Server"
         return response
 

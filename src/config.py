@@ -54,9 +54,17 @@ class Config(object):
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
     # In production, use an environment variable for the backup directory (Docker volume)
-    BACKUP_DIR = config("BACKUP_DIR", default=os.path.join(BASE_DIR, "static", "xmanager", "backups"))
-    CONFIG_DIR = config("CONFIG_DIR", default=os.path.join(BASE_DIR, "static", "xmanager", "configurations"))
-    TEMPLATE_DIR = config("TEMPLATE_DIR", default=os.path.join(BASE_DIR, "static", "xmanager", "templates"))
+    BACKUP_DIR = config(
+        "BACKUP_DIR", default=os.path.join(BASE_DIR, "static", "xmanager", "backups")
+    )
+    CONFIG_DIR = config(
+        "CONFIG_DIR",
+        default=os.path.join(BASE_DIR, "static", "xmanager", "configurations"),
+    )
+    TEMPLATE_DIR = config(
+        "TEMPLATE_DIR",
+        default=os.path.join(BASE_DIR, "static", "xmanager", "templates"),
+    )
 
     # Pengaturan untuk keamanan cookies
     SESSION_COOKIE_SECURE = True
@@ -116,59 +124,15 @@ class Config(object):
 
 
 class DevelopmentConfig(Config):
-    """Konfigurasi khusus untuk lingkungan pengembangan."""
-
     DEVELOPMENT = True
     DEBUG = True
     WTF_CSRF_ENABLED = False
     DEBUG_TB_ENABLED = True
-
-    # Pengaturan Flask-Talisman untuk pengembangan
     TALISMAN_FORCE_HTTPS = False
     TALISMAN_STRICT_TRANSPORT_SECURITY = False
-    TALISMAN_CONTENT_SECURITY_POLICY = {
-        "default-src": ["'self'", "https://www.youtube.com"],
-        "img-src": [
-            "'self'",
-            "data:",
-            "cdn.jsdelivr.net",
-            "via.placeholder.com",
-            "https://iili.io",
-        ],
-        "style-src": [
-            "'self'",
-            "'unsafe-inline'",
-            "fonts.googleapis.com",
-            "cdn.jsdelivr.net",
-        ],
-        "script-src": [
-            "'self'",
-            "'unsafe-inline'",
-            "'unsafe-eval'",
-            "kit.fontawesome.com",
-            "cdn.jsdelivr.net",
-        ],
-        "script-src-elem": [
-            "'self'",
-            "'unsafe-inline'",
-            "kit.fontawesome.com",
-            "cdn.jsdelivr.net",
-        ],
-        "font-src": [
-            "'self'",
-            "fonts.gstatic.com",
-            "fonts.googleapis.com",
-            "https://ka-f.fontawesome.com",
-        ],
-        "connect-src": ["'self'", "https://ka-f.fontawesome.com"],
-        "object-src": ["'none'"],
-        "frame-ancestors": ["'none'"],
-    }
 
 
 class TestingConfig(Config):
-    """Konfigurasi khusus untuk lingkungan pengujian."""
-
     TESTING = True
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
@@ -177,50 +141,5 @@ class TestingConfig(Config):
 
 
 class ProductionConfig(Config):
-    """Konfigurasi khusus untuk lingkungan produksi."""
-
     DEBUG = False
     DEBUG_TB_ENABLED = False
-
-    # Pengaturan Flask-Talisman untuk produksi
-    TALISMAN_FORCE_HTTPS = True
-    TALISMAN_STRICT_TRANSPORT_SECURITY = True
-    TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE = 31536000  # 1 year
-    TALISMAN_CONTENT_SECURITY_POLICY = {
-        "default-src": ["'self'", "https://www.youtube.com"],
-        "img-src": [
-            "'self'",
-            "data:",
-            "cdn.jsdelivr.net",
-            "via.placeholder.com",
-            "https://iili.io",
-        ],
-        "style-src": [
-            "'self'",
-            "'unsafe-inline'",
-            "fonts.googleapis.com",
-            "cdn.jsdelivr.net",
-        ],
-        "script-src": [
-            "'self'",
-            "'unsafe-inline'",
-            "'unsafe-eval'",
-            "kit.fontawesome.com",
-            "cdn.jsdelivr.net",
-        ],
-        "script-src-elem": [
-            "'self'",
-            "'unsafe-inline'",
-            "kit.fontawesome.com",
-            "cdn.jsdelivr.net",
-        ],
-        "font-src": [
-            "'self'",
-            "fonts.gstatic.com",
-            "fonts.googleapis.com",
-            "https://ka-f.fontawesome.com",
-        ],
-        "connect-src": ["'self'", "https://ka-f.fontawesome.com"],
-        "object-src": ["'none'"],
-        "frame-ancestors": ["'none'"],
-    }
