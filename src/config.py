@@ -90,35 +90,43 @@ class Config(object):
     TALISMAN_STRICT_TRANSPORT_SECURITY = True
     TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE = 31536000  # 1 year
     TALISMAN_CONTENT_SECURITY_POLICY = {
-        "default-src": ["'self'", "https://www.youtube.com"],
-        "img-src": ["'self'", "data:", "cdn.jsdelivr.net", "via.placeholder.com"],
+        "default-src": ["'self'"],
         "style-src": [
             "'self'",
+            "https://fonts.googleapis.com",
+            "https://cdn.jsdelivr.net",
             "'unsafe-inline'",
-            "fonts.googleapis.com",
-            "cdn.jsdelivr.net",
+        ],
+        "style-src-elem": [
+            "'self'",
+            "https://fonts.googleapis.com",
+            "https://cdn.jsdelivr.net",
+            "'unsafe-inline'",
         ],
         "script-src": [
             "'self'",
+            "https://cdn.jsdelivr.net",
+            "https://kit.fontawesome.com",
             "'unsafe-inline'",
             "'unsafe-eval'",
-            "kit.fontawesome.com",
-            "cdn.jsdelivr.net",
-        ],
-        "script-src-elem": [
-            "'self'",
-            "'unsafe-inline'",
-            "kit.fontawesome.com",
-            "cdn.jsdelivr.net",
         ],
         "font-src": [
             "'self'",
-            "fonts.gstatic.com",
-            "fonts.googleapis.com",
+            "https://fonts.gstatic.com",
+            "https://fonts.googleapis.com",
             "https://ka-f.fontawesome.com",
+        ],
+        "img-src": [
+            "'self'",
+            "https://iili.io",
+            "data:",
         ],
         "connect-src": ["'self'", "https://ka-f.fontawesome.com"],
         "object-src": ["'none'"],
+        "frame-src": [
+            "'self'",
+            "https://www.youtube.com",
+        ],
         "frame-ancestors": ["'none'"],
     }
 

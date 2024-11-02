@@ -108,7 +108,13 @@ def create_app():
     mail.init_app(app)
     ma.init_app(app)
     jwt.init_app(app)
-    talisman = Talisman(app)  # Init Talisman di sini
+    talisman = Talisman(
+        app,
+        content_security_policy=app.config["TALISMAN_CONTENT_SECURITY_POLICY"],
+        force_https=app.config["TALISMAN_FORCE_HTTPS"],
+        strict_transport_security=app.config["TALISMAN_STRICT_TRANSPORT_SECURITY"],
+        strict_transport_security_max_age=app.config["TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE"],
+    )
 
     # Set UUID type based on database type
     UUID_TYPE = get_uuid_type(app.config["SQLALCHEMY_DATABASE_URI"])
