@@ -27,6 +27,7 @@ from src.utils.forms_utils import (
     TemplateForm,
     TemplateUpdateForm,
     ManualTemplateForm,
+    TemplateDeleteForm,
 )
 
 # Blueprint untuk template manager
@@ -103,7 +104,7 @@ def allowed_file(filename, allowed_extensions):
 
 def save_uploaded_file(file, upload_folder):
     filename = secure_filename(file.filename)
-    file_path = os.path.join(current_app.static_folder, upload_folder, filename)
+    file_path = os.path.join(upload_folder, filename)
     file.save(file_path)
     current_app.logger.info(f"File uploaded: {filename}")
     return filename
@@ -129,8 +130,6 @@ def generate_random_filename(vendor_name):
     return filename
 
 
-RAW_TEMPLATE_FOLDER = "xmanager/templates"
-GEN_TEMPLATE_FOLDER = "xmanager/configurations"
 TEMPLATE_EXTENSIONS = {"j2"}
 PARAMS_EXTENSIONS = {"yml", "yaml"}
 
@@ -153,6 +152,7 @@ def index():
 
     form = TemplateForm(request.form)
     form_manual_create = ManualTemplateForm(request.form)
+    delete_form = TemplateDeleteForm()
 
     search_query = request.args.get("search", "").lower()
     page, per_page, offset = get_page_args(
@@ -194,6 +194,7 @@ def index():
             total_templates=total_templates,
             templates=templates,
             pagination=pagination,
+            delete_form=delete_form,
         )
     except Exception as e:
         # Handle any unexpected errors that occur during the query or pagination
@@ -219,12 +220,9 @@ def template_detail(template_id):
     template = TemplateManager.query.get_or_404(template_id)
     try:
         # Ensure paths are safe
-        template_file_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
-        )
-        parameter_file_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
-        )
+        template_dir = current_app.config["TEMPLATE_DIR"]
+        template_file_path = os.path.join(template_dir, template.template_name)
+        parameter_file_path = os.path.join(template_dir, template.parameter_name)
 
         # Reading template and parameter files
         if not os.path.isfile(template_file_path) or not os.path.isfile(
@@ -295,9 +293,14 @@ def template_detail(template_id):
 def upload_template():
     """Handles file uploads for template and parameter files, saving them to the database with enhanced security checks."""
     try:
-        form = TemplateForm(request.form)
+        form = TemplateForm()  # Inisialisasi form tanpa data terlebih dahulu
 
-        # Validate input vendor and version using WTForms
+        # Mengisi form data dari request
+        form = TemplateForm(request.form)  # Menyertakan request.form dalam form
+        form.j2 = request.files.get("j2")  # Mengambil file template
+        form.yaml = request.files.get("yaml")  # Mengambil file parameter
+
+        # Validasi form dengan WTForms (CSRF, vendor, version, dll.)
         if not form.validate():
             for field, errors in form.errors.items():
                 for error in errors:
@@ -307,73 +310,74 @@ def upload_template():
             )
             return redirect(url_for("tm.index"))
 
-        # Retrieve files and data from the form
+        # Retrieve files and form data
         j2 = request.files.get("j2")
         yaml = request.files.get("yaml")
         vendor = form.vendor.data
         version = form.version.data
         description = form.description.data
 
-        # Check if both files are provided and not empty
+        # Pastikan kedua file disertakan
         if not j2 or j2.filename == "":
-            flash("File template tidak ada.", "error")
+            flash("File template tidak ada.", "danger")
             current_app.logger.warning(
                 f"User {current_user.email} attempted to upload without providing a template file."
             )
             return redirect(url_for("tm.index"))
 
         if not yaml or yaml.filename == "":
-            flash("File parameter tidak ada.", "error")
+            flash("File parameter tidak ada.", "danger")
             current_app.logger.warning(
                 f"User {current_user.email} attempted to upload without providing a parameter file."
             )
             return redirect(url_for("tm.index"))
 
-        # Validate and save template file
+        # Validasi dan simpan file template
+        template_dir = current_app.config["TEMPLATE_DIR"]
         if j2.filename and allowed_file(j2.filename, TEMPLATE_EXTENSIONS):
             template_name = secure_filename(j2.filename)
-            template_path = save_uploaded_file(j2, RAW_TEMPLATE_FOLDER)
+            template_path = save_uploaded_file(j2, template_dir)
         else:
-            flash("Jenis file template tidak valid. Diizinkan: j2.", "error")
+            flash("Jenis file template tidak valid. Diizinkan: j2.", "danger")
             current_app.logger.warning(
                 f"User {current_user.email} uploaded an invalid template file type: {j2.filename}"
             )
             return redirect(url_for("tm.index"))
 
-        # Validate and save parameter file
+        # Validasi dan simpan file parameter
         if yaml.filename and allowed_file(yaml.filename, PARAMS_EXTENSIONS):
             parameter_name = secure_filename(yaml.filename)
-            parameter_path = save_uploaded_file(yaml, RAW_TEMPLATE_FOLDER)
+            parameter_path = save_uploaded_file(yaml, template_dir)
         else:
-            flash("Jenis file parameter tidak valid. Diizinkan: yml, yaml.", "error")
+            flash("Jenis file parameter tidak valid. Diizinkan: yml, yaml.", "danger")
             current_app.logger.warning(
                 f"User {current_user.email} uploaded an invalid parameter file type: {yaml.filename}"
             )
             return redirect(url_for("tm.index"))
 
-        # Check for duplicate template name
+        # Periksa duplikasi nama template
         existing_template = TemplateManager.query.filter_by(
             template_name=template_name
         ).first()
         if existing_template:
-            flash(f"Nama template sudah ada!", "danger")
+            flash("Nama template sudah ada!", "danger")
             current_app.logger.warning(
                 f"User {current_user.email} attempted to upload a duplicate template: {template_name}."
             )
             return redirect(url_for("tm.index"))
 
-        # Check for duplicate parameter name
+        # Periksa duplikasi nama parameter
         existing_parameter = TemplateManager.query.filter_by(
             parameter_name=parameter_name
         ).first()
         if existing_parameter:
-            flash(f"Nama template sudah ada!", "danger")
+            flash("Nama parameter sudah ada!", "danger")
             current_app.logger.warning(
                 f"User {current_user.email} attempted to upload a duplicate parameter: {parameter_name}."
             )
             return redirect(url_for("tm.index"))
 
-        # Create and save new template data to the database
+        # Simpan data template baru ke database
         new_template = TemplateManager(
             template_name=template_name,
             parameter_name=parameter_name,
@@ -390,8 +394,8 @@ def upload_template():
         flash("File berhasil diunggah.", "success")
 
     except Exception as e:
-        # Log the error and provide error feedback to the user
-        db.session.rollback()  # Ensure any changes are rolled back if an error occurs
+        # Rollback jika terjadi error dan berikan feedback ke pengguna
+        db.session.rollback()
         current_app.logger.error(
             f"Error uploading template for user {current_user.email}: {str(e)}"
         )
@@ -452,12 +456,9 @@ def create_template_manual():
         template_filename = f"{gen_filename}.j2"
         parameter_filename = f"{gen_filename}.yml"
 
-        template_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, template_filename
-        )
-        parameter_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, parameter_filename
-        )
+        template_dir = current_app.config["TEMPLATE_DIR"]
+        template_path = os.path.join(template_dir, template_filename)
+        parameter_path = os.path.join(template_dir, parameter_filename)
 
         # Save template content to file
         with open(template_path, "w", encoding="utf-8") as template_file:
@@ -515,16 +516,9 @@ def update_template(template_id):
     template = TemplateManager.query.get_or_404(template_id)
     current_app.logger.info(f"Accessed template update for template_id: {template_id}")
 
-    template_content = read_file(
-        os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
-        )
-    )
-    parameter_content = read_file(
-        os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
-        )
-    )
+    template_dir = current_app.config["TEMPLATE_DIR"]
+    template_content = read_file(os.path.join(template_dir, template.template_name))
+    parameter_content = read_file(os.path.join(template_dir, template.parameter_name))
 
     if template_content is None or parameter_content is None:
         flash("Terjadi kesalahan saat memuat template atau konten parameter.", "error")
@@ -567,10 +561,10 @@ def update_template(template_id):
                 return redirect(url_for("tm.update_template", template_id=template_id))
 
             # Handle file content changes
+            template_dir = current_app.config["TEMPLATE_DIR"]
             if new_template_content != template_content:
                 template_path = os.path.join(
-                    current_app.static_folder,
-                    RAW_TEMPLATE_FOLDER,
+                    template_dir,
                     template.template_name,
                 )
                 with open(template_path, "w", encoding="utf-8") as file:
@@ -581,8 +575,7 @@ def update_template(template_id):
 
             if new_parameter_content != parameter_content:
                 parameter_path = os.path.join(
-                    current_app.static_folder,
-                    RAW_TEMPLATE_FOLDER,
+                    template_dir,
                     template.parameter_name,
                 )
                 with open(parameter_path, "w", encoding="utf-8") as file:
@@ -593,12 +586,9 @@ def update_template(template_id):
 
             # Handle filename changes
             if new_template_name != template.template_name:
-                new_path_template = os.path.join(
-                    current_app.static_folder, RAW_TEMPLATE_FOLDER, new_template_name
-                )
+                new_path_template = os.path.join(template_dir, new_template_name)
                 old_path_template = os.path.join(
-                    current_app.static_folder,
-                    RAW_TEMPLATE_FOLDER,
+                    template_dir,
                     template.template_name,
                 )
                 os.rename(old_path_template, new_path_template)
@@ -608,12 +598,9 @@ def update_template(template_id):
                 )
 
             if new_parameter_name != template.parameter_name:
-                new_path_parameter = os.path.join(
-                    current_app.static_folder, RAW_TEMPLATE_FOLDER, new_parameter_name
-                )
+                new_path_parameter = os.path.join(template_dir, new_parameter_name)
                 old_path_parameter = os.path.join(
-                    current_app.static_folder,
-                    RAW_TEMPLATE_FOLDER,
+                    template_dir,
                     template.parameter_name,
                 )
                 os.rename(old_path_parameter, new_path_parameter)
@@ -657,64 +644,63 @@ def update_template(template_id):
 )
 def delete_template(template_id):
     """Handles the deletion of a template based on its ID."""
-    template = TemplateManager.query.get_or_404(template_id)
+    form = TemplateDeleteForm()
+    if form.validate_on_submit():
+        template = TemplateManager.query.get_or_404(template_id)
 
-    try:
-        # Define paths for the template and parameter files
-        template_file_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
-        )
-        parameter_file_path = os.path.join(
-            current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
-        )
+        try:
+            # Define paths for the template and parameter files
+            template_dir = current_app.config["TEMPLATE_DIR"]
+            template_file_path = os.path.join(template_dir, template.template_name)
+            parameter_file_path = os.path.join(template_dir, template.parameter_name)
 
-        # Try deleting the template file, log appropriately
-        if os.path.exists(template_file_path):
-            os.remove(template_file_path)
+            # Try deleting the template file, log appropriately
+            if os.path.exists(template_file_path):
+                os.remove(template_file_path)
+                current_app.logger.info(
+                    f"Template file deleted: {template_file_path} by {current_user.email}"
+                )
+            else:
+                current_app.logger.warning(
+                    f"Template file not found for deletion: {template_file_path} by {current_user.email}"
+                )
+
+            # Try deleting the parameter file, log appropriately
+            if os.path.exists(parameter_file_path):
+                os.remove(parameter_file_path)
+                current_app.logger.info(
+                    f"Parameter file deleted: {parameter_file_path} by {current_user.email}"
+                )
+            else:
+                current_app.logger.warning(
+                    f"Parameter file not found for deletion: {parameter_file_path} by {current_user.email}"
+                )
+
+            # Delete the template from the database
+            db.session.delete(template)
+            db.session.commit()
             current_app.logger.info(
-                f"Template file deleted: {template_file_path} by {current_user.email}"
+                f"Template with ID {template_id} successfully deleted by {current_user.email}"
             )
-        else:
-            current_app.logger.warning(
-                f"Template file not found for deletion: {template_file_path} by {current_user.email}"
+            flash("Template berhasil dihapus.", "success")
+
+        except OSError as os_error:
+            current_app.logger.error(
+                f"OS error while deleting files for template ID {template_id}: {os_error} by {current_user.email}"
             )
-
-        # Try deleting the parameter file, log appropriately
-        if os.path.exists(parameter_file_path):
-            os.remove(parameter_file_path)
-            current_app.logger.info(
-                f"Parameter file deleted: {parameter_file_path} by {current_user.email}"
+            flash(
+                "Terjadi kesalahan sistem saat menghapus file. Silakan coba lagi.", "danger"
             )
-        else:
-            current_app.logger.warning(
-                f"Parameter file not found for deletion: {parameter_file_path} by {current_user.email}"
+            db.session.rollback()
+
+        except Exception as e:
+            current_app.logger.error(
+                f"Unexpected error while deleting template ID {template_id}: {e} by {current_user.email}"
             )
+            flash("Gagal menghapus template. Silakan coba lagi.", "danger")
+            db.session.rollback()
 
-        # Delete the template from the database
-        db.session.delete(template)
-        db.session.commit()
-        current_app.logger.info(
-            f"Template with ID {template_id} successfully deleted by {current_user.email}"
-        )
-        flash("Template berhasil dihapus.", "success")
-
-    except OSError as os_error:
-        current_app.logger.error(
-            f"OS error while deleting files for template ID {template_id}: {os_error} by {current_user.email}"
-        )
-        flash(
-            "Terjadi kesalahan sistem saat menghapus file. Silakan coba lagi.", "danger"
-        )
-        db.session.rollback()
-
-    except Exception as e:
-        current_app.logger.error(
-            f"Unexpected error while deleting template ID {template_id}: {e} by {current_user.email}"
-        )
-        flash("Gagal menghapus template. Silakan coba lagi.", "danger")
-        db.session.rollback()
-
-    return redirect(url_for("tm.index"))
+        return redirect(url_for("tm.index"))
 
 
 @tm_bp.route("/template-generator/<template_id>", methods=["POST"])
@@ -730,12 +716,10 @@ def template_generator(template_id):
     template = TemplateManager.query.get_or_404(template_id)
     vendor = template.vendor
 
-    jinja_template_path = os.path.join(
-        current_app.static_folder, RAW_TEMPLATE_FOLDER, template.template_name
-    )
-    yaml_params_path = os.path.join(
-        current_app.static_folder, RAW_TEMPLATE_FOLDER, template.parameter_name
-    )
+    template_dir = current_app.config["TEMPLATE_DIR"]
+
+    jinja_template_path = os.path.join(template_dir, template.template_name)
+    yaml_params_path = os.path.join(template_dir, template.parameter_name)
 
     try:
         jinja_template = read_file(jinja_template_path)
@@ -790,9 +774,8 @@ def template_generator(template_id):
     try:
         gen_filename = generate_random_filename(template.vendor)
         newFileName = f"{gen_filename}"
-        new_file_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, newFileName
-        )
+        config_dir = current_app.config["CONFIG_DIR"]
+        new_file_path = os.path.join(config_dir, newFileName)
 
         with open(new_file_path, "w", encoding="utf-8") as new_file:
             new_file.write(rendered_config)

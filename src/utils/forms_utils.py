@@ -9,6 +9,7 @@ from wtforms import (
     SubmitField,
     BooleanField,
     IntegerField,
+    SelectMultipleField,
 )
 from wtforms.validators import (
     DataRequired,
@@ -20,7 +21,8 @@ from wtforms.validators import (
     IPAddress,
     Regexp,
 )
-from src.models.app_models import User
+from wtforms_sqlalchemy.fields import QuerySelectMultipleField
+from src.models.app_models import User, Permission
 
 
 class RegisterForm(FlaskForm):
@@ -231,6 +233,56 @@ class User2FAEnableForm(FlaskForm):
     )
 
 
+class RolesForm(FlaskForm):
+    name = StringField(
+        "Role Name",
+        validators=[DataRequired(), Length(max=64)],
+        render_kw={"placeholder": "Enter role name"},
+    )
+
+    permissions = QuerySelectMultipleField(
+        "Permissions", query_factory=lambda: Permission.query.all(), get_label="name"
+    )
+
+    submit = SubmitField("Save Role")
+
+
+class RoleUpdateForm(FlaskForm):
+    name = StringField(
+        "Role Name",
+        validators=[DataRequired(), Length(max=64)],
+        render_kw={"placeholder": "Enter role name"},
+    )
+
+    users = SelectMultipleField("Users", coerce=str)  # Menyimpan ID user sebagai string
+
+    permissions = SelectMultipleField(
+        "Permissions", coerce=str  # Menyimpan ID permission sebagai string
+    )
+
+    submit = SubmitField("Save Changes")
+
+
+class RoleDeleteForm(FlaskForm):
+    pass
+
+
+class RoleAssignUserForm(FlaskForm):
+    pass
+
+
+class PermissionCreateForm(FlaskForm):
+    pass
+
+
+class PermissionUpdateForm(FlaskForm):
+    pass
+
+
+class PermissionDeleteForm(FlaskForm):
+    pass
+
+
 class DeviceForm(FlaskForm):
     device_name = StringField(
         "Device Name",
@@ -406,6 +458,10 @@ class ManualTemplateForm(FlaskForm):
         "Parameter Content",
         validators=[DataRequired(message="Konten parameter tidak boleh kosong.")],
     )
+
+
+class TemplateDeleteForm(FlaskForm):
+    pass
 
 
 class ManualConfigurationForm(FlaskForm):

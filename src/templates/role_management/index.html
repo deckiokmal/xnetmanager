@@ -78,10 +78,12 @@
         <!-- Tombol untuk Delete -->
         <form method="post" action="{{ url_for('roles.delete_role', role_id=role.id) }}" class="d-inline"
             onsubmit="return confirm('Anda yakin ingin menghapus role ini?');">
+            {{ role_delete_form.hidden_tag() }}
             <button type="submit" class="btn btn-danger btn-sm mb-1">
                 <i class="fa-solid fa-trash"></i>
             </button>
         </form>
+
     </td>
 </tr>
 
@@ -143,23 +145,35 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
+                        <!-- Render form dengan WTForms -->
                         <form method="post" action="{{ url_for('roles.create_role') }}">
+                            {{ role_form.hidden_tag() }}
+
                             <div class="mb-3">
-                                <label for="name" class="form-label">Nama Role</label>
-                                <input type="text" class="form-control" id="name" name="name" required>
+                                {{ role_form.name.label(class="form-label") }}
+                                {{ role_form.name(class="form-control") }}
                             </div>
+
                             <div class="mb-3">
-                                <label class="form-label">Permissions</label>
-                                <div id="permissionsContainer" class="row">
-                                    <!-- Permissions will be dynamically added here -->
+                                {{ role_form.permissions.label(class="form-label") }}
+                                <div id="permissionsContainer" class="form-check">
+                                    {% for permission in role_form.permissions %}
+                                    <div class="form-check mb-2">
+                                        {{ permission(class="form-check-input") }}
+                                        {{ permission.label(class="form-check-label") }}
+                                    </div>
+                                    {% endfor %}
                                 </div>
                             </div>
+
                             <button type="submit" class="btn btn-primary">Create</button>
                         </form>
                     </div>
                 </div>
             </div>
         </div>
+
+
 
         <!-- Modal Tambah User ke Role -->
         <div class="modal fade" id="addUserToRoleModal" tabindex="-1" aria-labelledby="addUserToRoleModalLabel"
@@ -172,6 +186,7 @@
                     </div>
                     <div class="modal-body">
                         <form method="post" action="{{ url_for('roles.add_user_to_role') }}">
+                            {{ role_assign_user_form.hidden_tag() }}
                             <div class="form-group">
                                 <label for="user_id">Pilih User</label>
                                 <select class="form-control" id="user_id" name="user_id">
@@ -239,6 +254,5 @@
                         .catch(error => console.error('Error loading permissions:', error));
                 });
             });
-
         </script>
         {% endblock %}

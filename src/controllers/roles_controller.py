@@ -14,6 +14,15 @@ from src import db
 from src.models.app_models import User, Role, Permission, UserRoles
 from .decorators import role_required, login_required, required_2fa
 import logging
+from src.utils.forms_utils import (
+    RolesForm,
+    RoleUpdateForm,
+    RoleDeleteForm,
+    RoleAssignUserForm,
+    PermissionCreateForm,
+    PermissionUpdateForm,
+    PermissionDeleteForm,
+)
 
 # Membuat blueprint roles_bp dan error_bp
 roles_bp = Blueprint("roles", __name__)
@@ -93,6 +102,10 @@ def index():
         f"User {current_user.email} accessed Roles Management page."
     )
 
+    role_form = RolesForm()
+    role_delete_form = RoleDeleteForm()
+    role_assign_user_form = RoleAssignUserForm()
+
     try:
         all_roles = Role.query.all()  # Mengambil semua role
         all_users = User.query.all()  # Mengambil semua pengguna
@@ -131,6 +144,9 @@ def index():
             total_roles=total_roles,
             all_roles=all_roles,
             all_users=all_users,
+            role_form=role_form,
+            role_delete_form=role_delete_form,
+            role_assign_user_form=role_assign_user_form,
         )
 
     except Exception as e:
@@ -151,47 +167,52 @@ def create_role():
     """Membuat role baru dan menyimpannya ke dalam database."""
     current_app.logger.info(f"User {current_user.email} accessed Create Role page.")
 
-    role_name = request.form.get("name")
-    role_permissions = request.form.getlist("permissions")
+    form = RolesForm()
 
-    # Validasi input
-    if not role_name or not role_permissions:
-        current_app.logger.warning(
-            f"User {current_user.email} gagal membuat role baru: nama atau permissions kosong."
-        )
-        flash("Nama role dan permissions tidak boleh kosong!", "warning")
-        return redirect(url_for("roles.index"))
+    if form.validate_on_submit():
+        role_name = request.form.get("name")
+        role_permissions = request.form.getlist("permissions")
 
-    try:
-        # Check if role already exists
-        if Role.query.filter_by(name=role_name).first():
+        # Validasi input
+        if not role_name or not role_permissions:
             current_app.logger.warning(
-                f"User {current_user.email} gagal membuat role baru: role '{role_name}' sudah ada."
+                f"User {current_user.email} gagal membuat role baru: nama atau permissions kosong."
             )
-            flash("Role sudah ada!", "error")
+            flash("Nama role dan permissions tidak boleh kosong!", "warning")
             return redirect(url_for("roles.index"))
 
-        # Create new role with permissions
-        new_role = Role(
-            name=role_name,
-            permissions=[Permission.query.get(p) for p in role_permissions],
-        )
-        db.session.add(new_role)
-        db.session.commit()
+        try:
+            # Check if role already exists
+            if Role.query.filter_by(name=role_name).first():
+                current_app.logger.warning(
+                    f"User {current_user.email} gagal membuat role baru: role '{role_name}' sudah ada."
+                )
+                flash("Role sudah ada!", "error")
+                return redirect(url_for("roles.index"))
 
-        current_app.logger.info(
-            f"User {current_user.email} berhasil membuat role baru: {role_name}."
-        )
-        flash("Role berhasil ditambah!", "success")
-        return redirect(url_for("roles.index"))
+            # Create new role with permissions
+            new_role = Role(
+                name=role_name,
+                permissions=[Permission.query.get(p) for p in role_permissions],
+            )
+            db.session.add(new_role)
+            db.session.commit()
 
-    except Exception as e:
-        current_app.logger.error(
-            f"Error creating role '{role_name}' by user {current_user.email}: {str(e)}"
-        )
-        flash("Terjadi kesalahan saat membuat role baru. Silakan coba lagi.", "danger")
-        db.session.rollback()
-        return redirect(url_for("roles.index"))
+            current_app.logger.info(
+                f"User {current_user.email} berhasil membuat role baru: {role_name}."
+            )
+            flash("Role berhasil ditambah!", "success")
+            return redirect(url_for("roles.index"))
+
+        except Exception as e:
+            current_app.logger.error(
+                f"Error creating role '{role_name}' by user {current_user.email}: {str(e)}"
+            )
+            flash(
+                "Terjadi kesalahan saat membuat role baru. Silakan coba lagi.", "danger"
+            )
+            db.session.rollback()
+            return redirect(url_for("roles.index"))
 
 
 # Memperbarui Role
@@ -206,8 +227,16 @@ def update_role(role_id):
     )
 
     role = Role.query.get_or_404(role_id)  # Mengambil role berdasarkan ID
+    form = RoleUpdateForm(obj=role)  # Inisialisasi form dengan data role
 
-    if request.method == "POST":
+    # Menentukan pilihan untuk users dan permissions di form
+    form.users.choices = [(str(user.id), user.email) for user in User.query.all()]
+    form.permissions.choices = [
+        (str(permission.id), permission.name) for permission in Permission.query.all()
+    ]
+
+    # Validasi form hanya untuk CSRF, logika form tetap pakai request.form
+    if form.validate_on_submit():
         role_name = request.form.get("name")
         selected_permissions = request.form.getlist("permissions")
         selected_users = request.form.getlist("users")
@@ -267,6 +296,7 @@ def update_role(role_id):
     return render_template(
         "/role_management/update_role.html",
         role=role,
+        form=form,  # Menyertakan form untuk CSRF dan validasi
         associated_users=associated_users,
         all_permissions=all_permissions,
         associated_permissions=associated_permissions,
@@ -280,47 +310,57 @@ def update_role(role_id):
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def delete_role(role_id):
     """Menghapus role dari database jika tidak ada asosiasi pengguna atau permissions."""
-    current_app.logger.info(
-        f"User {current_user.email} is attempting to delete role with ID {role_id}."
-    )
+    form = RoleDeleteForm()  # Menggunakan form untuk validasi CSRF
 
-    role = Role.query.get_or_404(role_id)  # Mengambil role berdasarkan ID
-
-    try:
-        if role.users:
-            current_app.logger.warning(
-                f"User {current_user.email} mencoba menghapus role {role.name}, tetapi role ini terasosiasi dengan pengguna."
-            )
-            flash(
-                "Role tidak dapat dihapus karena masih terasosiasi dengan pengguna.",
-                "warning",
-            )
-            return redirect(url_for("roles.index"))
-        elif role.permissions:
-            current_app.logger.warning(
-                f"User {current_user.email} mencoba menghapus role {role.name}, tetapi role ini terasosiasi dengan permissions."
-            )
-            flash(
-                "Role tidak dapat dihapus karena masih terasosiasi dengan permissions.",
-                "warning",
-            )
-            return redirect(url_for("roles.index"))
-
-        db.session.delete(role)
-        db.session.commit()
+    if form.validate_on_submit():  # Pastikan token CSRF tervalidasi
         current_app.logger.info(
-            f"User {current_user.email} berhasil menghapus role {role.name}."
+            f"User {current_user.email} is attempting to delete role with ID {role_id}."
         )
-        flash("Role berhasil dihapus.", "success")
-        return redirect(url_for("roles.index"))
 
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(
-            f"Error deleting role '{role.name}' by user {current_user.email}: {str(e)}"
-        )
-        flash("Terjadi kesalahan saat menghapus role. Silakan coba lagi.", "danger")
-        return redirect(url_for("roles.index"))
+        role = Role.query.get_or_404(role_id)  # Mengambil role berdasarkan ID
+
+        try:
+            # Cek apakah role terasosiasi dengan pengguna
+            if role.users:
+                current_app.logger.warning(
+                    f"User {current_user.email} mencoba menghapus role {role.name}, tetapi role ini terasosiasi dengan pengguna."
+                )
+                flash(
+                    "Role tidak dapat dihapus karena masih terasosiasi dengan pengguna.",
+                    "warning",
+                )
+                return redirect(url_for("roles.index"))
+            # Cek apakah role terasosiasi dengan permissions
+            elif role.permissions:
+                current_app.logger.warning(
+                    f"User {current_user.email} mencoba menghapus role {role.name}, tetapi role ini terasosiasi dengan permissions."
+                )
+                flash(
+                    "Role tidak dapat dihapus karena masih terasosiasi dengan permissions.",
+                    "warning",
+                )
+                return redirect(url_for("roles.index"))
+
+            # Menghapus role jika tidak ada asosiasi
+            db.session.delete(role)
+            db.session.commit()
+            current_app.logger.info(
+                f"User {current_user.email} berhasil menghapus role {role.name}."
+            )
+            flash("Role berhasil dihapus.", "success")
+            return redirect(url_for("roles.index"))
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(
+                f"Error deleting role '{role.name}' by user {current_user.email}: {str(e)}"
+            )
+            flash("Terjadi kesalahan saat menghapus role. Silakan coba lagi.", "danger")
+            return redirect(url_for("roles.index"))
+
+    # Jika CSRF atau metode tidak valid
+    flash("Permintaan penghapusan tidak valid.", "danger")
+    return redirect(url_for("roles.index"))
 
 
 # Menambahkan Pengguna ke Role
@@ -330,55 +370,58 @@ def delete_role(role_id):
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def add_user_to_role():
     """Menambahkan pengguna ke role tertentu."""
-    user_id = request.form.get("user_id")
-    role_name = request.form.get("role_name")
+    form = RoleAssignUserForm()
 
-    current_app.logger.info(
-        f"User {current_user.email} is attempting to add user with ID {user_id} to role {role_name}."
-    )
+    if form.validate_on_submit():
+        user_id = request.form.get("user_id")
+        role_name = request.form.get("role_name")
 
-    try:
-        user = User.query.get(user_id)
-        role = Role.query.filter_by(name=role_name).first()
-
-        if not user:
-            current_app.logger.warning(
-                f"User {current_user.email} gagal menambahkan role {role_name} karena pengguna tidak ditemukan."
-            )
-            flash("Pengguna tidak ditemukan", "error")
-            return redirect(url_for("roles.index"))
-
-        if not role:
-            current_app.logger.warning(
-                f"User {current_user.email} gagal menambahkan role {role_name} karena role tidak ditemukan."
-            )
-            flash("Role tidak ditemukan", "error")
-            return redirect(url_for("roles.index"))
-
-        if role not in user.roles:
-            user.roles.append(role)
-            db.session.commit()
-            current_app.logger.info(
-                f"User {current_user.email} berhasil menambahkan role {role_name} ke pengguna {user.email}."
-            )
-            flash("Pengguna berhasil ditambahkan ke role.", "success")
-        else:
-            current_app.logger.warning(
-                f"User {current_user.email} gagal menambahkan role {role_name} ke pengguna {user.email} karena role ini sudah ada."
-            )
-            flash(f"User {user.email} sudah memiliki role {role_name}.", "warning")
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(
-            f"Error adding role '{role_name}' to user with ID {user_id} by user {current_user.email}: {str(e)}"
-        )
-        flash(
-            "Terjadi kesalahan saat menambahkan pengguna ke role. Silakan coba lagi.",
-            "danger",
+        current_app.logger.info(
+            f"User {current_user.email} is attempting to add user with ID {user_id} to role {role_name}."
         )
 
-    return redirect(url_for("roles.index"))
+        try:
+            user = User.query.get(user_id)
+            role = Role.query.filter_by(name=role_name).first()
+
+            if not user:
+                current_app.logger.warning(
+                    f"User {current_user.email} gagal menambahkan role {role_name} karena pengguna tidak ditemukan."
+                )
+                flash("Pengguna tidak ditemukan", "error")
+                return redirect(url_for("roles.index"))
+
+            if not role:
+                current_app.logger.warning(
+                    f"User {current_user.email} gagal menambahkan role {role_name} karena role tidak ditemukan."
+                )
+                flash("Role tidak ditemukan", "error")
+                return redirect(url_for("roles.index"))
+
+            if role not in user.roles:
+                user.roles.append(role)
+                db.session.commit()
+                current_app.logger.info(
+                    f"User {current_user.email} berhasil menambahkan role {role_name} ke pengguna {user.email}."
+                )
+                flash("Pengguna berhasil ditambahkan ke role.", "success")
+            else:
+                current_app.logger.warning(
+                    f"User {current_user.email} gagal menambahkan role {role_name} ke pengguna {user.email} karena role ini sudah ada."
+                )
+                flash(f"User {user.email} sudah memiliki role {role_name}.", "warning")
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(
+                f"Error adding role '{role_name}' to user with ID {user_id} by user {current_user.email}: {str(e)}"
+            )
+            flash(
+                "Terjadi kesalahan saat menambahkan pengguna ke role. Silakan coba lagi.",
+                "danger",
+            )
+
+        return redirect(url_for("roles.index"))
 
 
 # Menghapus pengguna dari role
@@ -499,6 +542,10 @@ def add_permission_to_role():
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def index_permissions():
     """Menampilkan daftar Permissions"""
+    create_form = PermissionCreateForm()
+    update_form = PermissionUpdateForm()
+    delete_form = PermissionDeleteForm()
+
     try:
         permissions = Permission.query.all()  # Mengambil semua permissions
         current_app.logger.info(
@@ -516,7 +563,11 @@ def index_permissions():
         permissions = []  # Set permissions to an empty list in case of error
 
     return render_template(
-        "role_management/index_permissions.html", permissions=permissions
+        "role_management/index_permissions.html", 
+        permissions=permissions,
+        create_form=create_form,
+        update_form=update_form,
+        delete_form=delete_form,
     )
 
 
@@ -527,42 +578,45 @@ def index_permissions():
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def create_permission():
     """Menambahkan Permissions baru dan menyimpannya ke database"""
-    try:
-        name = request.form.get("name")
-        description = request.form.get("description")
 
-        if not name:
-            current_app.logger.warning(
-                f"User {current_user.email} gagal menambahkan permission karena nama permission kosong."
+    form = PermissionCreateForm()
+    if form.validate_on_submit():
+        try:
+            name = request.form.get("name")
+            description = request.form.get("description")
+
+            if not name:
+                current_app.logger.warning(
+                    f"User {current_user.email} gagal menambahkan permission karena nama permission kosong."
+                )
+                flash("Nama permission tidak boleh kosong!", "warning")
+                return redirect(url_for("roles.index_permissions"))
+
+            if Permission.query.filter_by(name=name).first():
+                current_app.logger.warning(
+                    f"User {current_user.email} gagal menambahkan permission karena nama permission '{name}' sudah tersedia."
+                )
+                flash("Permission dengan nama ini sudah ada!", "warning")
+                return redirect(url_for("roles.index_permissions"))
+
+            new_permission = Permission(name=name, description=description)
+            db.session.add(new_permission)
+            db.session.commit()
+            current_app.logger.info(
+                f"User {current_user.email} berhasil menambahkan permission '{name}'."
             )
-            flash("Nama permission tidak boleh kosong!", "warning")
+            flash(f"Permission '{name}' berhasil ditambahkan.", "success")
             return redirect(url_for("roles.index_permissions"))
 
-        if Permission.query.filter_by(name=name).first():
-            current_app.logger.warning(
-                f"User {current_user.email} gagal menambahkan permission karena nama permission '{name}' sudah tersedia."
+        except Exception as e:
+            current_app.logger.error(
+                f"Error occurred while user {current_user.email} was creating permission '{name}': {str(e)}"
             )
-            flash("Permission dengan nama ini sudah ada!", "warning")
+            flash(
+                "Terjadi kesalahan saat menambahkan permission. Silakan coba lagi nanti.",
+                "danger",
+            )
             return redirect(url_for("roles.index_permissions"))
-
-        new_permission = Permission(name=name, description=description)
-        db.session.add(new_permission)
-        db.session.commit()
-        current_app.logger.info(
-            f"User {current_user.email} berhasil menambahkan permission '{name}'."
-        )
-        flash(f"Permission '{name}' berhasil ditambahkan.", "success")
-        return redirect(url_for("roles.index_permissions"))
-
-    except Exception as e:
-        current_app.logger.error(
-            f"Error occurred while user {current_user.email} was creating permission '{name}': {str(e)}"
-        )
-        flash(
-            "Terjadi kesalahan saat menambahkan permission. Silakan coba lagi nanti.",
-            "danger",
-        )
-        return redirect(url_for("roles.index_permissions"))
 
 
 # Memperbarui Permission
@@ -572,50 +626,53 @@ def create_permission():
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def update_permission(permission_id):
     """Memperbarui permission"""
-    permission = Permission.query.get_or_404(
-        permission_id
-    )  # Mengambil permission berdasarkan ID
 
-    if request.method == "POST":
-        try:
-            name = request.form.get("name")
-            description = request.form.get("description")
+    form = PermissionUpdateForm()
+    if form.validate_on_submit():
+        permission = Permission.query.get_or_404(
+            permission_id
+        )  # Mengambil permission berdasarkan ID
 
-            if not name:
-                current_app.logger.warning(
-                    f"User {current_user.email} gagal memperbarui permission {permission.name} karena nama permission kosong."
+        if request.method == "POST":
+            try:
+                name = request.form.get("name")
+                description = request.form.get("description")
+
+                if not name:
+                    current_app.logger.warning(
+                        f"User {current_user.email} gagal memperbarui permission {permission.name} karena nama permission kosong."
+                    )
+                    flash("Nama permission tidak boleh kosong!", "warning")
+                    return redirect(url_for("roles.index_permissions"))
+
+                existing_permission = Permission.query.filter(
+                    Permission.id != permission_id, Permission.name == name
+                ).first()
+                if existing_permission:
+                    current_app.logger.warning(
+                        f"User {current_user.email} gagal memperbarui permission karena permission dengan nama '{name}' sudah ada."
+                    )
+                    flash("Permission dengan nama ini sudah ada!", "warning")
+                    return redirect(url_for("roles.index_permissions"))
+
+                permission.name = name
+                permission.description = description
+                db.session.commit()
+                current_app.logger.info(
+                    f"User {current_user.email} berhasil memperbarui permission '{name}'"
                 )
-                flash("Nama permission tidak boleh kosong!", "warning")
+                flash("Permission berhasil diperbarui.", "success")
                 return redirect(url_for("roles.index_permissions"))
 
-            existing_permission = Permission.query.filter(
-                Permission.id != permission_id, Permission.name == name
-            ).first()
-            if existing_permission:
-                current_app.logger.warning(
-                    f"User {current_user.email} gagal memperbarui permission karena permission dengan nama '{name}' sudah ada."
+            except Exception as e:
+                current_app.logger.error(
+                    f"Error occurred while user {current_user.email} was updating permission '{permission.name}': {str(e)}"
                 )
-                flash("Permission dengan nama ini sudah ada!", "warning")
+                flash(
+                    "Terjadi kesalahan saat memperbarui permission. Silakan coba lagi nanti.",
+                    "danger",
+                )
                 return redirect(url_for("roles.index_permissions"))
-
-            permission.name = name
-            permission.description = description
-            db.session.commit()
-            current_app.logger.info(
-                f"User {current_user.email} berhasil memperbarui permission '{name}'"
-            )
-            flash("Permission berhasil diperbarui.", "success")
-            return redirect(url_for("roles.index_permissions"))
-
-        except Exception as e:
-            current_app.logger.error(
-                f"Error occurred while user {current_user.email} was updating permission '{permission.name}': {str(e)}"
-            )
-            flash(
-                "Terjadi kesalahan saat memperbarui permission. Silakan coba lagi nanti.",
-                "danger",
-            )
-            return redirect(url_for("roles.index_permissions"))
 
     return redirect(url_for("roles.index_permissions"))
 
@@ -627,49 +684,52 @@ def update_permission(permission_id):
 @role_required(roles=["Admin"], permissions=["Manage Roles"], page="Roles Management")
 def delete_permission(permission_id):
     """Menghapus permission"""
-    try:
-        permission = Permission.query.get_or_404(
-            permission_id
-        )  # Mengambil permission berdasarkan ID
 
-        # Log sebelum pengecekan asosiasi
-        current_app.logger.info(
-            f"User {current_user.email} mencoba menghapus permission: {permission.name}"
-        )
+    form = PermissionDeleteForm()
+    if form.validate_on_submit():
+        try:
+            permission = Permission.query.get_or_404(
+                permission_id
+            )  # Mengambil permission berdasarkan ID
 
-        # Mengecek apakah permission terasosiasi dengan role apa pun
-        associated_roles = Role.query.filter(
-            Role.permissions.contains(permission)
-        ).all()
-        if associated_roles:
-            role_names = ", ".join([role.name for role in associated_roles])
-            current_app.logger.warning(
-                f"User {current_user.email} gagal menghapus permission {permission.name} karena terasosiasi dengan role: {role_names}."
+            # Log sebelum pengecekan asosiasi
+            current_app.logger.info(
+                f"User {current_user.email} mencoba menghapus permission: {permission.name}"
+            )
+
+            # Mengecek apakah permission terasosiasi dengan role apa pun
+            associated_roles = Role.query.filter(
+                Role.permissions.contains(permission)
+            ).all()
+            if associated_roles:
+                role_names = ", ".join([role.name for role in associated_roles])
+                current_app.logger.warning(
+                    f"User {current_user.email} gagal menghapus permission {permission.name} karena terasosiasi dengan role: {role_names}."
+                )
+                flash(
+                    f"Permission tidak dapat dihapus karena masih terasosiasi dengan role: {role_names}.",
+                    "warning",
+                )
+                return redirect(url_for("roles.index_permissions"))
+
+            # Menghapus permission jika tidak ada asosiasi
+            db.session.delete(permission)
+            db.session.commit()
+
+            current_app.logger.info(
+                f"User {current_user.email} berhasil menghapus permission: {permission.name}"
+            )
+            flash("Permission berhasil dihapus!", "success")
+        except Exception as e:
+            # Log error jika terjadi masalah selama penghapusan
+            current_app.logger.error(
+                f"Error occurred while user {current_user.email} was deleting permission: {str(e)}"
             )
             flash(
-                f"Permission tidak dapat dihapus karena masih terasosiasi dengan role: {role_names}.",
-                "warning",
+                "Terjadi kesalahan saat menghapus permission. Silakan coba lagi nanti.",
+                "danger",
             )
-            return redirect(url_for("roles.index_permissions"))
-
-        # Menghapus permission jika tidak ada asosiasi
-        db.session.delete(permission)
-        db.session.commit()
-
-        current_app.logger.info(
-            f"User {current_user.email} berhasil menghapus permission: {permission.name}"
-        )
-        flash("Permission berhasil dihapus!", "success")
-    except Exception as e:
-        # Log error jika terjadi masalah selama penghapusan
-        current_app.logger.error(
-            f"Error occurred while user {current_user.email} was deleting permission: {str(e)}"
-        )
-        flash(
-            "Terjadi kesalahan saat menghapus permission. Silakan coba lagi nanti.",
-            "danger",
-        )
-        db.session.rollback()
+            db.session.rollback()
 
     return redirect(url_for("roles.index_permissions"))
 

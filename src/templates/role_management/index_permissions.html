@@ -37,6 +37,7 @@
         <!-- Form untuk Menghapus Permission -->
         <form action="{{ url_for('roles.delete_permission', permission_id=permission.id) }}" method="post"
             style="display:inline;">
+            {{ delete_form.hidden_tag() }}
             <button type="submit" class="btn btn-danger btn-sm mb-1"
                 onclick="return confirm('Apakah Anda yakin ingin menghapus permission ini?');">
                 <i class="fas fa-trash"></i>
@@ -57,6 +58,7 @@
             </div>
             <div class="modal-body">
                 <form method="post" action="{{ url_for('roles.update_permission', permission_id=permission.id) }}">
+                    {{ update_form.hidden_tag() }}
                     <div class="mb-3">
                         <label for="name" class="form-label">Nama Permission</label>
                         <input type="text" class="form-control" id="name" name="name" value="{{ permission.name }}"
@@ -88,6 +90,7 @@
             </div>
             <div class="modal-body">
                 <form method="post" action="{{ url_for('roles.create_permission') }}">
+                    {{ create_form.hidden_tag() }}
                     <div class="mb-3">
                         <label for="name" class="form-label">Nama Permission</label>
                         <input type="text" class="form-control" id="name" name="name" required>

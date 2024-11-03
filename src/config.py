@@ -151,3 +151,5 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     DEBUG_TB_ENABLED = False
+    TALISMAN_FORCE_HTTPS = False
+    TALISMAN_STRICT_TRANSPORT_SECURITY = False

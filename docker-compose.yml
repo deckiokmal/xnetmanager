@@ -1,27 +1,37 @@
 services:
   xnetmanager:
     build:
-      context: .
+      context: ./
       dockerfile: Dockerfile
+    container_name: xnetmanager_app
+    volumes:
+      - ./app/xnetmanager/backups:/data/backups
+      - ./app/xnetmanager/configurations:/data/configurations
+      - ./app/xnetmanager/templates:/data/templates
+      - ./.env:/var/www/.env
+      - ./src/static:/var/www/static
     env_file:
       - ./.env
-    volumes:
-      - ./data/backups:/app/data/backups
-      - ./data/configurations:/app/data/configurations
-      - ./data/templates:/app/data/templates
-      - ./.env:/app/.env
     ports:
-      - "8080:8080"
-    entrypoint: ["/bin/sh", "-c", "python db_init.py && python manage.py"]
-    depends_on:
-      - nginx
+      - "8000:8000"
+    command: ["/bin/sh", "-c", "python db_init.py && gunicorn --bind 0.0.0.0:8000 --workers 4 manage:app"]
+    networks:
+      - xnetmanager_bridge
 
   nginx:
     image: nginx:latest
-    container_name: nginx_proxy
+    container_name: xnetmanager_nginx
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./:/var/www
+      - ./default.conf:/etc/nginx/conf.d/default.conf
+      - ./src/static:/var/www/static
     ports:
       - "80:80"
+    networks:
+      - xnetmanager_bridge
     depends_on:
       - xnetmanager
+
+networks:
+  xnetmanager_bridge:
+    driver: bridge

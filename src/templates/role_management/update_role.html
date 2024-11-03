@@ -8,37 +8,35 @@
         Role Update
     </div>
     <form action="{{ url_for('roles.update_role', role_id=role.id) }}" method="POST">
+        {{ form.hidden_tag() }} <!-- CSRF token otomatis dari WTForms -->
+
         <div class="row">
+            <!-- Field untuk Role Name -->
             <div class="col mb-3">
-                <div class="row md-6">
-                    <label for="name" class="text-white">Role Name</label>
-                    <input type="text" class="form-control" id="name" name="name" value="{{ role.name }}" required>
-                </div>
+                <label for="name" class="text-white">Role Name</label>
+                <input type="text" class="form-control" id="name" name="name" value="{{ role.name }}" required>
             </div>
+
+            <!-- Field untuk Users (Checkbox) -->
             <div class="col mb-3">
                 <label class="text-white">User</label>
                 {% for user in associated_users %}
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" name="users" id="user{{ user.id }}"
-                        value="{{ user.id }}" checked>
-                    <label class="form-check-label badge badge-success" for="user{{ user.id }}">
-                        {{ user.email }}
-                    </label>
-                </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="users" id="user{{ user.id }}" value="{{ user.id }}" checked>
+                        <label class="form-check-label badge badge-success" for="user{{ user.id }}">{{ user.email }}</label>
+                    </div>
                 {% endfor %}
             </div>
+
+            <!-- Field untuk Permissions (Checkbox) -->
             <div class="col mb-3">
                 <label>Permissions</label>
                 <div>
                     {% for permission in all_permissions %}
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="checkbox" name="permissions"
-                            id="permission{{ permission.id }}" value="{{ permission.id }}" {% if permission.id in
-                            associated_permissions %} checked {% endif %}>
-                        <label class="form-check-label badge badge-primary" for="permission{{ permission.id }}">
-                            {{ permission.name }}
-                        </label>
-                    </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" name="permissions" id="permission{{ permission.id }}" value="{{ permission.id }}" {% if permission.id in associated_permissions %} checked {% endif %}>
+                            <label class="form-check-label badge badge-primary" for="permission{{ permission.id }}">{{ permission.name }}</label>
+                        </div>
                     {% endfor %}
                 </div>
             </div>
