@@ -17,6 +17,7 @@ services:
     command: ["/bin/sh", "-c", "python db_init.py && gunicorn --bind 0.0.0.0:8000 --workers 4 manage:app"]
     networks:
       - xnetmanager_bridge
+    restart: always
 
   nginx:
     image: nginx:latest
@@ -31,6 +32,7 @@ services:
       - xnetmanager_bridge
     depends_on:
       - xnetmanager
+    restart: always
 
 networks:
   xnetmanager_bridge:

@@ -90,7 +90,8 @@
         <div id="statusIndicator{{ device.id }}" class="status-indicator"></div>
     </td>
     <td>
-        <button class="btn btn-sm btn-primary mb-1" data-bs-toggle="modal" data-bs-target="#pushConfigModal{{ device.id }}">
+        <button class="btn btn-sm btn-primary mb-1" data-bs-toggle="modal"
+            data-bs-target="#pushConfigModal{{ device.id }}">
             Config
         </button>
         <button class="btn btn-sm btn-danger mb-1" data-bs-toggle="modal" data-bs-target="#backupModal{{ device.id }}">
@@ -312,6 +313,23 @@
             </div>
         </div>
 
+        <!-- Modal for Error Display -->
+        <div class="modal fade" id="pushConfigErrorModal" tabindex="-1" aria-labelledby="pushConfigErrorModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content bg-danger text-light">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="pushConfigErrorModalLabel">Configuration Error</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" id="pushConfigErrorModalBody">
+                        <!-- Pesan error akan dimuat di sini -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
         {% endblock %}
 
         {% block script_js %}
@@ -369,7 +387,7 @@
                         });
                     })
                     .catch(error => {
-                        console.error("Error:", error);
+
                         alert("Gagal memeriksa status perangkat. Silakan coba lagi.");
                     })
                     .finally(() => {
@@ -392,51 +410,108 @@
                 });
             });
 
-            // Event for Push Config button
+            let selectedVendor = null;
+
+            // Event ketika pengguna klik tombol "Select Devices"
+            document.querySelectorAll(".btn-check").forEach(button => {
+                button.addEventListener("change", function () {
+                    const deviceVendor = this.closest("tr").querySelector("td:nth-child(5)").innerText.trim();
+
+                    if (this.checked) {
+                        if (selectedVendor === null) {
+                            // Set vendor pertama yang dipilih dan ambil konfigurasi berdasarkan vendor
+                            selectedVendor = deviceVendor;
+                            fetchConfigsByVendor(selectedVendor);
+                        } else if (selectedVendor !== deviceVendor) {
+                            // Vendor tidak cocok, tampilkan pesan peringatan dan batalkan pemilihan
+                            alert("You can only select devices with the same vendor.");
+                            this.checked = false;
+                        }
+                    } else {
+                        // Jika uncheck dan tidak ada perangkat lain yang dipilih, reset selectedVendor
+                        const anyChecked = Array.from(document.querySelectorAll(".btn-check:checked")).some(cb => cb !== this);
+                        if (!anyChecked) {
+                            selectedVendor = null;
+                            document.getElementById("configSelect").innerHTML = ""; // Kosongkan select config
+                        }
+                    }
+                });
+            });
+
+            // Fungsi untuk mengambil daftar konfigurasi berdasarkan vendor yang dipilih
+            function fetchConfigsByVendor(vendor) {
+                fetch("/get_configs_by_vendor", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ vendor: vendor })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Isi select config dengan daftar konfigurasi yang cocok
+                            const configSelect = document.getElementById("configSelect");
+                            configSelect.innerHTML = "<option value='' disabled selected>Select a config</option>";
+                            data.configs.forEach(config => {
+                                const option = document.createElement("option");
+                                option.value = config.id;
+                                option.textContent = config.name;
+                                configSelect.appendChild(option);
+                            });
+                        } else {
+                            alert("No configurations available for selected vendor.");
+                        }
+                    })
+                    .catch(error => {
+
+                        alert("Error fetching configurations.");
+                    });
+            }
+
+            // Event untuk membuka modal push config
             document.getElementById("pushConfigBtn").addEventListener("click", function () {
                 const selectedDevices = Array.from(document.querySelectorAll(".btn-check:checked")).map(checkbox => checkbox.getAttribute("data-ip"));
-                if (selectedDevices.length > 0) {
+                if (selectedDevices.length > 0 && selectedVendor) {
                     const selectConfigModal = new bootstrap.Modal(document.getElementById("selectConfigModal"));
                     selectConfigModal.show();
                 } else {
-                    alert("Please select at least one device.");
+                    alert("Please select at least one device with the same vendor.");
                 }
             });
 
             // Event for Confirm Push Config button
             document.getElementById("confirmPushConfigBtn").addEventListener("click", function () {
-                const selectedconfig = document.getElementById("configSelect").value;
+                const selectedConfig = document.getElementById("configSelect").value;
                 const selectedDevices = Array.from(document.querySelectorAll(".btn-check:checked")).map(checkbox => checkbox.getAttribute("data-ip"));
 
-                if (selectedconfig && selectedDevices.length > 0) {
+                if (selectedConfig && selectedDevices.length > 0) {
                     showLoadingOverlay();
                     fetch("/push_configs", {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json"
                         },
-                        body: JSON.stringify({ devices: selectedDevices, config_id: selectedconfig })
+                        body: JSON.stringify({ devices: selectedDevices, config_id: selectedConfig })
                     })
                         .then(response => response.json())
                         .then(data => {
-                            console.log("Response data:", data);
                             let tableHTML = '<table class="table table-bordered"><thead><tr><th>Device Name</th><th>IP Address</th><th>Status</th><th>Message</th></tr></thead><tbody>';
                             data.results.forEach(result => {
-                                tableHTML += `<tr><td>${result.device_name}</td><td>${result.ip}</td><td>${result.status}</td><td>${result.message || 'Konfigurasi sukses'}</td></tr>`;
+                                tableHTML += `<tr><td>${result.device_name}</td><td>${result.ip}</td><td>${result.status}</td><td>${result.message}</td></tr>`;
                             });
                             tableHTML += '</tbody></table>';
                             document.getElementById("pushConfigResultTable").innerHTML = tableHTML;
-                            const selectConfigModal = bootstrap.Modal.getInstance(document.getElementById("selectConfigModal"));
-                            selectConfigModal.hide();
+
+                            // Tampilkan modal hasil push config
                             const pushConfigResultModal = new bootstrap.Modal(document.getElementById("pushConfigResultModal"));
                             pushConfigResultModal.show();
                         })
                         .catch(error => {
-                            console.error("Error:", error);
                             alert("Error pushing configurations: " + error.message);
                         })
                         .finally(() => {
-                            hideLoadingOverlay(); // Hide overlay after processing
+                            hideLoadingOverlay();
                         });
                 } else {
                     alert("Please select a config.");
@@ -516,34 +591,82 @@
             });
         </script>
 
-        <!-- javascript untuk handle push config single device -->
+        <!-- // Script to Handle Push Config Single Device -->
         <script>
-            // Fungsi untuk menampilkan loading overlay
-            function showLoadingOverlay() {
+            // Fungsi untuk menampilkan loading overlay khusus untuk single device
+            function showLoadingOverlaySingleDevice() {
                 document.getElementById('loadingOverlay').style.display = 'flex';
             }
 
-            // Fungsi untuk menyembunyikan loading overlay
-            function hideLoadingOverlay() {
+            // Fungsi untuk menyembunyikan loading overlay khusus untuk single device
+            function hideLoadingOverlaySingleDevice() {
                 document.getElementById('loadingOverlay').style.display = 'none';
             }
 
+            // Fungsi untuk mengambil daftar konfigurasi berdasarkan vendor untuk single device
+            function fetchConfigsByVendorSingleDevice(vendor, deviceId) {
+                fetch("/get_configs_by_vendor", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ vendor: vendor }) // Kirim data vendor sebagai JSON
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error("Failed to fetch configurations.");
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            const configSelect = document.getElementById(`configSelect${deviceId}`);
+                            configSelect.innerHTML = "<option value='' disabled selected>Select a config</option>";
+                            data.configs.forEach(config => {
+                                const option = document.createElement("option");
+                                option.value = config.id;
+                                option.textContent = config.name;
+                                configSelect.appendChild(option);
+                            });
+
+                            // Buka modal setelah daftar konfigurasi berhasil dimuat
+                            const pushConfigModal = new bootstrap.Modal(document.getElementById(`pushConfigModal${deviceId}`));
+                            pushConfigModal.show();
+                        } else {
+                            alert(data.message || "No configurations available for selected vendor.");
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error fetching configurations:", error);
+                        alert("Error fetching configurations. Please try again.");
+                    });
+            }
+
+            // Event listener untuk tombol Config, memuat daftar konfigurasi berdasarkan vendor perangkat untuk single device
+            document.querySelectorAll(".btn-primary[data-bs-target^='#pushConfigModal']").forEach(button => {
+                button.addEventListener("click", function () {
+                    const deviceId = button.getAttribute("data-bs-target").replace("#pushConfigModal", "");
+                    const deviceVendor = button.closest("tr").querySelector("td:nth-child(5)").innerText.trim();
+
+                    fetchConfigsByVendorSingleDevice(deviceVendor, deviceId);
+                });
+            });
+
+            // Event listener untuk submit form push konfigurasi single device
             document.querySelectorAll('form[id^="pushConfigForm"]').forEach(form => {
                 form.addEventListener("submit", function (e) {
                     e.preventDefault();
 
-                    const deviceId = form.id.replace('pushConfigForm', ''); // Ambil device_id dari form ID
-                    const configId = document.getElementById(`configSelect${deviceId}`).value; // Ambil config_id dari select input
+                    const deviceId = form.id.replace('pushConfigForm', '');
+                    const configId = document.getElementById(`configSelect${deviceId}`).value;
 
                     if (!configId) {
                         alert("Please select a config.");
                         return;
                     }
 
-                    // Tampilkan loading overlay saat proses dimulai
-                    showLoadingOverlay();
+                    showLoadingOverlaySingleDevice();
 
-                    // Kirim request POST untuk push config ke single device
                     fetch(`/push_config/${deviceId}`, {
                         method: "POST",
                         headers: {
@@ -553,24 +676,39 @@
                     })
                         .then(response => response.json())
                         .then(data => {
+                            hideLoadingOverlaySingleDevice();
+
                             if (data.success) {
-                                alert("Config pushed successfully!");
-                                // Tutup modal setelah sukses
+                                alert("Configuration successfully applied!");
+                            } else if (data.result && data.result.message) {
+                                // Tutup modal pemilihan konfigurasi jika modal error akan ditampilkan
                                 const pushConfigModal = bootstrap.Modal.getInstance(document.getElementById(`pushConfigModal${deviceId}`));
-                                pushConfigModal.hide();
+                                if (pushConfigModal) {
+                                    pushConfigModal.hide();
+                                }
+
+                                // Tampilkan modal error dengan pesan dari OpenAI
+                                document.getElementById("pushConfigErrorModalBody").innerText = data.result.message;
+                                const pushConfigErrorModal = new bootstrap.Modal(document.getElementById("pushConfigErrorModal"));
+                                pushConfigErrorModal.show();
                             } else {
-                                alert("Failed to push config: " + data.message);
+                                alert("An unknown error occurred. Please try again.");
+                                console.log("Device ID:", deviceId);
+                                console.log("Config ID:", configId);
+                                console.log(`/push_config/${deviceId}`);
                             }
                         })
                         .catch(error => {
                             console.error("Error pushing config:", error);
-                            alert("Error pushing config.");
-                        })
-                        .finally(() => {
-                            // Sembunyikan loading overlay setelah proses selesai
-                            hideLoadingOverlay();
+                            alert("Error pushing configuration.");
+                            hideLoadingOverlaySingleDevice();
                         });
                 });
+            });
+
+            // Event listener untuk menutup modal pushConfigErrorModal dan reload halaman saat ditutup secara manual
+            document.getElementById("pushConfigErrorModal").addEventListener("hidden.bs.modal", function () {
+                location.reload(); // Reload halaman saat modal error ditutup secara manual
             });
         </script>
 
@@ -621,7 +759,7 @@
                             }
                         })
                         .catch(error => {
-                            console.error("Error creating backup:", error);
+
                             alert("Error creating backup.");
                         })
                         .finally(() => {

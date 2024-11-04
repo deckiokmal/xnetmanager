@@ -4,6 +4,7 @@ from src.models.app_models import (
     Role,
     Permission,
 )
+import logging
 
 def initialize():
     app = create_app()
@@ -45,7 +46,6 @@ def initialize():
                 if not role:
                     role = Role(name=role_name)
                     db.session.add(role)
-                    db.session.commit()
 
                 for perm_name in permissions:
                     permission = Permission.query.filter_by(name=perm_name).first()
@@ -59,7 +59,7 @@ def initialize():
                     if permission not in role.permissions:
                         role.permissions.append(permission)
 
-                db.session.commit()
+            db.session.commit()
 
             # Buat pengguna default dengan peran Admin
             default_email = "xnetmanager@example.com"
@@ -77,16 +77,16 @@ def initialize():
                 db.session.add(admin_user)
                 db.session.commit()
 
-            print("Inisialisasi database selesai dengan peran dan izin default serta pengguna admin.")
+            logging.info("Inisialisasi database selesai dengan peran dan izin default serta pengguna admin.")
         
         except Exception as e:
-            print(f"Error during initialization: {e}")
             db.session.rollback()
+            logging.error(f"Error during initialization: {e}")
             raise
 
 if __name__ == "__main__":
     try:
         initialize()
     except Exception as e:
-        print(f"Error during initialization: {e}")
         db.session.rollback()
+        logging.error(f"Error during initialization: {e}")

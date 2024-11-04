@@ -81,3 +81,38 @@ def create_configuration_with_openai(question, vendor):
         return error_message, detailed_error_message
 
     return configuration_result, None
+
+
+def summarize_error_with_openai(error_log, vendor):
+    """
+    Menggunakan OpenAI API untuk menyederhanakan pesan error atau mengonfirmasi sukses.
+    Jika `error_log` kosong, return status sukses dengan pesan "Configuration successfully applied".
+    Jika terdapat error, ringkas pesan error dalam bahasa Indonesia.
+    """
+    if not error_log.strip():
+        # Jika error_log kosong, anggap konfigurasi berhasil
+        return {"status": "success", "message": "Configuration successfully applied."}
+
+    # Jika ada pesan error, gunakan OpenAI untuk menyederhanakan pesan
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {
+                "role": "system",
+                "content": f"You are an expert in network device configuration for {vendor} devices. Respond in Indonesian. If the configuration is error-free, reply exactly 'Configuration successfully applied.' If there is an error, provide a simplified summary of the error message.",
+            },
+            {
+                "role": "user",
+                "content": f"Here is the error log for a {vendor} device configuration attempt:\n\n{error_log}\n\n"
+                "Please summarize this error log into a simple, user-friendly message in Indonesia.",
+            },
+        ],
+    )
+
+    summary_result = response["choices"][0]["message"]["content"].strip()
+
+    # Periksa hasil dari OpenAI, dan tentukan statusnya
+    if summary_result == "Configuration successfully applied.":
+        return {"status": "success", "message": summary_result}
+    else:
+        return {"status": "error", "message": summary_result}

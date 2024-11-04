@@ -30,6 +30,7 @@ import string
 from src import db
 import time
 from sqlalchemy.exc import SQLAlchemyError
+from src.utils.openai_utils import summarize_error_with_openai
 
 # Membuat blueprint untuk Network Manager (nm_bp) dan Error Handling (error_bp)
 nm_bp = Blueprint("nm", __name__)
@@ -96,9 +97,6 @@ def inject_user():
 # --------------------------------------------------------------------------------
 # Config Management Section
 # --------------------------------------------------------------------------------
-
-
-GEN_TEMPLATE_FOLDER = "xmanager/configurations"
 
 
 # Fungsi pembantu untuk menghasilkan nama file acak
@@ -334,6 +332,19 @@ def push_configs():
             404,
         )
 
+    # Cek konsistensi vendor
+    unique_vendors = {device.vendor for device in devices}
+    if len(unique_vendors) > 1:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Selected devices must have the same vendor.",
+                }
+            ),
+            400,
+        )
+
     # Query konfigurasi berdasarkan peran user
     if current_user.has_role("Admin"):
         config = ConfigurationManager.query.filter_by(id=config_id).first()
@@ -348,9 +359,8 @@ def push_configs():
 
     # Membaca file konfigurasi
     def read_config(filename):
-        config_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
-        )
+        config_dir = current_app.config["CONFIG_DIR"]
+        config_path = os.path.join(config_dir, filename)
         try:
             with open(config_path, "r") as file:
                 return file.read()
@@ -380,29 +390,33 @@ def push_configs():
             )
             response_json = config_utils.configure_device(config_content)
             response_dict = json.loads(response_json)
-            message = response_dict.get("message", "Konfigurasi sukses")
-            status = response_dict.get("status", "success")
-            return {
-                "device_name": device.device_name,
-                "ip": device.ip_address,
-                "status": status,
-                "message": message,
-            }
-        except json.JSONDecodeError as e:
-            logging.error("Error decoding JSON response: %s", e)
-            return {
-                "device_name": device.device_name,
-                "ip": device.ip_address,
-                "status": "error",
-                "message": "Error decoding JSON response",
-            }
+
+            if "message" in response_dict:
+                error_summary = summarize_error_with_openai(
+                    response_dict["message"], device.vendor
+                )
+                return {
+                    "device_name": device.device_name,
+                    "ip": device.ip_address,
+                    "status": error_summary["status"],
+                    "message": error_summary["message"],
+                }
+            else:
+                # Jika tidak ada pesan sama sekali, konfigurasi dianggap sukses
+                return {
+                    "device_name": device.device_name,
+                    "ip": device.ip_address,
+                    "status": "success",
+                    "message": "Configuration successfully applied.",
+                }
         except Exception as e:
             logging.error("Error configuring device %s: %s", device.ip_address, e)
+            success = False
             return {
                 "device_name": device.device_name,
                 "ip": device.ip_address,
                 "status": "error",
-                "message": str(e),
+                "message": f"Configuration failed with error: {str(e)}",
             }
 
     # Push konfigurasi ke perangkat secara paralel menggunakan threading
@@ -418,7 +432,12 @@ def push_configs():
             if result["status"] != "success":
                 success = False
 
-    return jsonify({"success": success, "results": results})
+    summary_message = (
+        "All configurations pushed successfully."
+        if success
+        else "Some configurations failed. Check individual device messages."
+    )
+    return jsonify({"success": success, "message": summary_message, "results": results})
 
 
 # Endpoint untuk push konfigurasi ke satu perangkat
@@ -466,9 +485,8 @@ def push_config_single_device(device_id):
 
     # Membaca file konfigurasi
     def read_config(filename):
-        config_path = os.path.join(
-            current_app.static_folder, GEN_TEMPLATE_FOLDER, filename
-        )
+        config_dir = current_app.config["CONFIG_DIR"]
+        config_path = os.path.join(config_dir, filename)
         try:
             with open(config_path, "r") as file:
                 return file.read()
@@ -494,14 +512,25 @@ def push_config_single_device(device_id):
             )
             response_json = config_utils.configure_device(config_content)
             response_dict = json.loads(response_json)
-            message = response_dict.get("message", "Konfigurasi sukses")
-            status = response_dict.get("status", "success")
-            return {
-                "device_name": device.device_name,
-                "ip": device.ip_address,
-                "status": status,
-                "message": message,
-            }
+
+            if "message" in response_dict and response_dict["message"]:
+                # Gunakan OpenAI untuk menyederhanakan error jika ada pesan error
+                error_summary = summarize_error_with_openai(
+                    response_dict["message"], device.vendor
+                )
+                return {
+                    "device_name": device.device_name,
+                    "ip": device.ip_address,
+                    "status": "error",
+                    "message": error_summary.get("message", "Unknown error occurred."),
+                }
+            else:
+                return {
+                    "device_name": device.device_name,
+                    "ip": device.ip_address,
+                    "status": "success",
+                    "message": "Configuration successfully applied.",
+                }
         except json.JSONDecodeError as e:
             logging.error("Error decoding JSON response: %s", e)
             return {
@@ -519,8 +548,31 @@ def push_config_single_device(device_id):
                 "message": str(e),
             }
 
-    # Push konfigurasi ke perangkat
     result = configure_device(device)
     success = result["status"] == "success"
 
     return jsonify({"success": success, "result": result}), 200 if success else 500
+
+
+# Endpoint untuk mendapatkan daftar konfigurasi berdasarkan vendor
+@nm_bp.route("/get_configs_by_vendor", methods=["POST"])
+@login_required
+@required_2fa
+def get_configs_by_vendor():
+    data = request.get_json()
+    vendor = data.get("vendor")
+
+    # Validasi input
+    if not vendor:
+        return jsonify({"success": False, "message": "No vendor provided."}), 400
+
+    # Query konfigurasi berdasarkan vendor dan role user
+    if current_user.has_role("Admin"):
+        configs = ConfigurationManager.query.filter_by(vendor=vendor).all()
+    else:
+        configs = ConfigurationManager.query.filter_by(
+            vendor=vendor, user_id=current_user.id
+        ).all()
+
+    config_list = [{"id": config.id, "name": config.config_name} for config in configs]
+    return jsonify({"success": True, "configs": config_list})
