@@ -44,6 +44,7 @@ import os
 from src.utils.openai_utils import (
     validate_generated_template_with_openai,
     create_configuration_with_openai,
+    summarize_error_with_openai,
 )
 from src.utils.talita_ai_utils import generate_configfile_talita
 from src.utils.config_manager_utils import ConfigurationManagerUtils
@@ -735,12 +736,8 @@ def create_template():
         parameter_filename = f"{gen_filename}.yml"
 
         template_dir = current_app.config["TEMPLATE_DIR"]
-        template_path = os.path.join(
-            template_dir, template_filename
-        )
-        parameter_path = os.path.join(
-            template_dir, parameter_filename
-        )
+        template_path = os.path.join(template_dir, template_filename)
+        parameter_path = os.path.join(template_dir, parameter_filename)
 
         # Simpan template content ke file
         with open(template_path, "w", encoding="utf-8") as template_file:
@@ -815,15 +812,9 @@ def update_template(template_id):
 
         # Membaca konten template dan parameter saat ini dari file
         template_dir = current_app.config["TEMPLATE_DIR"]
-        template_content = read_file(
-            os.path.join(
-                template_dir, template.template_name
-            )
-        )
+        template_content = read_file(os.path.join(template_dir, template.template_name))
         parameter_content = read_file(
-            os.path.join(
-                template_dir, template.parameter_name
-            )
+            os.path.join(template_dir, template.parameter_name)
         )
 
         # Cek apakah konten file ada
@@ -880,9 +871,7 @@ def update_template(template_id):
         # Simpan perubahan konten file jika ada perubahan
         if new_template_content != template_content:
             template_dir = current_app.config["TEMPLATE_DIR"]
-            template_path = os.path.join(
-                template_dir, template.template_name
-            )
+            template_path = os.path.join(template_dir, template.template_name)
             with open(template_path, "w", encoding="utf-8") as file:
                 file.write(new_template_content)
             current_app.logger.info(
@@ -891,9 +880,7 @@ def update_template(template_id):
 
         if new_parameter_content != parameter_content:
             template_dir = current_app.config["TEMPLATE_DIR"]
-            parameter_path = os.path.join(
-                template_dir, template.parameter_name
-            )
+            parameter_path = os.path.join(template_dir, template.parameter_name)
             with open(parameter_path, "w", encoding="utf-8") as file:
                 file.write(new_parameter_content)
             current_app.logger.info(
@@ -902,12 +889,8 @@ def update_template(template_id):
 
         # Ganti nama file jika nama template atau parameter berubah
         if new_template_name != template.template_name:
-            new_path_template = os.path.join(
-                template_dir, new_template_name
-            )
-            old_path_template = os.path.join(
-                template_dir, template.template_name
-            )
+            new_path_template = os.path.join(template_dir, new_template_name)
+            old_path_template = os.path.join(template_dir, template.template_name)
             os.rename(old_path_template, new_path_template)
             template.template_name = new_template_name
             current_app.logger.info(
@@ -916,12 +899,8 @@ def update_template(template_id):
 
         if new_parameter_name != template.parameter_name:
             template_dir = current_app.config["TEMPLATE_DIR"]
-            new_path_parameter = os.path.join(
-                template_dir, new_parameter_name
-            )
-            old_path_parameter = os.path.join(
-                template_dir, template.parameter_name
-            )
+            new_path_parameter = os.path.join(template_dir, new_parameter_name)
+            old_path_parameter = os.path.join(template_dir, template.parameter_name)
             os.rename(old_path_parameter, new_path_parameter)
             template.parameter_name = new_parameter_name
             current_app.logger.info(
@@ -967,12 +946,8 @@ def delete_template(template_id):
 
         # Tentukan path untuk file template dan parameter
         template_dir = current_app.config["TEMPLATE_DIR"]
-        template_file_path = os.path.join(
-            template_dir, template.template_name
-        )
-        parameter_file_path = os.path.join(
-            template_dir, template.parameter_name
-        )
+        template_file_path = os.path.join(template_dir, template.template_name)
+        parameter_file_path = os.path.join(template_dir, template.parameter_name)
 
         # Hapus file template jika ada
         if os.path.exists(template_file_path):
@@ -1041,12 +1016,8 @@ def generate_template(template_id):
 
         # Tentukan path untuk file Jinja template dan YAML parameter
         template_dir = current_app.config["TEMPLATE_DIR"]
-        jinja_template_path = os.path.join(
-            template_dir, template.template_name
-        )
-        yaml_params_path = os.path.join(
-            template_dir, template.parameter_name
-        )
+        jinja_template_path = os.path.join(template_dir, template.template_name)
+        yaml_params_path = os.path.join(template_dir, template.parameter_name)
 
         # Membaca konten file Jinja template dan YAML parameter
         jinja_template = read_file(jinja_template_path)
@@ -1100,9 +1071,7 @@ def generate_template(template_id):
         # Generate filename untuk menyimpan hasil template yang digenerate
         gen_filename = generate_random_filename(template.vendor)
         config_dir = current_app.config["CONFIG_DIR"]
-        new_file_path = os.path.join(
-            config_dir, f"{gen_filename}.txt"
-        )
+        new_file_path = os.path.join(config_dir, f"{gen_filename}.txt")
 
         # Simpan konfigurasi yang sudah dirender ke dalam file
         with open(new_file_path, "w", encoding="utf-8") as new_file:
@@ -1589,9 +1558,7 @@ def update_configfile(config_id):
 
         # Membaca konten konfigurasi file saat ini
         config_dir = current_app.config["CONFIG_DIR"]
-        config_path = os.path.join(
-            config_dir, config.config_name
-        )
+        config_path = os.path.join(config_dir, config.config_name)
         config_content = read_file(config_path)
 
         if config_content is None:
@@ -1654,9 +1621,7 @@ def update_configfile(config_id):
         # Perbarui nama file jika berubah
         if new_config_name != config.config_name:
             config_dir = current_app.config["CONFIG_DIR"]
-            new_path = os.path.join(
-                config_dir, new_config_name
-            )
+            new_path = os.path.join(config_dir, new_config_name)
             os.rename(config_path, new_path)
             config.config_name = new_config_name
             current_app.logger.info(
@@ -1706,9 +1671,7 @@ def delete_config(config_id):
 
         # Tentukan path untuk file config
         config_dir = current_app.config["CONFIG_DIR"]
-        config_file_path = os.path.join(
-            config_dir, config.config_name
-        )
+        config_file_path = os.path.join(config_dir, config.config_name)
 
         # Hapus file config jika ada
         if os.path.exists(config_file_path):
@@ -1924,6 +1887,19 @@ def push_configs():
             404,
         )
 
+    # Cek konsistensi vendor
+    unique_vendors = {device.vendor for device in devices}
+    if len(unique_vendors) > 1:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Selected devices must have the same vendor.",
+                }
+            ),
+            400,
+        )
+
     # Query konfigurasi berdasarkan peran pengguna
     if "Admin" in roles:
         config = ConfigurationManager.query.filter_by(id=config_id).first()
@@ -1939,9 +1915,7 @@ def push_configs():
     # Membaca file konfigurasi
     def read_config(filename):
         config_dir = current_app.config["CONFIG_DIR"]
-        config_path = os.path.join(
-            config_dir, filename
-        )
+        config_path = os.path.join(config_dir, filename)
         try:
             with open(config_path, "r") as file:
                 return file.read()
@@ -1971,8 +1945,23 @@ def push_configs():
             )
             response_json = config_utils.configure_device(config_content)
             response_dict = json.loads(response_json)
-            message = response_dict.get("message", "Konfigurasi sukses")
-            status = response_dict.get("status", "success")
+
+            # Memeriksa hasil konfigurasi dan meringkas error jika ada
+            if response_dict.get("status") == "error":
+                error_summary = summarize_error_with_openai(
+                    response_dict["message"], device.vendor
+                )
+                status = error_summary["status"]
+                message = error_summary["message"]
+            else:
+                status = "success"
+                message = response_dict.get(
+                    "message", "Configuration successfully applied."
+                )
+
+            if status != "success":
+                success = False
+
             return {
                 "device_name": device.device_name,
                 "ip": device.ip_address,
@@ -1981,6 +1970,7 @@ def push_configs():
             }
         except json.JSONDecodeError as e:
             logging.error("Error decoding JSON response: %s", e)
+            success = False
             return {
                 "device_name": device.device_name,
                 "ip": device.ip_address,
@@ -1989,6 +1979,7 @@ def push_configs():
             }
         except Exception as e:
             logging.error("Error configuring device %s: %s", device.ip_address, e)
+            success = False
             return {
                 "device_name": device.device_name,
                 "ip": device.ip_address,
@@ -2008,7 +1999,12 @@ def push_configs():
             if result["status"] != "success":
                 success = False
 
-    return jsonify({"success": success, "results": results})
+    summary_message = (
+        "All configurations pushed successfully."
+        if success
+        else "Some configurations failed. Check individual device messages."
+    )
+    return jsonify({"success": success, "message": summary_message, "results": results})
 
 
 @restapi_bp.route("/api/push_config/<device_id>", methods=["POST"])
@@ -2060,9 +2056,7 @@ def push_config_single_device(device_id):
     # Membaca file konfigurasi
     def read_config(filename):
         config_dir = current_app.config["CONFIG_DIR"]
-        config_path = os.path.join(
-            config_dir, filename
-        )
+        config_path = os.path.join(config_dir, filename)
         try:
             with open(config_path, "r") as file:
                 return file.read()
