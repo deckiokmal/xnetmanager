@@ -76,7 +76,7 @@
         messageDiv.className = `message ${className}`;
 
         let imgSrc = className === 'user-message' ?
-            '{{ url_for("static", filename=current_user.profile_picture) if current_user.profile_picture else "https://via.placeholder.com/100" }}' :
+            '{{ url_for("static", filename=current_user.profile_picture) if current_user.profile_picture else url_for("static", filename="img/default.jpg") }}' :
             'https://iili.io/JpjR5tp.png';
 
         // If the message has no newlines, just render as is; else use Marked.js for markdown formatting

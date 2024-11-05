@@ -561,7 +561,7 @@ body {
 
 /* Styling for profile background banner */
 .profile-background {
-    background-image: url('bg.jpg');
+    background-image: url('../img/bg.jpg');
     background-size: cover;
     background-position: center;
     height: 180px;
@@ -730,7 +730,7 @@ body {
 }
 
 .page-banner {
-    background-image: url('banner.jpg');
+    background-image: url('../img/banner.jpg');
     background-size: cover;
     background-position: center;
     width: 100%;

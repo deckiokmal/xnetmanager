@@ -120,6 +120,7 @@ class Config(object):
         "img-src": [
             "'self'",
             "https://iili.io",
+            "https://via.placeholder.com",
             "data:",
         ],
         "connect-src": ["'self'", "https://ka-f.fontawesome.com"],
