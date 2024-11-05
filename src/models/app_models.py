@@ -355,6 +355,16 @@ class BackupData(db.Model):
                 version=new_version,
             )
 
+            # Ensure the backup was successful and has a valid backup_path
+            if (
+                backup_result.get("status") != "success"
+                or "backup_path" not in backup_result
+            ):
+                error_message = backup_result.get(
+                    "message", "Unknown error occurred during backup."
+                )
+                raise RuntimeError(f"Backup failed: {error_message}")
+
             # Create the new backup record
             new_backup = BackupData(
                 backup_name=backup_name,
@@ -365,7 +375,7 @@ class BackupData(db.Model):
                 user_id=user_id,
                 device_id=device_id,
                 retention_period_days=retention_days,
-                integrity_check=backup_result["integrity_hash"],
+                integrity_check=backup_result.get("integrity_hash"),
             )
 
             db.session.add(new_backup)

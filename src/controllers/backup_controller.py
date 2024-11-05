@@ -31,6 +31,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 from src.utils.forms_utils import UpdateBackupForm
 from src.utils.config_manager_utils import ConfigurationManagerUtils
+from werkzeug.exceptions import HTTPException
 
 # Membuat blueprint untuk Backup Manager (backup_bp) dan Error Handling (error_bp)
 backup_bp = Blueprint("backup", __name__)
@@ -198,7 +199,7 @@ def create_backup_multiple():
     try:
         data = request.get_json()
         device_ips = data.get("devices", [])
-        backup_name = data.get("backup_name", None)
+        backup_name = data.get("backup_name")
         description = data.get("description", "")
         backup_type = data.get("backup_type", "full")
         retention_days = data.get("retention_days", None)
@@ -215,6 +216,7 @@ def create_backup_multiple():
         if not devices:
             return jsonify({"message": "No devices found."}), 404
 
+        # Pastikan semua perangkat memiliki vendor yang sama
         vendors = {device.vendor for device in devices}
         if len(vendors) > 1:
             return jsonify({"message": "Devices must have the same vendor."}), 400
@@ -222,12 +224,12 @@ def create_backup_multiple():
         results = []
         success = True
 
-        @copy_current_request_context
         def backup_device(app, device, command):
             nonlocal success
-            try:
-                with app.app_context():
-                    new_backup = BackupData.create_backup(
+            with app.app_context():
+                try:
+                    # Jalankan backup menggunakan create_backup di model BackupData
+                    backup_result = BackupData.create_backup(
                         backup_name=backup_name,
                         description=description,
                         user_id=user_id,
@@ -236,28 +238,71 @@ def create_backup_multiple():
                         retention_days=retention_days,
                         command=command,
                     )
+
+                    # Pastikan backup berhasil
+                    if backup_result and backup_result.backup_path:
+                        results.append(
+                            {
+                                "device_name": device.device_name,
+                                "ip": device.ip_address,
+                                "status": "success",
+                                "message": "Backup successful",
+                                "backup_id": backup_result.id,
+                            }
+                        )
+                    else:
+                        error_message = "Backup failed without a specific error."
+                        current_app.logger.error(
+                            f"Error during backup for {device.ip_address}: {error_message}"
+                        )
+                        success = False
+                        results.append(
+                            {
+                                "device_name": device.device_name,
+                                "ip": device.ip_address,
+                                "status": "error",
+                                "message": error_message,
+                            }
+                        )
+                except TimeoutError:
+                    current_app.logger.error(
+                        f"Timeout during backup for {device.ip_address}"
+                    )
+                    success = False
                     results.append(
                         {
                             "device_name": device.device_name,
                             "ip": device.ip_address,
-                            "status": "success",
-                            "message": "Backup successful",
-                            "backup_id": new_backup.id,
+                            "status": "error",
+                            "message": "Connection timed out.",
                         }
                     )
-            except Exception as e:
-                current_app.logger.error(
-                    f"Error during backup for {device.ip_address}: {e}"
-                )
-                success = False
-                results.append(
-                    {
-                        "device_name": device.device_name,
-                        "ip": device.ip_address,
-                        "status": "error",
-                        "message": str(e),
-                    }
-                )
+                except HTTPException as e:
+                    current_app.logger.error(
+                        f"HTTP error during backup for {device.ip_address}: {str(e)}"
+                    )
+                    success = False
+                    results.append(
+                        {
+                            "device_name": device.device_name,
+                            "ip": device.ip_address,
+                            "status": "error",
+                            "message": str(e),
+                        }
+                    )
+                except Exception as e:
+                    current_app.logger.error(
+                        f"Error during backup for {device.ip_address}: {e}"
+                    )
+                    success = False
+                    results.append(
+                        {
+                            "device_name": device.device_name,
+                            "ip": device.ip_address,
+                            "status": "error",
+                            "message": str(e),
+                        }
+                    )
 
         app = current_app._get_current_object()
         with ThreadPoolExecutor(max_workers=5) as executor:
@@ -266,7 +311,11 @@ def create_backup_multiple():
                 for device in devices
             }
             for future in as_completed(futures):
-                future.result()
+                try:
+                    future.result()
+                except Exception as e:
+                    current_app.logger.error(f"Error in backup thread: {e}")
+                    success = False
 
         return jsonify({"success": success, "results": results}), (
             200 if success else 500

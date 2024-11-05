@@ -17,6 +17,7 @@ import openai
 import os
 from flask_marshmallow import Marshmallow
 from flask_jwt_extended import JWTManager
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Load .env file variable
 load_dotenv()
@@ -115,6 +116,7 @@ def create_app():
         strict_transport_security=app.config["TALISMAN_STRICT_TRANSPORT_SECURITY"],
         strict_transport_security_max_age=app.config["TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE"],
     )
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
     # Set UUID type based on database type
     UUID_TYPE = get_uuid_type(app.config["SQLALCHEMY_DATABASE_URI"])

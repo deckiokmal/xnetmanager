@@ -61,6 +61,9 @@ def before_request_func():
     # Exempt pages that should not trigger authentication or force logout
     exempt_pages = [url_for("main.login")]
 
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+    current_app.logger.info(f"Request received from IP: {ip_address}")
+
     if request.path in exempt_pages:
         return  # Allow access to exempted pages without further checks
 

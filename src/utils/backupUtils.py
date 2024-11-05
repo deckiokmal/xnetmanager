@@ -24,55 +24,60 @@ class BackupUtils:
         :param version: Version of the backup.
         :return: A dictionary with the result of the backup process.
         """
-        # Determine previous backup if required
         previous_backup = BackupUtils.determine_previous_backup(device, backup_type)
 
-        if backup_type == "full":
-            backup_data = BackupUtils.full_backup(device, command)
-        elif backup_type == "incremental":
-            if not previous_backup:
-                raise ValueError("Previous backup is required for incremental backup.")
-            backup_data = BackupUtils.incremental_backup(
-                device, previous_backup, command
-            )
-        elif backup_type == "differential":
-            if not previous_backup:
-                raise ValueError(
-                    "Previous full backup is required for differential backup."
+        # Perform backup based on type
+        try:
+            if backup_type == "full":
+                backup_data = BackupUtils.full_backup(device, command)
+            elif backup_type == "incremental":
+                if not previous_backup:
+                    raise ValueError(
+                        "Previous backup is required for incremental backup."
+                    )
+                backup_data = BackupUtils.incremental_backup(
+                    device, previous_backup, command
                 )
-            backup_data = BackupUtils.differential_backup(
-                device, previous_backup, command
+            elif backup_type == "differential":
+                if not previous_backup:
+                    raise ValueError(
+                        "Previous full backup is required for differential backup."
+                    )
+                backup_data = BackupUtils.differential_backup(
+                    device, previous_backup, command
+                )
+            else:
+                raise ValueError(f"Unknown backup type: {backup_type}")
+
+            # Save to file
+            backup_path = BackupUtils.generate_backup_path(
+                user_id, backup_name, version
             )
-        else:
-            raise ValueError(f"Unknown backup type: {backup_type}")
+            BackupUtils.save_backup_to_file(backup_data["message"], backup_path)
 
-        # Generate backup path and file handling
-        backup_path = BackupUtils.generate_backup_path(user_id, backup_name, version)
-        BackupUtils.save_backup_to_file(backup_data["message"], backup_path)
+            # Calculate integrity hash
+            integrity_hash = BackupUtils.calculate_integrity(backup_path)
 
-        # Integrity check
-        integrity_hash = BackupUtils.calculate_integrity(backup_path)
+            return {
+                "status": "success",
+                "backup_path": backup_path,
+                "message": backup_data["message"],
+                "integrity_hash": integrity_hash,
+            }
 
-        return {
-            "status": "success",
-            "backup_path": backup_path,
-            "message": backup_data["message"],
-            "integrity_hash": integrity_hash,
-        }
-
-    @staticmethod
-    def calculate_integrity(backup_path):
-        """
-        Calculate the integrity of the backup file by generating a hash.
-        """
-        hash_md5 = hashlib.md5()
-        with open(backup_path, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                hash_md5.update(chunk)
-        return hash_md5.hexdigest()
+        except Exception as e:
+            current_app.logger.error(f"Backup failed: {e}")
+            return {"status": "error", "message": f"Backup failed: {str(e)}"}
 
     @staticmethod
     def full_backup(device, command):
+        """
+        Perform a full backup of the device configuration.
+
+        :param device: Device object for which the backup is being performed.
+        :param command: The command to execute on the device.
+        :return: Dictionary with backup result or raise an error if failed.
+        """
         config_utils = ConfigurationManagerUtils(
             ip_address=device.ip_address,
             username=device.username,
@@ -85,9 +90,8 @@ class BackupUtils:
         if response_dict.get("status") == "success":
             return {"status": "success", "message": response_dict.get("message", "")}
         else:
-            raise RuntimeError(
-                f"Full backup failed: {response_dict.get('message', 'Unknown error')}"
-            )
+            error_message = response_dict.get("message", "Unknown error")
+            raise RuntimeError(f"Full backup failed: {error_message}")
 
     @staticmethod
     def incremental_backup(device, previous_backup, command):
@@ -116,6 +120,31 @@ class BackupUtils:
             return {"status": "success", "message": "No changes detected"}
 
     @staticmethod
+    def get_device_config(device, command):
+        config_utils = ConfigurationManagerUtils(
+            ip_address=device.ip_address,
+            username=device.username,
+            password=device.password,
+            ssh=device.ssh,
+        )
+        response_json = config_utils.backup_configuration(command=command)
+        response_dict = json.loads(response_json)
+
+        if response_dict.get("status") == "success":
+            return response_dict.get("message", "")
+        else:
+            error_message = response_dict.get("message", "Unknown error")
+            raise RuntimeError(f"Failed to retrieve device config: {error_message}")
+
+    @staticmethod
+    def calculate_integrity(backup_path):
+        hash_md5 = hashlib.md5()
+        with open(backup_path, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_md5.update(chunk)
+        return hash_md5.hexdigest()
+
+    @staticmethod
     def compare_data_for_incremental(previous_data, current_data):
         diff = difflib.unified_diff(
             previous_data.splitlines(), current_data.splitlines(), lineterm=""
@@ -128,18 +157,6 @@ class BackupUtils:
             previous_data.splitlines(), current_data.splitlines(), lineterm=""
         )
         return "\n".join(list(diff))
-
-    @staticmethod
-    def get_device_config(device, command):
-        config_utils = ConfigurationManagerUtils(
-            ip_address=device.ip_address,
-            username=device.username,
-            password=device.password,
-            ssh=device.ssh,
-        )
-        response_json = config_utils.backup_configuration(command=command)
-        response_dict = json.loads(response_json)
-        return response_dict.get("message", "")
 
     @staticmethod
     def read_backup_file(backup_path):

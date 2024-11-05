@@ -67,10 +67,11 @@ class Config(object):
     )
 
     # Pengaturan untuk keamanan cookies
-    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = False
     REMEMBER_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_DOMAIN = None
 
     # Pengaturan logging
     LOGGING_LEVEL = logging.DEBUG if DEBUG else logging.INFO

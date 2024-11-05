@@ -8,6 +8,8 @@ import json
 import logging
 import time
 import asyncio
+from paramiko.ssh_exception import SSHException, AuthenticationException
+import socket
 
 # Konfigurasi logging
 logging.basicConfig(
@@ -129,8 +131,11 @@ class ConfigurationManagerUtils:
             stdout, stderr = await process.communicate()
             elapsed_time = time.time() - start_time
 
-            if ("Reply from" in stdout.decode() or "reply from" in stdout.decode() or 
-                "bytes from" in stdout.decode().lower()):
+            if (
+                "Reply from" in stdout.decode()
+                or "reply from" in stdout.decode()
+                or "bytes from" in stdout.decode().lower()
+            ):
                 self.device_status = True
                 status_message = "Perangkat online"
                 status = "success"
@@ -189,22 +194,65 @@ class ConfigurationManagerUtils:
         :param command: Perintah konfigurasi yang akan dijalankan pada perangkat.
         :return: JSON yang berisi status dan pesan hasil eksekusi perintah.
         """
-        try:
-            result_json = self.configure_device(command)
-            result_dict = json.loads(result_json)
+        retries = 0
+        while retries <= self.MAX_RETRIES:
+            try:
+                result_json = self.configure_device(command)
+                result_dict = json.loads(result_json)
 
-            if result_dict.get("status") == "success":
-                output = result_dict.get("message")
-                return json.dumps({"status": "success", "message": output})
-            else:
-                error_message = result_dict.get("message")
-                logging.error("Konfigurasi gagal: %s", error_message)
+                if result_dict.get("status") == "success":
+                    output = result_dict.get("message")
+                    return json.dumps({"status": "success", "message": output})
+                else:
+                    error_message = result_dict.get("message")
+                    logging.error(
+                        "Konfigurasi gagal untuk %s: %s", self.ip_address, error_message
+                    )
+                    return json.dumps({"status": "error", "message": error_message})
+
+            except (TimeoutError, socket.timeout):
+                retries += 1
+                if retries > self.MAX_RETRIES:
+                    error_message = (
+                        "Connection to device timed out after multiple attempts."
+                    )
+                    logging.error(
+                        "Gagal menghubungi perangkat %s setelah %s percobaan: %s",
+                        self.ip_address,
+                        retries,
+                        error_message,
+                    )
+                    return json.dumps({"status": "error", "message": error_message})
+                else:
+                    logging.warning(
+                        "Percobaan ke-%s untuk menghubungi perangkat %s setelah timeout.",
+                        retries,
+                        self.ip_address,
+                    )
+                    time.sleep(self.RETRY_DELAY)
+
+            except AuthenticationException:
+                error_message = "Authentication failed. Please check your credentials."
+                logging.error("Autentikasi gagal untuk perangkat %s", self.ip_address)
                 return json.dumps({"status": "error", "message": error_message})
-        except json.JSONDecodeError as e:
-            error_message = f"Kesalahan parsing JSON: {e}"
-            logging.error(error_message)
-            return json.dumps({"status": "error", "message": error_message})
-        except Exception as e:
-            error_message = f"Kesalahan tidak terduga saat menjalankan perintah: {e}"
-            logging.error(error_message)
-            return json.dumps({"status": "error", "message": error_message})
+
+            except SSHException as e:
+                error_message = f"SSH error occurred: {e}"
+                logging.error("SSH error untuk perangkat %s: %s", self.ip_address, e)
+                return json.dumps({"status": "error", "message": error_message})
+
+            except json.JSONDecodeError as e:
+                error_message = f"Kesalahan parsing JSON: {e}"
+                logging.error(
+                    "Kesalahan parsing JSON untuk perangkat %s: %s", self.ip_address, e
+                )
+                return json.dumps({"status": "error", "message": error_message})
+
+            except Exception as e:
+                error_message = f"Kesalahan tidak terduga: {e}"
+                logging.error(
+                    "Kesalahan tidak terduga saat mengonfigurasi perangkat %s: %s",
+                    self.ip_address,
+                    e,
+                )
+                return json.dumps({"status": "error", "message": error_message})
