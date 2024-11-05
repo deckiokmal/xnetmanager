@@ -32,6 +32,16 @@ services:
       - xnetmanager
     restart: always
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared_tunnel
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TOKEN}
+    env_file:
+      - .env
+    networks:
+      - xnetmanager_bridge
+    restart: always
+
 networks:
   xnetmanager_bridge:
     driver: bridge

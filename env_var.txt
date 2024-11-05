@@ -16,3 +16,4 @@ TALITA_URL=
 BACKUP_DIR=app/xnetmanager/backups
 CONFIG_DIR=app/xnetmanager/configurations
 TEMPLATE_DIR=app/xnetmanager/templates
+CLOUDFLARED_TOKEN=
