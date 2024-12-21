@@ -32,6 +32,11 @@ from sqlalchemy.orm import joinedload
 from src.utils.forms_utils import UpdateBackupForm
 from src.utils.config_manager_utils import ConfigurationManagerUtils
 from werkzeug.exceptions import HTTPException
+from src.utils.openai_utils import (
+    validate_generated_template_with_openai,
+    create_configuration_with_openai,
+    analyze_device_with_openai,
+)
 
 # Membuat blueprint untuk Backup Manager (backup_bp) dan Error Handling (error_bp)
 backup_bp = Blueprint("backup", __name__)
@@ -800,3 +805,22 @@ def get_audit_logs(backup_id):
         for log in audit_logs
     ]
     return jsonify(logs_list), 200
+
+
+@backup_bp.route("/analyze-data/<backup_id>", methods=["GET", "POST"])
+@login_required
+def analyze_data(backup_id):
+    # Query the backup by ID
+    backup = BackupData.query.get(backup_id)
+
+    # Read data
+    backup_content = BackupUtils.read_backup_file(backup.backup_path)
+
+    analysis, recommendations = analyze_device_with_openai(backup_content)
+
+    print(analysis)
+    for recommendation, syntax in recommendations:
+        print(f"- {recommendation}:")
+        print(f"  `\n{syntax}\n`")
+    
+    return analysis, recommendations

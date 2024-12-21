@@ -116,3 +116,45 @@ def summarize_error_with_openai(error_log, vendor):
         return {"status": "success", "message": summary_result}
     else:
         return {"status": "error", "message": summary_result}
+
+
+def analyze_device_with_openai(backup_content):
+    """
+    Menggunakan OpenAI API untuk menganalisis konfigurasi Mikrotik, memberikan rekomendasi praktik terbaik, dan contoh syntax konfigurasi.
+
+    Args:
+        backup_content (str): Isi file backup konfigurasi Mikrotik.
+        vendor (str): Vendor perangkat (misalnya, MikroTik).
+
+    Returns:
+        tuple: Tuple berisi (ringkasan analisis, daftar rekomendasi dengan syntax).
+    """
+
+    if not backup_content.strip():
+        return "Tidak ada data konfigurasi yang ditemukan.", []
+
+    # Prompt untuk OpenAI, dengan detail yang lebih spesifik
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {
+                "role": "system",
+                "content": f"Anda adalah seorang ahli konfigurasi jaringan MikroTik. Tugas Anda adalah menganalisis konfigurasi yang diberikan dan memberikan rekomendasi praktik terbaik. Jawaban Anda harus dalam bahasa Indonesia dan mencakup:\n1. Ringkasan singkat konfigurasi yang ada.\n2. Daftar rekomendasi praktik terbaik, termasuk:\n   - Deskripsi singkat rekomendasi.\n   - Contoh syntax konfigurasi MikroTik yang relevan untuk menerapkan rekomendasi tersebut."
+            },
+            {
+                "role": "user",
+                "content": f"Berikut adalah konfigurasi MikroTik yang ingin saya analisis:\n\n`\n{backup_content}\n`\n\nMohon berikan analisis mendalam dan rekomendasi untuk meningkatkan keamanan, kinerja, dan stabilitas konfigurasi ini."
+            },
+        ],
+    )
+
+    # Parsing respons OpenAI untuk mendapatkan hasil yang lebih terstruktur
+    analysis = response["choices"][0]["message"]["content"]
+    recommendations = []
+    for part in analysis.split("\n\n"):
+        if "Rekomendasi" in part:
+            recommendation = part.split(":")
+            if len(recommendation) == 2:
+                recommendations.append((recommendation[0].strip(), recommendation[1].strip()))
+
+    return analysis, recommendations
