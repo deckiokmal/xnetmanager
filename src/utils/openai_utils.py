@@ -118,43 +118,66 @@ def summarize_error_with_openai(error_log, vendor):
         return {"status": "error", "message": summary_result}
 
 
-def analyze_device_with_openai(backup_content):
+def analyze_device_with_openai(backup_content, max_tokens=8000, overlap=100):
     """
-    Menggunakan OpenAI API untuk menganalisis konfigurasi Mikrotik, memberikan rekomendasi praktik terbaik, dan contoh syntax konfigurasi.
+    Menggunakan OpenAI API untuk menganalisis konfigurasi MikroTik, dengan penanganan kesalahan token.
 
     Args:
         backup_content (str): Isi file backup konfigurasi Mikrotik.
-        vendor (str): Vendor perangkat (misalnya, MikroTik).
+        max_tokens (int): Batas maksimum token untuk setiap permintaan ke OpenAI.
 
     Returns:
         tuple: Tuple berisi (ringkasan analisis, daftar rekomendasi dengan syntax).
     """
 
-    if not backup_content.strip():
-        return "Tidak ada data konfigurasi yang ditemukan.", []
+    def split_content_with_overlap(content, max_tokens=8000, overlap=100):
+        # Fungsi untuk membagi konten menjadi bagian-bagian dengan panjang maksimum
+        tokens = len(content.split())  # Estimasi jumlah token (tidak akurat)
+        parts = []
+        start = 0
+        while start < len(content):
+            end = min(start + max_tokens, len(content))
+            parts.append(content[start:end])
+            start = end
+        return parts
 
-    # Prompt untuk OpenAI, dengan detail yang lebih spesifik
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {
-                "role": "system",
-                "content": f"Anda adalah seorang ahli konfigurasi jaringan MikroTik. Tugas Anda adalah menganalisis konfigurasi yang diberikan dan memberikan rekomendasi praktik terbaik. Jawaban Anda harus dalam bahasa Indonesia dan mencakup:\n1. Ringkasan singkat konfigurasi yang ada.\n2. Daftar rekomendasi praktik terbaik, termasuk:\n   - Deskripsi singkat rekomendasi.\n   - Contoh syntax konfigurasi MikroTik yang relevan untuk menerapkan rekomendasi tersebut."
-            },
-            {
-                "role": "user",
-                "content": f"Berikut adalah konfigurasi MikroTik yang ingin saya analisis:\n\n`\n{backup_content}\n`\n\nMohon berikan analisis mendalam dan rekomendasi untuk meningkatkan keamanan, kinerja, dan stabilitas konfigurasi ini."
-            },
-        ],
-    )
+    # Bagi backup menjadi bagian-bagian
+    parts = split_content_with_overlap(backup_content, max_tokens)
 
-    # Parsing respons OpenAI untuk mendapatkan hasil yang lebih terstruktur
-    analysis = response["choices"][0]["message"]["content"]
-    recommendations = []
+    # Inisialisasi variabel untuk menyimpan hasil
+    overall_analysis = []
+    all_recommendations = []
+
+    for part in parts:
+        # Buat prompt dengan bagian backup yang lebih kecil
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {
+                    "role": "system",
+                    "content": f"Anda adalah seorang ahli konfigurasi jaringan MikroTik. Tugas Anda adalah menganalisis konfigurasi yang diberikan dan memberikan rekomendasi praktik terbaik. Jawaban Anda harus dalam bahasa Indonesia dan mencakup:\n1. Ringkasan singkat konfigurasi yang ada.\n2. Daftar rekomendasi praktik terbaik, termasuk:\n   - Deskripsi singkat rekomendasi.\n   - Contoh syntax konfigurasi MikroTik yang relevan untuk menerapkan rekomendasi tersebut.",
+                },
+                {
+                    "role": "user",
+                    "content": f"Berikut adalah konfigurasi MikroTik yang ingin saya analisis:\n\n`\n{backup_content}\n`\n\nMohon berikan analisis mendalam dan rekomendasi untuk meningkatkan keamanan, kinerja, dan stabilitas konfigurasi ini.",
+                },
+            ],
+        )
+
+        # Parsing respons dan tambahkan ke hasil keseluruhan
+        analysis = response["choices"][0]["message"]["content"]
+        overall_analysis.append(analysis)
+
+        recommendations = []
     for part in analysis.split("\n\n"):
         if "Rekomendasi" in part:
             recommendation = part.split(":")
             if len(recommendation) == 2:
-                recommendations.append((recommendation[0].strip(), recommendation[1].strip()))
+                recommendations.append(
+                    (recommendation[0].strip(), recommendation[1].strip())
+                )
 
-    return analysis, recommendations
+        all_recommendations.extend(recommendations)
+
+    # Gabungkan hasil dari semua bagian
+    return "\n".join(overall_analysis), all_recommendations

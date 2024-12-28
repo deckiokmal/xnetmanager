@@ -823,4 +823,7 @@ def analyze_data(backup_id):
         print(f"- {recommendation}:")
         print(f"  `\n{syntax}\n`")
     
-    return analysis, recommendations
+    return jsonify({
+        "analysis": analysis,
+        "recommendations": recommendations
+    })
