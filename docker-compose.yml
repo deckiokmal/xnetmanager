@@ -45,7 +45,7 @@ services:
     image: nginx:latest
     container_name: xnetmanager_nginx
     volumes:
-      - ./src/static:/var/www//src/static
+      - ./src/static:/var/www/src/static
       - ./certbot/www:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
       - ./default.conf:/etc/nginx/conf.d/default.conf:ro
