@@ -46,14 +46,9 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     BCRYPT_LOG_ROUNDS = int(config("BCRYPT_LOG_ROUNDS", default=13))
     WTF_CSRF_ENABLED = True
-    DEBUG_TB_ENABLED = False
-    DEBUG_TB_INTERCEPT_REDIRECTS = False
-    APP_NAME = config("APP_NAME")
 
-    # Set BASE_DIR to the project root
+    # Konfigurasi Direktori
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-
-    # In production, use an environment variable for the backup directory (Docker volume)
     BACKUP_DIR = config(
         "BACKUP_DIR", default=os.path.join(BASE_DIR, "static", "xmanager", "backups")
     )
@@ -66,19 +61,18 @@ class Config(object):
         default=os.path.join(BASE_DIR, "static", "xmanager", "templates"),
     )
 
-    # Pengaturan untuk keamanan cookies
-    SESSION_COOKIE_SECURE = False
+    # Pengaturan Keamanan Cookie
+    SESSION_COOKIE_SECURE = True  # Pastikan cookie hanya dikirim melalui HTTPS
     REMEMBER_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = "Lax"
-    SESSION_COOKIE_DOMAIN = None
+    SESSION_COOKIE_SAMESITE = "Strict"
 
-    # Pengaturan logging
-    LOGGING_LEVEL = logging.DEBUG if DEBUG else logging.INFO
+    # Pengaturan Logging
+    LOGGING_LEVEL = logging.INFO
     LOGGING_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     LOGGING_LOCATION = "app.log"
 
-    # Pengaturan untuk email
+    # Pengaturan Email
     MAIL_SERVER = config("MAIL_SERVER", default="smtp.gmail.com")
     MAIL_USERNAME = config("MAIL_USERNAME")
     MAIL_PASSWORD = config("MAIL_PASSWORD")
@@ -86,19 +80,13 @@ class Config(object):
     MAIL_USE_SSL = config("MAIL_USE_SSL", default=False, cast=bool)
     MAIL_PORT = 465 if MAIL_USE_SSL else 587
 
-    # Pengaturan Flask-Talisman
+    # Flask-Talisman untuk Keamanan
     TALISMAN_FORCE_HTTPS = True
     TALISMAN_STRICT_TRANSPORT_SECURITY = True
-    TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE = 31536000  # 1 year
+    TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE = 31536000  # 1 tahun
     TALISMAN_CONTENT_SECURITY_POLICY = {
         "default-src": ["'self'"],
         "style-src": [
-            "'self'",
-            "https://fonts.googleapis.com",
-            "https://cdn.jsdelivr.net",
-            "'unsafe-inline'",
-        ],
-        "style-src-elem": [
             "'self'",
             "https://fonts.googleapis.com",
             "https://cdn.jsdelivr.net",
@@ -117,41 +105,41 @@ class Config(object):
             "https://fonts.googleapis.com",
             "https://ka-f.fontawesome.com",
         ],
-        "img-src": [
-            "'self'",
-            "https://iili.io",
-            "https://via.placeholder.com",
-            "data:",
-        ],
+        "img-src": ["'self'", "https://via.placeholder.com", "data:"],
         "connect-src": ["'self'", "https://ka-f.fontawesome.com"],
         "object-src": ["'none'"],
-        "frame-src": [
-            "'self'",
-            "https://www.youtube.com",
-        ],
+        "frame-src": ["'self'", "https://www.youtube.com"],
         "frame-ancestors": ["'none'"],
     }
 
 
+class ProductionConfig(Config):
+    """Konfigurasi untuk lingkungan produksi."""
+
+    DEBUG = False
+    TESTING = False
+    WTF_CSRF_ENABLED = True  # Pastikan CSRF aktif di produksi
+    TALISMAN_FORCE_HTTPS = True
+    SESSION_COOKIE_SECURE = True  # Pastikan cookie hanya dikirim melalui HTTPS
+    LOGGING_LEVEL = logging.INFO  # Gunakan INFO untuk logging di produksi
+
+
 class DevelopmentConfig(Config):
+    """Konfigurasi untuk lingkungan pengembangan."""
+
     DEVELOPMENT = True
     DEBUG = True
     WTF_CSRF_ENABLED = False
-    DEBUG_TB_ENABLED = True
     TALISMAN_FORCE_HTTPS = False
-    TALISMAN_STRICT_TRANSPORT_SECURITY = False
+    SESSION_COOKIE_SECURE = False
+    LOGGING_LEVEL = logging.DEBUG
 
 
 class TestingConfig(Config):
+    """Konfigurasi untuk lingkungan pengujian."""
+
     TESTING = True
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     BCRYPT_LOG_ROUNDS = 1
     WTF_CSRF_ENABLED = False
-
-
-class ProductionConfig(Config):
-    DEBUG = False
-    DEBUG_TB_ENABLED = False
-    TALISMAN_FORCE_HTTPS = True
-    TALISMAN_STRICT_TRANSPORT_SECURITY = True
