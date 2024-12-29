@@ -1,6 +1,12 @@
 #!/bin/bash
 # Entrypoint script for initial database setup and application start
 
+# Tunggu hingga PostgreSQL siap
+until pg_isready -h db -U ${POSTGRES_USER}; do
+    echo "Waiting for PostgreSQL to be ready..."
+    sleep 2
+done
+
 echo "Memulai proses inisialisasi dan aplikasi XnetManager..."
 
 # Jalankan migrasi database

@@ -2,7 +2,7 @@ FROM python:3.9-slim
 
 ENV CONTAINER_HOME=/var/www
 
-ADD . ${CONTAINER_HOME}
+COPY . ${CONTAINER_HOME}
 WORKDIR ${CONTAINER_HOME}
 
 RUN apt-get update && \
@@ -10,5 +10,11 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir -r ${CONTAINER_HOME}/requirements.txt
+
+# Pastikan file entrypoint memiliki izin eksekusi
+RUN chmod +x entrypoint.sh
+
+# Tentukan variabel lingkungan default untuk Flask
+ENV CONFIG_NAME Production
 
 EXPOSE 8000

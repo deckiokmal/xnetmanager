@@ -5,10 +5,10 @@ services:
       dockerfile: Dockerfile
     container_name: xnetmanager_flask
     volumes:
-      - xnetmanager_backups:/data/backups
-      - xnetmanager_configurations:/data/configurations
-      - xnetmanager_templates:/data/templates
-      - .env:/app/.env:ro # Menggunakan akses read-only untuk keamanan
+      - xnetmanager_backups:/var/www/data/backups
+      - xnetmanager_configurations:/var/www/data/configurations
+      - xnetmanager_templates:/var/www/data/templates
+      - .env:/var/www/.env:ro
     env_file:
       - .env
     ports:
@@ -41,25 +41,14 @@ services:
       timeout: 5s
       retries: 5
 
-  adminer:
-    image: adminer:latest
-    container_name: xnetmanager_adminer
-    depends_on:
-      - db
-    ports:
-      - "8080:8080"
-    networks:
-      - xnetmanager_bridge
-    restart: unless-stopped
-
   nginx:
     image: nginx:latest
     container_name: xnetmanager_nginx
     volumes:
-      - ./static:/var/www/static
+      - ./src/static:/var/www//src/static
       - ./certbot/www:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
-      - ./default.conf:/etc/nginx/conf.d/default.conf:ro # Menggunakan akses read-only
+      - ./default.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
       - "80:80"
       - "443:443"
@@ -68,7 +57,7 @@ services:
     depends_on:
       - xnetmanager
     restart: unless-stopped
-  
+
   certbot:
     image: certbot/certbot
     container_name: certbot
@@ -78,7 +67,7 @@ services:
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 1; done'"
     networks:
       - xnetmanager_bridge
-      
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: xnetmanager_cloudflared
@@ -90,10 +79,10 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data: # Volume untuk menyimpan data PostgreSQL
-  xnetmanager_backups: # Volume untuk menyimpan data backups
-  xnetmanager_configurations: # Volume untuk menyimpan konfigurasi
-  xnetmanager_templates: # Volume untuk menyimpan template
+  postgres_data:
+  xnetmanager_backups:
+  xnetmanager_configurations:
+  xnetmanager_templates:
 
 networks:
   xnetmanager_bridge:
