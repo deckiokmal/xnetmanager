@@ -1,25 +1,25 @@
 #!/bin/bash
 # Entrypoint script for initial database setup and application start
 
-# Jalankan inisialisasi database jika belum ada
-if [ ! -f "/instance/xnetmanager.sqlite" ]; then
-    echo "Database belum ada, memulai inisialisasi database..."
+echo "Memulai proses inisialisasi dan aplikasi XnetManager..."
 
-    # Cek apakah direktori migrations ada atau tidak
-    if [ ! -d "/var/www/migrations" ]; then
-        echo "Direktori migrations tidak ada, menjalankan flask db init..."
-        flask db init
-    else
-        echo "Direktori migrations sudah ada, melewati flask db init."
-    fi
-
-    # Lanjutkan dengan migrasi dan upgrade
-    flask db migrate -m "Initial Migration"
-    flask db upgrade
-    python db_init.py
+# Jalankan migrasi database
+if [ ! -d "/var/www/migrations" ]; then
+    echo "Direktori migrations tidak ditemukan. Menjalankan 'flask db init'..."
+    flask db init
 else
-    echo "Database sudah ada, melewati inisialisasi."
+    echo "Direktori migrations ditemukan. Melewati 'flask db init'."
 fi
 
-# Mulai aplikasi dengan Gunicorn
+# Lanjutkan dengan migrasi dan upgrade
+echo "Menjalankan 'flask db migrate' dan 'flask db upgrade'..."
+flask db migrate -m "Initial Migration"
+flask db upgrade
+
+# Jalankan skrip inisialisasi database
+echo "Menjalankan inisialisasi data awal dengan db_init.py..."
+python db_init.py
+
+# Mulai aplikasi menggunakan Gunicorn
+echo "Memulai aplikasi XnetManager dengan Gunicorn..."
 exec gunicorn --bind 0.0.0.0:8000 --workers 4 manage:app
