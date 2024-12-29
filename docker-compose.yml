@@ -6,8 +6,8 @@ services:
     container_name: xnetmanager_flask
     volumes:
       - xnetmanager_backups:/data/backups
-			- xnetmanager_configurations:/data/configurations
-			- xnetmanager_templates:/data/templates
+      - xnetmanager_configurations:/data/configurations
+      - xnetmanager_templates:/data/templates
       - .env:/app/.env:ro # Menggunakan akses read-only untuk keamanan
     env_file:
       - .env
