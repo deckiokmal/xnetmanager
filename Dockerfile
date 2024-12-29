@@ -6,7 +6,7 @@ COPY . ${CONTAINER_HOME}
 WORKDIR ${CONTAINER_HOME}
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends iputils-ping && \
+    apt-get install -y --no-install-recommends iputils-ping postgresql-client && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir -r ${CONTAINER_HOME}/requirements.txt
