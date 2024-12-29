@@ -1,0 +1,35 @@
+# Application Configuration
+APP_NAME=XNETMANAGER
+CONFIG_NAME=Production
+FLASK_APP=
+SECRET_KEY=
+
+# Database Configuration
+DATABASE_URL=
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+POSTGRES_DB=
+
+# Security Configuration
+BCRYPT_LOG_ROUNDS=
+
+# Mail Configuration
+MAIL_SERVER=
+MAIL_PORT=
+MAIL_USERNAME=
+MAIL_PASSWORD=
+MAIL_USE_TLS=
+MAIL_USE_SSL=
+
+# AI and External API Configuration
+OPENAI_API_KEY=
+TALITA_API_KEY=
+TALITA_URL=
+
+# Data Directory Configuration
+BACKUP_DIR=data/backups
+CONFIG_DIR=data/configurations
+TEMPLATE_DIR=data/templates
+
+# Cloudflare Configuration
+CLOUDFLARED_TOKEN=
