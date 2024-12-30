@@ -85,7 +85,7 @@
         </a>
         <form action="{{ url_for('config_file.delete_configuration', config_id=data.id) }}" method="post"
             class="d-inline">
-            {{ csrf_field() }}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-danger btn-sm mb-1"
                 onclick="return confirm('Apakah Anda yakin ingin menghapus ?');">
                 <i class="fas fa-trash"></i>
