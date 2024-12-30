@@ -115,6 +115,12 @@ def create_app():
         force_https=app.config["TALISMAN_FORCE_HTTPS"],
         strict_transport_security=app.config["TALISMAN_STRICT_TRANSPORT_SECURITY"],
         strict_transport_security_max_age=app.config["TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE"],
+        strict_transport_security_include_subdomains=app.config.get(
+        "TALISMAN_STRICT_TRANSPORT_SECURITY_INCLUDE_SUBDOMAINS", True
+        ),
+        strict_transport_security_preload=app.config.get(
+            "TALISMAN_STRICT_TRANSPORT_SECURITY_PRELOAD", False
+        ),
     )
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
