@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <!-- Security Section -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <!-- End of Security Section -->
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap 5 Section -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- End of Bootstrap 5 Section -->
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+    <!-- XNETMANAGER Section -->
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <!-- End of XNETMANAGER Section -->
+</head>
+
+<body>
+
+    <!-- Main Content -->
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    {% block js %}{% endblock %}
+
+    <!-- Script Bootstrap 5 Section -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+    <!-- End of Script Bootstrap 5 Section -->
+
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/083945212a.js" crossorigin="anonymous"></script>
+    <!-- End of Font Awesome -->
+
+</body>
+
+</html>

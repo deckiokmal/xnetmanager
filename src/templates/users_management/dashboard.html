@@ -1,0 +1,402 @@
+{% extends "/layouts/layout.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_heading %}Dashboard{% endblock %}
+{% block content %}
+
+<!-- Card data dashboard -->
+<div class="row">
+    <!-- Total Devices -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Devices</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_devices }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-tablet fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Templates -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Total Templates</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_templates }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Configuration Files -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Total Configuration Files</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_configuration_file }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-gear fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Backup Files -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Total Backup Files</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_backupdata }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-box-archive fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart -->
+<div class="row">
+
+    <div class="col-12 col-sm-6 col-lg-6 mb-2">
+        <div class="card shadow mb-4">
+            <!-- Card Header - Dropdown -->
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Devices by vendor</h6>
+                <div class="dropdown no-arrow">
+                    <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown"
+                        aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
+                        aria-labelledby="dropdownMenuLink">
+                        <div class="dropdown-header">Dropdown Header:</div>
+                        <a class="dropdown-item" href="#">Action</a>
+                        <a class="dropdown-item" href="#">Another action</a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="#">Something else here</a>
+                    </div>
+                </div>
+            </div>
+            <!-- Card Body -->
+            <div class="card-body">
+                <div class="chart-area">
+                    <canvas id="devicePieChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-lg-6 mb-2">
+        <div class="card shadow mb-4">
+            <!-- Card Header - Dropdown -->
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Templates by vendor</h6>
+                <div class="dropdown no-arrow">
+                    <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown"
+                        aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
+                        aria-labelledby="dropdownMenuLink">
+                        <div class="dropdown-header">Dropdown Header:</div>
+                        <a class="dropdown-item" href="#">Action</a>
+                        <a class="dropdown-item" href="#">Another action</a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="#">Something else here</a>
+                    </div>
+                </div>
+            </div>
+            <!-- Card Body -->
+            <div class="card-body">
+                <div class="chart-area">
+                    <canvas id="templatePieChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Card Informasi -->
+<div class="row">
+    <div class="col-12 col-sm-6 col-lg-6 mb-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    Templates Tutorial</h6>
+            </div>
+            <div class="card-body">
+                <!-- Embed YouTube Video -->
+                <div class="ratio ratio-16x9">
+                    <iframe width="560" height="315" src="https://www.youtube.com/embed/NbaPfFTTsVE" frameborder="0"
+                        allowfullscreen></iframe>
+                </div>
+                <p>
+                    Template yang digunakan adalah Jinja2 dan YAML. Simak video di atas untuk detail
+                    templating.
+                    Anda juga dapat melakukan simulasi pada website <a target="_blank" class="text-info" rel="nofollow"
+                        href="https://j2live.ttl255.com/">J2live.</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-lg-6 mb-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    Template Example</h6>
+            </div>
+            <div class="card-body">
+                <!-- Jinja2 Code Block -->
+                <h6>Template (.j2):</h6>
+                <pre class="bg-black text-light rounded" style="white-space: pre-wrap; word-wrap: break-word;">
+                                {% raw %}
+    config system global
+        set hostname {{ hostname }}
+    end
+                                {% endraw %}
+                            </pre>
+                <!-- YAML Code Block -->
+                <h6>Parameter (.yaml):</h6>
+                <pre class="bg-black text-light rounded" style="white-space: pre-wrap; word-wrap: break-word;">
+
+    hostname: "yourhostname"
+                                </pre>
+                <p>Pelajari lebih lanjut
+                <a target="_blank" class="text-info" rel="nofollow"
+                    href="https://jinja.palletsprojects.com/en/2.10.x/">&rarr; Jinja Template Documentation
+                    </a></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block script_js %}
+<script>
+    // Fungsi untuk format angka
+    function number_format(number, decimals, dec_point, thousands_sep) {
+        number = (number + '').replace(',', '').replace(' ', '');
+        var n = !isFinite(+number) ? 0 : +number,
+            prec = !isFinite(+decimals) ? 0 : Math.abs(decimals),
+            sep = (typeof thousands_sep === 'undefined') ? ',' : thousands_sep,
+            dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
+            s = '',
+            toFixedFix = function (n, prec) {
+                var k = Math.pow(10, prec);
+                return '' + Math.round(n * k) / k;
+            };
+        s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
+        if (s[0].length > 3) {
+            s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
+        }
+        if ((s[1] || '').length < prec) {
+            s[1] = s[1] || '';
+            s[1] += new Array(prec - s[1].length + 1).join('0');
+        }
+        return s.join(dec);
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        // Canvas for new charts
+        const devicePieCtx = document.getElementById('devicePieChart').getContext('2d');
+        const templatePieCtx = document.getElementById('templatePieChart').getContext('2d');
+
+        // Data for Devices (from old pie chart)
+        const deviceData = {
+            labels: {{ device_vendor_keys | tojson
+    }},
+        datasets: [{
+            label: "Devices",
+            data: {{ device_vendor_values | tojson }},
+        lineTension: 0.3,
+        backgroundColor: "rgba(78, 115, 223, 0.05)",
+        borderColor: "rgba(78, 115, 223, 1)",
+        pointRadius: 3,
+        pointBackgroundColor: "rgba(78, 115, 223, 1)",
+        pointBorderColor: "rgba(78, 115, 223, 1)",
+        pointHoverRadius: 3,
+        pointHoverBackgroundColor: "rgba(78, 115, 223, 1)",
+        pointHoverBorderColor: "rgba(78, 115, 223, 1)",
+        pointHitRadius: 10,
+        pointBorderWidth: 2,
+            }]
+        };
+
+    // Data for Templates (from old pie chart)
+    const templateData = {
+        labels: {{ template_vendor_keys | tojson }},
+    datasets: [{
+        label: "Templates",
+        data: {{ template_vendor_values | tojson }},
+        lineTension: 0.3,
+        backgroundColor: "rgba(78, 115, 223, 0.05)",
+        borderColor: "rgba(78, 115, 223, 1)",
+        pointRadius: 3,
+        pointBackgroundColor: "rgba(78, 115, 223, 1)",
+        pointBorderColor: "rgba(78, 115, 223, 1)",
+        pointHoverRadius: 3,
+        pointHoverBackgroundColor: "rgba(78, 115, 223, 1)",
+        pointHoverBorderColor: "rgba(78, 115, 223, 1)",
+        pointHitRadius: 10,
+        pointBorderWidth: 2,
+            }]
+        };
+
+    // Area/Line Chart for Devices
+    const deviceChart = new Chart(devicePieCtx, {
+        type: 'line', // Mengganti dari 'pie' ke 'line'
+        data: deviceData,
+        options: {
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 25,
+                    top: 25,
+                    bottom: 0
+                }
+            },
+            scales: {
+                xAxes: [{
+                    time: {
+                        unit: 'date'
+                    },
+                    gridLines: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        maxTicksLimit: 7
+                    }
+                }],
+                yAxes: [{
+                    ticks: {
+                        maxTicksLimit: 5,
+                        padding: 10,
+                        callback: function (value, index, values) {
+                            return number_format(value);
+                        }
+                    },
+                    gridLines: {
+                        color: "rgb(234, 236, 244)",
+                        zeroLineColor: "rgb(234, 236, 244)",
+                        drawBorder: false,
+                        borderDash: [2],
+                        zeroLineBorderDash: [2]
+                    }
+                }],
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: "rgb(255,255,255)",
+                    bodyFontColor: "#858796",
+                    titleFontColor: '#6e707e',
+                    borderColor: '#dddfeb',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function (context) {
+                            const label = context.dataset.label || '';
+                            const value = context.raw || '';
+                            return `${label}: ${number_format(value)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Line Chart for Templates
+    const templateChart = new Chart(templatePieCtx, {
+        type: 'line', // Mengganti dari 'pie' ke 'line'
+        data: templateData,
+        options: {
+            maintainAspectRatio: false,
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 25,
+                    top: 25,
+                    bottom: 0
+                }
+            },
+            scales: {
+                xAxes: [{
+                    time: {
+                        unit: 'date'
+                    },
+                    gridLines: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        maxTicksLimit: 7
+                    }
+                }],
+                yAxes: [{
+                    ticks: {
+                        maxTicksLimit: 5,
+                        padding: 10,
+                        callback: function (value, index, values) {
+                            return number_format(value);
+                        }
+                    },
+                    gridLines: {
+                        color: "rgb(234, 236, 244)",
+                        zeroLineColor: "rgb(234, 236, 244)",
+                        drawBorder: false,
+                        borderDash: [2],
+                        zeroLineBorderDash: [2]
+                    }
+                }],
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: "rgb(255,255,255)",
+                    bodyFontColor: "#858796",
+                    titleFontColor: '#6e707e',
+                    borderColor: '#dddfeb',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function (context) {
+                            const label = context.dataset.label || '';
+                            const value = context.raw || '';
+                            return `${label}: ${number_format(value)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    });
+</script>
+
+{% endblock %}

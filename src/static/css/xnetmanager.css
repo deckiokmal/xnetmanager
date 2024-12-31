@@ -1,0 +1,759 @@
+html,
+body {
+    height: 100%;
+    margin: 0;
+}
+
+.sidebar {
+    width: 250px;
+    /* Atur lebar sidebar sesuai kebutuhan */
+    min-height: 100vh;
+    /* Memastikan sidebar minimal setinggi layar */
+    z-index: 2;
+}
+
+.content {
+    flex: 1;
+    /* Memastikan konten mengisi ruang yang tersisa */
+    min-height: 100vh;
+    /* Memastikan konten minimal setinggi layar */
+}
+
+
+
+
+/* Layout base section  */
+
+.bg-custom-topbar {
+    background-color: #712cf9;
+}
+
+.bg-custom-sidebar {
+    background-color: #4600d1;
+    /* Warna background */
+    color: #ffffff;
+    /* Warna teks */
+}
+
+.bg-custom-main {
+    background-color: #282828;
+}
+
+.bg-custom-table {
+    background-color: #712cf9;
+    /* Warna background */
+}
+
+/* Warna teks */
+.white-text-color {
+    color: #ffffff;
+}
+
+/* end of Layout Base Section */
+
+
+/* Sidebar Section */
+
+.password-container {
+    position: relative;
+    width: 100%;
+    max-width: 30rem;
+    /* Maximum width of 50rem */
+}
+
+.password-input {
+    width: 100%;
+    padding-right: 30px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 5px;
+    top: 75%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #ccc;
+}
+
+.password-toggle.active {
+    color: #333;
+}
+
+.sidebar-dark {
+    background-color: #343a40 !important;
+}
+
+.sidebar .nav-link .fas {
+    margin-right: 10px;
+}
+
+.sidebar .nav-link span {
+    font-weight: bold;
+}
+
+.sidebar .nav-link:hover {
+    background-color: #1d2124;
+}
+
+.sidebar .nav-link.active {
+    background-color: #007bff;
+}
+
+.sidebar .nav-item.active {
+    background: rgba(255, 255, 255, 0.2);
+    /* Warna latar belakang dengan transparansi */
+    backdrop-filter: blur(10px);
+    /* Efek blur */
+    -webkit-backdrop-filter: blur(10px);
+    /* Efek blur untuk Safari */
+    border-radius: 5px;
+    /* Sudut yang melengkung */
+}
+
+.sidebar .nav-item.active .nav-link {
+    color: #fff;
+    /* Warna teks yang kontras */
+}
+
+/* end of Sidebar Section */
+
+/* Dashboard Section  */
+
+body {
+    background-color: #121212;
+    color: #ffffff;
+    font-family: 'Roboto', sans-serif;
+}
+
+
+/* end of Dashboard Section */
+
+/* user profile section  */
+
+.profile-menu {
+    max-width: 400px;
+    max-height: 300px;
+    margin: 0 auto;
+    background-color: rgb(0, 0, 0);
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.profile-menu img {
+    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+}
+
+.profile-card {
+    max-width: 600px;
+    margin: 0 auto;
+    background-color: rgb(0, 0, 0);
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-linkedin {
+    background-color: #0077b5;
+    color: white;
+    margin-top: 15px;
+}
+
+.btn-linkedin:hover {
+    background-color: #005b8c;
+}
+
+/* end of user profile section  */
+
+
+/* Define CSS for status indicator */
+.status-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    /* Untuk membuat bentuk bulat */
+    display: inline-block;
+}
+
+.status-indicator-green {
+    background-color: green;
+    /* Warna hijau untuk status OK */
+}
+
+.status-indicator-red {
+    background-color: rgb(228, 17, 17);
+    /* Warna red untuk status NOK */
+}
+
+/* sidebar */
+.bg-navbar-la {
+    background-color: #1b5ca2;
+    /* background-image: linear-gradient(180deg, #4e73df 10%, #224abe 100%); */
+    /* background-size: cover */
+}
+
+.bg-main-content {
+    background-color: #45474a;
+}
+
+/* Styles for the loading overlay */
+.loading-overlay {
+    position: fixed;
+    /* Fixed position to cover the entire viewport */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    /* Semi-transparent background */
+    display: none;
+    /* Hidden by default */
+    align-items: center;
+    justify-content: center;
+    z-index: 1051;
+    /* Higher than Bootstrap modals (Bootstrap modal has z-index 1050) */
+}
+
+/* CSS for Modal Background and Text Color */
+.modal-header {
+    background-color: #712cf9;
+    color: #ffffff;
+    padding: 10px 15px;
+    position: relative;
+}
+
+.modal-header::before {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 5px;
+    background-color: #ffffff;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.modal-title {
+    font-size: 16px;
+    font-weight: normal;
+    margin: 0;
+    padding: 0;
+}
+
+.modal-body {
+    background-color: #222124;
+    color: #ffffff;
+}
+
+.modal-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+.modal-footer {
+    background-color: #222124;
+    color: #ffffff;
+}
+
+.content-data {
+    background-color: #222124;
+    color: #ffffff;
+}
+
+/* .form-control {
+    background-color: #0000007b;
+    color: #ffffff;
+} */
+
+
+/* talita chatbot message */
+#chatbot-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    background-color: #1b5ca2;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+    z-index: 1000;
+    background-image: url('https://iili.io/JpjR5tp.png');
+    background-size: cover;
+    background-position: center;
+}
+
+#chatbot-button.clicked {
+    background-image: none;
+    background-color: #1b5ca2;
+    transform: rotate(180deg);
+}
+
+#chatbot-button:hover {
+    transform: scale(1.1);
+}
+
+#chatbot-button:active {
+    transform: scale(0.95);
+}
+
+#chatbot-container {
+    display: none;
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 350px;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    background-color: #fff;
+    overflow: hidden;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+}
+
+#chat-header {
+    background-color: #1b5ca2;
+    color: #fff;
+    padding: 15px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+}
+
+#chat-header img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.header-text {
+    display: flex;
+    flex-direction: column;
+    margin-left: 10px;
+}
+
+#typing-indicator {
+    font-size: 12px;
+    color: #ffffff;
+    display: none;
+    /* Default disembunyikan */
+    font-style: italic;
+    /* Membuat teks miring */
+    margin-top: 2px;
+    /* Jarak sedikit dari nama */
+}
+
+#chat-body {
+    height: 300px;
+    overflow-y: auto;
+    /* Memungkinkan scroll vertikal */
+    overflow-x: hidden;
+    /* Menyembunyikan scroll horizontal */
+    padding: 10px;
+    background-color: #e5ddd5;
+    word-wrap: break-word;
+    /* Membungkus kata panjang */
+    overflow-wrap: break-word;
+    /* Membungkus kata yang sangat panjang */
+    white-space: pre-wrap;
+    /* Mengakui newline dan spasi secara tepat */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Styles for headings inside the chatbot */
+#chat-body h1,
+#chat-body h2,
+#chat-body h3,
+#chat-body h4,
+#chat-body h5,
+#chat-body h6 {
+    font-size: 1em;
+    /* Default ukuran yang lebih kecil */
+    margin: 0;
+    /* Menghapus margin default untuk menghemat ruang */
+    font-weight: bold;
+    /* Pastikan tetap tebal untuk penekanan */
+    line-height: 1.2;
+    /* Mengatur line-height agar tidak terlalu rapat */
+}
+
+#chat-body h1 {
+    font-size: 1.2em;
+    /* Ukuran lebih kecil untuk h1 */
+}
+
+#chat-body h2 {
+    font-size: 1.1em;
+    /* Ukuran lebih kecil untuk h2 */
+}
+
+#chat-body h3,
+#chat-body h4,
+#chat-body h5,
+#chat-body h6 {
+    font-size: 1em;
+    /* Ukuran lebih kecil untuk h3-h6 */
+}
+
+.message-text {
+    font-size: 0.8em;
+    /* Ukuran lebih kecil untuk konsistensi */
+    max-width: auto;
+    /* Maksimal lebar adalah 90% dari kontainer */
+    line-height: 1.4;
+    word-wrap: break-word;
+    /* Membungkus kata-kata panjang dalam pesan */
+    overflow-wrap: break-word;
+    /* Membungkus teks yang sangat panjang */
+    white-space: pre-wrap;
+    /* Mengakui newline dan spasi secara tepat */
+    display: inline-block;
+    /* Memastikan elemen dapat diatur secara vertikal */
+    margin: 5px 0;
+    /* Sedikit margin di atas dan bawah untuk spasi */
+    overflow: hidden;
+    /* Menghindari overflow horizontal */
+    text-overflow: ellipsis;
+    /* Tambahkan ellipsis jika terlalu panjang */
+}
+
+#chat-input {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid #ddd;
+    background-color: white;
+}
+
+#chat-input textarea {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    resize: none;
+    /* Tidak bisa di-resize */
+    height: auto;
+    /* Pastikan tinggi otomatis */
+    max-height: 100px;
+    /* Batasi tinggi maksimum */
+    overflow-y: hidden;
+    /* Sembunyikan scrollbar */
+    font-size: 0.8em;
+    /* Ukuran teks lebih kecil */
+    margin-right: 10px;
+    word-wrap: break-word;
+    /* Bungkus kata-kata panjang */
+    overflow-wrap: break-word;
+    /* Bungkus teks yang sangat panjang */
+    white-space: pre-wrap;
+    /* Mengakui newline dan spasi secara tepat */
+}
+
+#chat-input button {
+    background-color: #1b5ca2;
+    color: #fff;
+    border: none;
+    padding: 10px;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-left: 5px;
+}
+
+#chat-input button:hover {
+    background-color: #1b5ca2c7;
+}
+
+.message {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: flex-start;
+    max-width: 100%;
+    /* Sesuaikan lebar ke kontainer */
+    word-wrap: break-word;
+    font-size: 0.8em;
+    /* Ukuran lebih kecil */
+    line-height: 1.2em;
+}
+
+.bot-message {
+    justify-content: flex-start;
+    flex-direction: row;
+    margin-right: auto;
+    max-width: 100%;
+}
+
+.user-message {
+    justify-content: flex-end;
+    flex-direction: row-reverse;
+    margin-left: auto;
+}
+
+.bot-message .message-text,
+.user-message .message-text {
+    border-radius: 8px;
+    padding: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.bot-message .message-text {
+    background-color: #ffffff;
+    margin-left: 5px;
+}
+
+.user-message .message-text {
+    background-color: #dcf8c6;
+    margin-right: 5px;
+}
+
+.message img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin: 0 10px;
+}
+
+.bot-message img {
+    order: -1;
+}
+
+.user-message img {
+    order: 1;
+}
+
+#send-btn {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 10px;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-left: 5px;
+    width: 40px;
+    height: 40px;
+    /* Ukuran tetap untuk tombol */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#send-btn:hover {
+    background-color: #0056b3;
+}
+
+/* talita chatbot end */
+
+
+
+
+/* Tambah Css Baru */
+
+
+/* Styling for profile background banner */
+.profile-background {
+    background-image: url('../img/bg.jpg');
+    background-size: cover;
+    background-position: center;
+    height: 180px;
+    position: relative;
+    z-index: 1;
+    border-radius: 10px 10px 0 0;
+}
+
+/* Adjust profile picture size and positioning for mobile */
+.avatar-xxl {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    z-index: 2;
+    position: relative;
+    bottom: 50px;
+    margin-bottom: -50px;
+}
+
+/* Styling for mobile view to ensure smooth alignment */
+@media (max-width: 768px) {
+    .profile-background {
+        height: 120px;
+        /* Reduce the height of the background image */
+    }
+
+    .avatar-xxl {
+        width: 80px;
+        /* Resize profile image for smaller screens */
+        height: 80px;
+        bottom: 40px;
+        /* Adjust vertical alignment */
+    }
+
+    .lh-1 h2 {
+        font-size: 1.1rem;
+        /* Smaller font for mobile */
+        text-align: center;
+    }
+
+    .lh-1 p {
+        text-align: center;
+        /* Center the username for mobile view */
+        font-size: 0.7rem;
+    }
+
+    .lh-1 h2, .lh-1 p {
+        margin: 5px 0;
+    }
+
+    /* Navigation buttons styling */
+    .nav-lt-tab {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+
+    .nav-lt-tab .nav-item button {
+        font-size: 10px; /* Smaller font size for precision */
+        flex: 1; /* Make buttons occupy equal space */
+        text-align: center;
+    }
+
+    .nav-lt-tab .nav-item a {
+        font-size: 10px; /* Smaller font size for precision */
+        flex: 1; /* Make buttons occupy equal space */
+        text-align: center;
+    }
+
+    .btn-profile-edit {
+        width: 25px;
+        /* Small button for mobile */
+        height: 25px;
+        font-size: 12px;
+        /* Smaller icon size */
+    }
+
+    /* Adjust positioning of the edit button on mobile */
+    .btn-profile-edit.position-absolute {
+        top: -10px;
+        right: -5px;
+    }
+}
+
+/* Small shadow effect for the white background card */
+.smooth-shadow-sm {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1;
+}
+
+/* Positioning the button on the profile picture */
+.btn-profile-edit {
+    width: 25px;
+    /* Set the width of the button */
+    height: 25px;
+    /* Set the height of the button */
+    font-size: 16px;
+    /* Adjust the icon size */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    border-radius: 50%;
+    /* Ensures the button stays circular */
+    background-color: #ffffff;
+    /* Light background color */
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    /* Slight shadow for depth */
+    border: 2px solid #ddd;
+    /* Optional border */
+    top: -25px;
+    right: -5px;
+}
+
+.btn-profile-edit i {
+    color: #333;
+    /* Icon color */
+}
+
+/* Adjust the size of the profile images in the Activity Feed */
+.avatar-md {
+    width: 50px;
+    /* Set the desired width */
+    height: 50px;
+    /* Set the desired height */
+    object-fit: cover;
+    /* Ensures the image maintains aspect ratio and fits within the defined size */
+    border-radius: 50%;
+    /* Ensures the image remains circular */
+}
+
+.btn {
+    min-width: 40px;
+    min-height: 10px;
+}
+
+@media (max-width: 576px) {
+    #searchForm {
+        display: flex;
+        flex-direction: row;
+        /* Membuat input dan tombol sejajar */
+        align-items: center;
+        /* Agar tetap rapi sejajar vertikal */
+    }
+
+    #searchInput {
+        flex: 1;
+        /* Memastikan input mengambil sisa ruang */
+    }
+
+    #searchForm button {
+        margin-left: 5px;
+        /* Beri jarak antara input dan tombol */
+    }
+
+    .btn {
+        max-width: 120px;
+        max-height: 40px;
+        padding: 1px;
+    }
+}
+
+.page-banner {
+    background-image: url('../img/banner.jpg');
+    background-size: cover;
+    background-position: center;
+    width: 100%;
+    height: 350px;
+    position: absolute;
+    top: 0px;
+    z-index: 0;
+    left: 0;
+}
+
+.topbar {
+    background-color: #0057b300;
+    z-index: 20;
+}
+
+.dropdown-menu {
+    z-index: 30;
+}
+
+.dropdown-menu .dropdown-item {
+    z-index: 30;
+}
+
+.page-heading {
+    z-index: 1;
+}

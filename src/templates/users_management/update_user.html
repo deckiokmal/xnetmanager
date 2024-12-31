@@ -1,0 +1,180 @@
+{% extends "/layouts/layout.html" %}
+{% block title %}Update User - {{ user.email }}{% endblock %}
+{% block content %}
+<div class="card position-relative py-4 px-4">
+    <div class="card-header mb-3">
+        Update User
+    </div>
+    <form action="{{ url_for('users.update_user', user_id=user.id) }}" method="post" class="needs-validation"
+        novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="first_name" class="form-label">First Name</label>
+                {{ form.first_name(class="form-control", id="first_name") }}
+                {% if form.first_name.errors %}
+                {% for error in form.first_name.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label for="last_name" class="form-label">Last Name</label>
+                {{ form.last_name(class="form-control", id="last_name") }}
+                {% if form.last_name.errors %}
+                {% for error in form.last_name.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="email" class="form-label">Email</label>
+                {{ form.email(class="form-control", id="email") }}
+                {% if form.email.errors %}
+                {% for error in form.email.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label for="password" class="form-label">New Password (leave blank if unchanged)</label>
+                {{ form.password(class="form-control", id="password") }}
+                {% if form.password.errors %}
+                {% for error in form.password.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="phone_number" class="form-label">Phone Number</label>
+                {{ form.phone_number(class="form-control", id="phone_number") }}
+                {% if form.phone_number.errors %}
+                {% for error in form.phone_number.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label for="profile_picture" class="form-label">Profile Picture URL</label>
+                {{ form.profile_picture(class="form-control", id="profile_picture") }}
+                {% if form.profile_picture.errors %}
+                {% for error in form.profile_picture.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="company" class="form-label">Company</label>
+                {{ form.company(class="form-control", id="company") }}
+                {% if form.company.errors %}
+                {% for error in form.company.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label for="title" class="form-label">Title</label>
+                {{ form.title(class="form-control", id="title") }}
+                {% if form.title.errors %}
+                {% for error in form.title.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="city" class="form-label">City</label>
+                {{ form.city(class="form-control", id="city") }}
+                {% if form.city.errors %}
+                {% for error in form.city.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label for="division" class="form-label">Division</label>
+                {{ form.division(class="form-control", id="division") }}
+                {% if form.division.errors %}
+                {% for error in form.division.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="is_verified" class="form-label">Email Verified</label>
+                {{ form.is_verified(class="form-select", id="is_verified") }}
+                {% if form.is_verified.errors %}
+                {% for error in form.is_verified.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label for="is_2fa_enabled" class="form-label">2FA Enabled</label>
+                {{ form.is_2fa_enabled(class="form-select", id="is_2fa_enabled") }}
+                {% if form.is_2fa_enabled.errors %}
+                {% for error in form.is_2fa_enabled.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="time_zone" class="form-label">Time Zone</label>
+                {{ form.time_zone(class="form-control", id="time_zone") }}
+                {% if form.time_zone.errors %}
+                {% for error in form.time_zone.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label for="is_active" class="form-label">Active</label>
+                {{ form.is_active(class="form-select", id="is_active") }}
+                {% if form.is_active.errors %}
+                {% for error in form.is_active.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tombol Aksi -->
+        <button type="submit" class="btn btn-sm btn-success">
+            <i class="fa-solid fa-check"></i> Save Changes
+        </button>
+        <a class="btn btn-sm btn-warning" href="{{ url_for('users.index') }}">
+            <i class="fa-solid fa-arrow-left"></i> Back
+        </a>
+    </form>
+</div>
+
+{% block script_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Bootstrap validation script
+        var forms = document.querySelectorAll('.needs-validation');
+        Array.prototype.slice.call(forms).forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

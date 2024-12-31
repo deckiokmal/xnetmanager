@@ -1,0 +1,58 @@
+<!-- Flash Messages -->
+<div class="mt-2 mb-3">
+    {% with errors = get_flashed_messages(category_filter=["error"]) %}
+    {% if errors %}
+    {%- for msg in errors %}
+    <div class="alert alert-danger alert-dismissible fade show small" role="alert">
+        <strong><i class="fas fa-fw fa-triangle-exclamation"></i></strong> {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor -%}
+    {% endif %}
+    {% endwith %}
+
+    {% with success = get_flashed_messages(category_filter=["success"]) %}
+    {% if success %}
+    {%- for msg in success %}
+    <div class="alert alert-success alert-dismissible fade show small" role="alert">
+        <strong><i class="fas fa-fw fa-square-check"></i></strong> {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor -%}
+    {% endif %}
+    {% endwith %}
+
+    {% with info = get_flashed_messages(category_filter=["info"]) %}
+    {% if info %}
+    {%- for msg in info %}
+    <div class="alert alert-info alert-dismissible fade show small" role="alert">
+        <strong><i class="fas fa-fw fa-info"></i></strong> {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor -%}
+    {% endif %}
+    {% endwith %}
+
+    {% with warning = get_flashed_messages(category_filter=["warning"]) %}
+    {% if warning %}
+    {%- for msg in warning %}
+    <div class="alert alert-warning alert-dismissible fade show small" role="alert">
+        <strong><i class="fas fa-fw fa-exclamation-triangle"></i></strong> {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor -%}
+    {% endif %}
+    {% endwith %}
+
+    {% with danger = get_flashed_messages(category_filter=["danger"]) %}
+    {% if danger %}
+    {%- for msg in danger %}
+    <div class="alert alert-danger alert-dismissible fade show small" role="alert">
+        <strong><i class="fas fa-fw fa-exclamation-triangle"></i></strong> {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor -%}
+    {% endif %}
+    {% endwith %}
+</div>
+<!-- End Flash Messages -->

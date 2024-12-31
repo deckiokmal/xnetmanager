@@ -1,0 +1,267 @@
+{% extends "/layouts/layout_table.html" %}
+{% block page_heading %}Users Management{% endblock %}
+{% block title %}Users Management{% endblock %}
+
+{% block button_group1 %}
+<!-- Tombol untuk membuka modal pembuatan perangkat baru -->
+<button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createuserModal">
+    Create New
+</button>
+{% endblock %}
+
+<!-- Data Table Start -->
+{% block table_name %}Users Management{% endblock %}
+
+{% block form_filter_row %}
+<form id="perPageForm" action="{{ url_for('users.index') }}" method="get">
+    <label class="d-flex align-items-center">
+        <span>Tampilkan</span>
+        <select name="per_page" class="form-select form-select-sm mx-2"
+            onchange="document.getElementById('perPageForm').submit()">
+            <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
+            <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
+            <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
+        </select>
+        <span>entri</span>
+    </label>
+    <input type="hidden" name="search" value="{{ search_query }}">
+</form>
+{% endblock %}
+
+{% block form_search %}
+<form id="searchForm" method="get" action="{{ url_for('users.index') }}" class="form-inline d-flex justify-content-between">
+    <input id="searchInput" type="text" name="search" class="form-control form-control-sm mr-2" placeholder="Search..."
+        value="{{ search_query }}">
+    <button class="btn btn-outline-success btn-sm" type="submit">
+        <i class="fa-solid fa-magnifying-glass"></i>
+    </button>
+    <input type="hidden" name="per_page" value="{{ per_page }}">
+</form>
+{% endblock %}
+
+{% block table_header %}
+<th>No</th>
+<th onclick="sortTable(0)">Email <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(1)">Hash Password <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(2)">Company <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(3)">2FA Verified <i class="fas fa-sort"></i></th>
+<th>Aksi</th>
+{% endblock %}
+
+{% block table_body %}
+{% for user in users %}
+<tr>
+    <th scope="row">{{ loop.index + (page - 1) * per_page }}</th>
+    <td>{{ user.email }}</td>
+    <td>
+        <div class="d-flex align-items-center">
+            <!-- Menampilkan password dengan masker -->
+            <span class="password-display">{{ user.password_hash | mask_password }}</span>
+        </div>
+    </td>
+    <td>{{ user.company }}</td>
+    <td>{{ 'Yes' if user.is_2fa_enabled else 'No' }}</td>
+    <td>
+        <!-- Tombol Detail Perangkat -->
+        <button class="btn btn-info btn-sm mb-1" data-user-id="{{ user.id }}" onclick="showUserDetails(this)">
+            <i class="fas fa-eye"></i>
+        </button>
+        <!-- Tombol Edit Perangkat -->
+        <a href="{{url_for('users.update_user', user_id=user.id)}}" class="btn btn-success btn-sm mb-1">
+            <i class="fas fa-edit"></i>
+        </a>
+        <!-- Form untuk Menghapus Perangkat -->
+        <form action="{{url_for('users.delete_user', user_id=user.id)}}" method="post" style="display:inline;">
+            {{ form.csrf_token }} <!-- Adding CSRF token for deletion -->
+            <button type="submit" class="btn btn-danger btn-sm mb-1"
+                onclick="return confirm('Apakah Anda yakin ingin menghapus pengguna ini?');">
+                <i class="fas fa-trash"></i>
+            </button>
+        </form>
+    </td>
+</tr>
+{% endfor %}
+{% endblock %}
+
+{% block show_total_data %}
+<div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
+    Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if
+    (page - 1)
+    * per_page + per_page < total_user else total_user }} dari {{ total_user }} entri </div>
+
+        {% endblock %}
+
+        {% block pagination %}
+        <!-- Link Pagination -->
+        {{ pagination.links }}
+        {% endblock %}
+
+        {% block modal_data %}
+        <!-- Modal Detail User -->
+        <div class="modal fade" id="userDetailModal" tabindex="-1" aria-labelledby="userDetailModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="userDetailModalLabel">User Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Email:</strong> <span id="email"></span></p>
+                        <p><strong>Password:</strong> <span id="password"></span></p>
+                        <p><strong>First name:</strong> <span id="first_name"></span></p>
+                        <p><strong>Last name:</strong> <span id="last_name"></span></p>
+                        <p><strong>User role:</strong> <span id="roles"></span></p>
+                        <p><strong>2FA status:</strong> <span id="is_2fa_enabled"></span></p>
+                        <p><strong>Date joined:</strong> <span id="date_joined"></span></p>
+                        <p><strong>Last login:</strong> <span id="last_login"></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- create user Modal -->
+        <div class="modal fade" id="createuserModal" tabindex="-1" aria-labelledby="createuserModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 400px;">
+                <div class="modal-content bg-black text-white">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="createuserModalLabel">Tambah Pengguna Baru</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="{{ url_for('users.create_user') }}">
+                            {{ form.csrf_token }}
+
+                            <div class="form-group">
+                                {{ form.first_name(placeholder="First Name", class="form-control form-control-user") }}
+                                {% if form.first_name.errors %}
+                                {% for error in form.first_name.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <div class="form-group">
+                                {{ form.last_name(placeholder="Last Name", class="form-control form-control-user") }}
+                                {% if form.last_name.errors %}
+                                {% for error in form.last_name.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <div class="form-group">
+                                {{ form.email(placeholder="Email Address", class="form-control form-control-user") }}
+                                {% if form.email.errors %}
+                                {% for error in form.email.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <div class="form-group">
+                                {{ form.password(placeholder="Password", class="form-control form-control-user") }}
+                                {% if form.password.errors %}
+                                {% for error in form.password.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <div class="form-group">
+                                {{ form.confirm_password(placeholder="Confirm Password", class="form-control
+                                form-control-user")
+                                }}
+                                {% if form.confirm_password.errors %}
+                                {% for error in form.confirm_password.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <button class="btn btn-primary btn-user btn-block" type="submit">Submit</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endblock %}
+
+        {% block script_js %}
+        <script>
+            let timeout = null;
+
+            document.getElementById("searchInput").addEventListener("input", function () {
+                clearTimeout(timeout);
+
+                timeout = setTimeout(function () {
+                    document.getElementById('searchForm').submit();
+                }, 1000);
+            });
+
+            document.getElementById("searchInput").addEventListener("input", function () {
+                const query = this.value.toLowerCase();
+                const rows = document.querySelectorAll("#dataTable tbody tr");
+
+                rows.forEach(row => {
+                    // Ambil kolom email dan company sesuai dengan urutan kolom pada tabel
+                    const email = row.cells[1].textContent.toLowerCase();
+                    const company = row.cells[3].textContent.toLowerCase();
+
+                    // Periksa apakah pencarian cocok dengan email atau company
+                    if (email.includes(query) || company.includes(query)) {
+                        row.style.display = ""; // Tampilkan baris jika cocok
+                    } else {
+                        row.style.display = "none"; // Sembunyikan baris jika tidak cocok
+                    }
+                });
+            });
+        </script>
+
+        <script>
+            // Handle user detail
+            function showUserDetails(button) {
+                const userId = button.getAttribute("data-user-id");
+
+                fetch(`/detail-user/${userId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert(data.error);
+                        } else {
+                            // Update UI with user details
+                            document.getElementById("email").innerText = data.email;
+                            document.getElementById("password").innerText = data.password;
+                            document.getElementById("first_name").innerText = data.first_name;
+                            document.getElementById("last_name").innerText = data.last_name;
+                            document.getElementById("roles").innerText = data.roles;
+                            document.getElementById("is_2fa_enabled").innerText = data.is_2fa_enabled;
+                            document.getElementById("date_joined").innerText = data.date_joined;
+
+                            // Handle last_login
+                            if (data.last_login) {
+                                document.getElementById("last_login").innerText = data.last_login;
+                            } else {
+                                document.getElementById("last_login").innerText = 'Never login';
+                            }
+
+                            // Show modal
+                            var detailModal = new bootstrap.Modal(document.getElementById("userDetailModal"));
+                            detailModal.show();
+                        }
+                    })
+                    .catch(error => console.error('Error fetching user details:', error));
+            }
+        </script>
+
+        <script>
+            // Cek apakah modal perlu dibuka kembali setelah validasi gagal
+            document.addEventListener("DOMContentLoaded", function () {
+                {% if open_modal %}
+                var modal = new bootstrap.Modal(document.getElementById('createuserModal'));
+                modal.show();  // Buka modal secara otomatis
+                {% endif %}
+            });
+        </script>
+        {% endblock %}

@@ -1,0 +1,141 @@
+{% extends "/layouts/layout.html" %}
+{% block title %}Update Configuration File{% endblock %}
+
+{% block content %}
+<div class="card position-relative py-4 px-4">
+    <div class="card-header mb-3">
+        Update Configuration File
+    </div>
+    <!-- Overlay Loading -->
+    <div id="loadingOverlay" class="overlay d-none justify-content-center align-items-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Form for Updating Configuration -->
+    <form id="updateConfigForm" action="{{ url_for('config_file.update_configuration', config_id=config.id) }}"
+        method="post">
+        {{ form.csrf_token }}
+
+        <!-- Field for Configuration Filename -->
+        <div class="mb-3">
+            <label for="config_name" class="form-label">Configuration Filename</label>
+            {{ form.config_name(class="form-control", value=config.config_name, id="config_name") }}
+            {% if form.config_name.errors %}
+            {% for error in form.config_name.errors %}
+            <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Field for Vendor -->
+        <div class="mb-3">
+            <label for="vendor" class="form-label">Vendor</label>
+            {{ form.vendor(class="form-control", value=config.vendor, id="vendor") }}
+            {% if form.vendor.errors %}
+            {% for error in form.vendor.errors %}
+            <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Field for Description -->
+        <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            {{ form.description(class="form-control", value=config.description, id="description") }}
+            {% if form.description.errors %}
+            {% for error in form.description.errors %}
+            <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Field for Configuration Content -->
+        <div class="mb-3">
+            <label for="config_content" class="form-label">Configuration Content</label>
+            {{ form.config_content(class="form-control", rows="10", id="config_content") }}
+            {% if form.config_content.errors %}
+            {% for error in form.config_content.errors %}
+            <div class="text-danger">{{ error }}</div>
+            {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Tombol Aksi -->
+        <button type="submit" class="btn btn-sm btn-success">
+            <i class="fa-solid fa-check"></i> Save Changes
+        </button>
+        <a class="btn btn-sm btn-warning" href="{{ url_for('config_file.index') }}">
+            <i class="fa-solid fa-arrow-left"></i> Back
+        </a>
+    </form>
+</div>
+{% endblock %}
+
+{% block script_js %}
+<script>
+    // Function to show the loading overlay
+    function showLoadingOverlay() {
+        document.getElementById('loadingOverlay').classList.remove('d-none');
+    }
+
+    // Function to hide the loading overlay
+    function hideLoadingOverlay() {
+        document.getElementById('loadingOverlay').classList.add('d-none');
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        document.getElementById("updateConfigForm").addEventListener('submit', function (event) {
+            event.preventDefault();  // Prevent default form submission
+
+            // Show the loading overlay
+            showLoadingOverlay();
+
+            const formData = new FormData(this);
+            const actionUrl = this.getAttribute('action');
+
+            fetch(actionUrl, {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(errData => {
+                            throw new Error(errData.error_message || 'Request failed');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    hideLoadingOverlay();  // Hide the loading overlay
+
+                    if (data.is_valid) {
+                        // If no changes detected or success, redirect to index
+                        if (data.redirect_url) {
+                            window.location.href = data.redirect_url;
+                        }
+                    } else if (data.errors) {
+                        // Display form validation errors
+                        Object.keys(data.errors).forEach(field => {
+                            const errorField = document.querySelector(`#${field}`);
+                            if (errorField) {
+                                const errorDiv = document.createElement('div');
+                                errorDiv.classList.add('text-danger');
+                                errorDiv.textContent = data.errors[field];
+                                errorField.parentElement.appendChild(errorDiv);
+                            }
+                        });
+                    } else {
+                        alert("An unexpected error occurred, but no specific details were provided.");
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    hideLoadingOverlay();  // Hide the loading overlay
+                    alert(`An unexpected error occurred: ${error.message}`);
+                });
+        });
+    });
+</script>
+{% endblock %}

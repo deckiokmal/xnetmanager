@@ -1,0 +1,77 @@
+{% extends '/layouts/layout.html' %}
+
+{% block title %}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Grup Tombol -->
+    <div class="d-flex justify-content-between mb-3">
+        <div>
+            <div class="row">
+                <div class="col-auto mb-1">
+                    {% block button_group1 %}{% endblock %}
+                </div>
+                <div class="col-auto mb-1">
+                    {% block button_group2 %}{% endblock %}
+                </div>
+                <div class="col-auto mb-1">
+                    {% block button_group3 %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- dataTable -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">{% block table_name %}{% endblock %}</h6>
+        </div>
+        <div class="card-body">
+            <!-- Tabel Responsif -->
+            <div class="table-responsive"> <!-- Responsif untuk layar kecil -->
+
+                <!-- Filter dan Pencarian -->
+                <div class="row mb-3">
+                    <!-- Filter -->
+                    <div class="col-12 col-md-6 d-flex align-items-center mb-2 mb-md-0">
+                        <div class="dataTables_length" id="dataTable_length">
+                            {% block form_filter_row %}{% endblock %}
+                        </div>
+                    </div>
+                    <!-- Pencarian -->
+                    <div class="col-12 col-md-6 d-flex justify-content-md-end">
+                        {% block form_search %}{% endblock %}
+                    </div>
+                </div>
+
+                <!-- Tabel Utama -->
+                <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            {% block table_header %}{% endblock %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% block table_body %}{% endblock %}
+                    </tbody>
+                </table>
+
+                <!-- Pagination dan Informasi Data -->
+                <div class="row mt-2 mb-2">
+                    <div class="col-12 col-md-5 d-flex align-items-center mb-2 mb-md-0">
+                        {% block show_total_data %}{% endblock %}
+                    </div>
+                    <div class="col-12 col-md-7 d-flex justify-content-md-end pagination-sm">
+                        {% block pagination %}{% endblock %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block modal_data %}{% endblock %}
+
+{% endblock %}
+
+{% block script_js %}{% endblock %}

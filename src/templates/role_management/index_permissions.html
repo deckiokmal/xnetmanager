@@ -1,0 +1,108 @@
+{% extends "/layouts/layout_table.html" %}
+{% block page_heading %}User Permissions{% endblock %}
+{% block title %}Permissions Management{% endblock %}
+
+
+{% block button_group1 %}
+<!-- Tombol untuk menampilkan modal Create Permission -->
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createPermissionModal">
+    Create new
+</button>
+{% endblock %}
+
+
+<!-- Data Table Start -->
+{% block table_name %}Permissions Management{% endblock %}
+
+{% block table_header %}
+<th>No</th>
+<th onclick="sortTable(0)">Nama <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(1)">Deskripsi <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(2)">Aksi <i class="fas fa-sort"></i></th>
+{% endblock %}
+
+{% block table_body %}
+{% for permission in permissions %}
+<tr>
+    <th scope="row">{{ loop.index }}</th>
+    <td>{{ permission.name }}</td>
+    <td>{{ permission.description }}</td>
+    <td>
+        <!-- Tombol untuk menampilkan modal Update Permission -->
+        <button class="btn btn-success btn-sm mb-1" data-bs-toggle="modal"
+            data-bs-target="#updatePermissionModal{{ permission.id }}">
+            <i class="fas fa-edit"></i>
+        </button>
+
+        <!-- Form untuk Menghapus Permission -->
+        <form action="{{ url_for('roles.delete_permission', permission_id=permission.id) }}" method="post"
+            style="display:inline;">
+            {{ delete_form.hidden_tag() }}
+            <button type="submit" class="btn btn-danger btn-sm mb-1"
+                onclick="return confirm('Apakah Anda yakin ingin menghapus permission ini?');">
+                <i class="fas fa-trash"></i>
+            </button>
+        </form>
+    </td>
+</tr>
+
+<!-- Modal Update Permission -->
+<div class="modal fade" id="updatePermissionModal{{ permission.id }}" tabindex="-1"
+    aria-labelledby="updatePermissionModalLabel{{ permission.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-black text-white">
+            <div class="modal-header">
+                <h5 class="modal-title" id="updatePermissionModalLabel{{ permission.id }}">Update
+                    Permission</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{{ url_for('roles.update_permission', permission_id=permission.id) }}">
+                    {{ update_form.hidden_tag() }}
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nama Permission</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ permission.name }}"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Deskripsi</label>
+                        <textarea class="form-control" id="description" name="description"
+                            rows="3">{{ permission.description }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block modal_data %}
+<!-- Modal Create Permission -->
+<div class="modal fade" id="createPermissionModal" tabindex="-1" aria-labelledby="createPermissionModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-black text-white">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createPermissionModalLabel">Tambah Permission Baru</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{{ url_for('roles.create_permission') }}">
+                    {{ create_form.hidden_tag() }}
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nama Permission</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Deskripsi</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "/layouts/layout.html" %}
+{% block title %}Update Device - {{form.device_name.data}} {% endblock %}
+{% block content %}
+<div class="card position-relative py-4 px-4">
+    <div class="card-header mb-3">
+        Update Device
+    </div>
+    <form action="{{ url_for('dm.update_device', device_id=device.id) }}" method="POST">
+        {{ form.csrf_token }} <!-- Adding CSRF token -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                {{ form.device_name.label(class_="form-label") }}
+                {{ form.device_name(class_="form-control") }}
+            </div>
+            <div class="col-md-6">
+                {{ form.vendor.label(class_="form-label") }}
+                {{ form.vendor(class_="form-control") }}
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                {{ form.ip_address.label(class_="form-label") }}
+                {{ form.ip_address(class_="form-control") }}
+            </div>
+            <div class="col-md-6">
+                {{ form.username.label(class_="form-label") }}
+                {{ form.username(class_="form-control") }}
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                {{ form.password.label(class_="form-label") }}
+                <div class="input-group">
+                    {{ form.password(class_="form-control", id="password") }}
+                    <span class="input-group-text">
+                        <i class="fa-solid fa-eye" id="togglePassword" style="cursor: pointer;"></i>
+                    </span>
+                </div>
+                <small class="form-text text-muted">Leave empty to keep the current password</small>
+            </div>
+            <div class="col-md-6">
+                {{ form.ssh.label(class_="form-label") }}
+                {{ form.ssh(class_="form-control") }}
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-12">
+                {{ form.description.label(class_="form-label") }}
+                {{ form.description(class_="form-control") }}
+            </div>
+        </div>
+
+        <!-- Tombol Aksi -->
+        <button type="submit" class="btn btn-sm btn-success">
+            <i class="fa-solid fa-check"></i> Save Changes
+        </button>
+        <a class="btn btn-sm btn-warning" href="{{ url_for('dm.index') }}">
+            <i class="fa-solid fa-arrow-left"></i> Back
+        </a>
+    </form>
+</div>
+
+<script>
+    document.getElementById('togglePassword').addEventListener('click', function () {
+        var passwordField = document.getElementById('password');
+        if (passwordField.type === 'password') {
+            passwordField.type = 'text';
+        } else {
+            passwordField.type = 'password';
+        }
+    });
+</script>
+
+{% endblock %}

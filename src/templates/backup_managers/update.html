@@ -1,0 +1,119 @@
+{% extends "/layouts/layout.html" %}
+{% block title %}Update - {{ backup.backup_name }} {% endblock %}
+{% block content %}
+<!-- Page Content for Updating item -->
+<div class="card position-relative py-4 px-4">
+    <div class="card-header mb-3">
+        Update {{ backup.backup_name }}
+    </div>
+    <form action="{{ url_for('backup.update_backup', backup_id=backup.id) }}" method="post" class="needs-validation"
+        novalidate>
+        {{ form.hidden_tag() }}
+
+        <!-- form update 2 columns -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <!-- Backup Name Input -->
+                <label for="backup_name" class="form-label">Backup Name</label>
+                {{ form.backup_name(class="form-control", id="backup_name") }}
+                {% if form.backup_name.errors %}
+                {% for error in form.backup_name.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <!-- Description Input -->
+                <label for="description" class="form-label">Description</label>
+                {{ form.description(class="form-control", id="description") }}
+                {% if form.description.errors %}
+                {% for error in form.description.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- form update additional columns -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <!-- Is Encrypted Checkbox -->
+                <div class="form-check form-switch">
+                    {{ form.is_encrypted(class="form-check-input", id="is_encrypted") }}
+                    <label for="is_encrypted" class="form-check-label">Encrypt Backup</label>
+                    {% if form.is_encrypted.errors %}
+                    {% for error in form.is_encrypted.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <!-- Is Compressed Checkbox -->
+                <div class="form-check form-switch">
+                    {{ form.is_compressed(class="form-check-input", id="is_compressed") }}
+                    <label for="is_compressed" class="form-check-label">Compress Backup</label>
+                    {% if form.is_compressed.errors %}
+                    {% for error in form.is_compressed.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <!-- Retention Days Input -->
+                <label for="retention_days" class="form-label">Retention Period (Days)</label>
+                {{ form.retention_days(class="form-control", id="retention_days") }}
+                {% if form.retention_days.errors %}
+                {% for error in form.retention_days.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tags Input -->
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <label for="tags" class="form-label">Tags (comma-separated)</label>
+                {{ form.tags(class="form-control", id="tags") }}
+                {% if form.tags.errors %}
+                {% for error in form.tags.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <button type="submit" class="btn btn-sm btn-success">
+            <i class="fa-solid fa-check"></i> Save Changes
+        </button>
+        <a class="btn btn-sm btn-warning" href="{{ url_for('backup.index') }}">
+            <i class="fa-solid fa-arrow-left"></i> Back
+        </a>
+    </form>
+</div>
+
+{% block script_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Bootstrap validation script
+        var forms = document.querySelectorAll('.needs-validation');
+        Array.prototype.slice.call(forms).forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    });
+</script>
+{% endblock %}
+
+{% endblock %}

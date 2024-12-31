@@ -1,0 +1,166 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap');
+
+* {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(90deg, rgba(2, 0, 36, 1) 0%, rgba(75, 14, 154, 1) 35%, rgba(0, 212, 255, 1) 100%);
+    /* Dark mode background color */
+    color: #e0e0e0;
+    /* Default text color for dark mode */
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.form-container {
+    width: 90%;
+    max-width: 400px;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin: 0 auto;
+    background-color: rgba(0, 0, 0, 0.174);
+    /* Transparent black background */
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.btn-primary {
+    width: 100%;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(90deg, rgba(2, 0, 36, 1) 0%, rgba(75, 14, 154, 1) 35%, rgba(0, 212, 255, 1) 100%);
+}
+
+.form-control {
+    color: #333333;
+    /* Dark text for better readability */
+    background-color: #ffffff;
+    /* Light background for input fields */
+    border: none;
+    border-bottom: 1px solid #555555;
+    border-radius: 4px 4px 0 0;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.form-control:focus {
+    background-color: #f0f0f0;
+    /* Slightly lighter background on focus */
+    color: #333333;
+    outline: none;
+    box-shadow: none;
+}
+
+h4 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #ffffff;
+    /* Ensure heading is visible in dark mode */
+}
+
+.form-label {
+    font-weight: 500;
+    color: #cccccc;
+    /* Lighter label text for better contrast */
+}
+
+a {
+    color: #ffffff;
+    /* Link color in dark mode */
+}
+
+@media (max-width: 768px) {
+    .form-container {
+        width: 95%;
+        padding: 20px;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1200px) {
+    .form-container {
+        width: 60%;
+    }
+}
+
+
+/* Global Styles */
+body,
+html {
+    height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: #f8f9fa;
+    font-family: 'Arial', sans-serif;
+}
+
+#layoutError {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 100vh;
+}
+
+#layoutError_content {
+    flex: 1;
+}
+
+main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    max-width: 100%;
+    padding: 0 15px;
+}
+
+/* Error Image */
+.img-error {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+}
+
+/* Footer Styles */
+footer {
+    background-color: #343a40;
+    color: #ffffff;
+}
+
+footer .small {
+    text-align: center;
+}
+
+footer .text-light {
+    color: #e9ecef;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .col-lg-6 {
+        width: 100%;
+    }
+
+    .img-error {
+        max-width: 300px;
+    }
+
+    footer {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 576px) {
+    .img-error {
+        max-width: 250px;
+    }
+
+    footer {
+        padding: 15px;
+    }
+}

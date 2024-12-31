@@ -1,0 +1,20 @@
+{% extends "main/base_layouts.html" %}
+{% block title %}Verify 2FA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center vh-100">
+    <form class="form-container form-container-dark" role="form" method="post">
+        {{ form.csrf_token }}
+        {{ form.hidden_tag() }}
+        <h4 class="text-center">Verifikasi 2FA</h4>
+        <div class="div mb-3 mt-5">
+            {{ form.otp.label(class="form-control-label") }}
+            {{ form.otp(class="form-control") }}
+        </div>
+        {% include '/layouts/flash_msg.html' %}
+
+        <button type="submit" class="btn btn-primary btn-user btn-block">Verify</button>
+
+    </form>
+</div>
+{% endblock %}

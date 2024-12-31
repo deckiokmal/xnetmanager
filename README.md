@@ -10,9 +10,17 @@ XNetManager adalah aplikasi web berbasis Python yang dirancang untuk mengotomati
 - Pengelolaan hak akses untuk pengguna administrator
 - Pemantauan status perangkat dengan ping utilities
 
+## Aplication Stack
+- Flask
+- SQLAlchemy
+- PostgreSQL
+- Bootstrap 5
+- Font Awesome Kit
+- Google Font
+
 ## Persyaratan
 - Docker dan Docker Compose terinstal di sistem Anda
-- GitHub untuk mengakses repositori
+- Git untuk mengakses repositori
 
 ## Deployment dengan docker-compose
 docker-compose

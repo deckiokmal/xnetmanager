@@ -1,0 +1,265 @@
+{% extends "/layouts/layout_table.html" %}
+{% block page_heading %}Devices Management{% endblock %}
+{% block title %}Devices Management{% endblock %}
+
+{% block button_group1 %}
+<!-- Tombol untuk membuka modal pembuatan perangkat baru -->
+<button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createdeviceModal">
+    Create New
+</button>
+{% endblock %}
+
+{% block table_name %}Daftar Perangkat{% endblock %}
+
+{% block form_filter_row %}
+<form id="perPageForm" action="{{ url_for('dm.index') }}" method="get">
+    <label class="d-flex align-items-center">
+        <span>Tampilkan</span>
+        <select name="per_page" class="form-select form-select-sm mx-2"
+            onchange="document.getElementById('perPageForm').submit()">
+            <option value="10" {% if per_page==10 %}selected{% endif %}>10</option>
+            <option value="25" {% if per_page==25 %}selected{% endif %}>25</option>
+            <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
+        </select>
+        <span>entri</span>
+    </label>
+    <input type="hidden" name="search" value="{{ search_query }}">
+</form>
+{% endblock %}
+
+{% block form_search %}
+<form id="searchForm" method="get" action="{{ url_for('dm.index') }}" class="form-inline d-flex">
+    <input id="searchInput" type="text" name="search" class="form-control form-control-sm me-2"
+        placeholder="Search..." value="{{ search_query }}">
+    <button class="btn btn-outline-success btn-sm" type="submit">
+        <i class="fas fa-search"></i>
+    </button>
+    <input type="hidden" name="per_page" value="{{ per_page }}">
+</form>
+{% endblock %}
+
+{% block table_header %}
+<th>No</th>
+<th onclick="sortTable(0)">Nama Perangkat <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(1)">Vendor <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(2)">IP Address <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(3)">Username <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(4)">Password <i class="fas fa-sort"></i></th>
+<th onclick="sortTable(5)">Port SSH <i class="fas fa-sort"></i></th>
+<th>Aksi</th>
+{% endblock %}
+
+{% block table_body %}
+{% for data in devices %}
+<tr>
+    <th scope="row">{{ loop.index + (page - 1) * per_page }}</th>
+    <td>{{ data.device_name }}</td>
+    <td>{{ data.vendor }}</td>
+    <td>{{ data.ip_address }}</td>
+    <td>{{ data.username }}</td>
+    <td>
+        <div class="d-flex align-items-center">
+            <span class="password-display">{{ data.password | mask_password }}</span>
+        </div>
+    </td>
+    <td>{{ data.ssh }}</td>
+    <td>
+        <button class="btn btn-info btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#detailModal{{ data.id }}">
+            <i class="fas fa-eye"></i>
+        </button>
+        <a href="{{ url_for('dm.update_device', device_id=data.id) }}" class="btn btn-success btn-sm mb-1">
+            <i class="fas fa-edit"></i>
+        </a>
+        <form action="{{ url_for('dm.delete_device', device_id=data.id) }}" method="post" style="display:inline;">
+            {{ form.csrf_token }} <!-- Adding CSRF token -->
+            <button type="submit" class="btn btn-danger btn-sm mb-1"
+                onclick="return confirm('Apakah Anda yakin ingin menghapus ?');">
+                <i class="fas fa-trash"></i>
+            </button>
+        </form>
+    </td>
+</tr>
+
+<!-- Modal Detail Perangkat -->
+<div class="modal fade" id="detailModal{{ data.id }}" tabindex="-1" aria-labelledby="detailModalLabel{{ data.id }}"
+    aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailModalLabel{{ data.id }}">Detail Perangkat</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Nama Perangkat:</strong> {{ data.device_name }}</p>
+                <p><strong>Vendor:</strong> {{ data.vendor }}</p>
+                <p><strong>IP Address:</strong> {{ data.ip_address }}</p>
+                <p><strong>Username:</strong> {{ data.username }}</p>
+                <p><strong>Password:</strong> {{ data.password }}</p>
+                <p><strong>Port SSH:</strong> {{ data.ssh }}</p>
+                <p><strong>Description:</strong> {{ data.description }}</p>
+                <p><strong>Dibuat oleh:</strong> {{ data.created_by }}</p>
+                <p><strong>Status Jaringan:</strong> {{ data.status }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endfor %}
+{% endblock %}
+
+{% block show_total_data %}
+<div class="dataTables_info" id="dataTable_info" role="status" aria-live="polite">
+    Menampilkan {{ (page - 1) * per_page + 1 }} hingga {{ (page - 1) * per_page + per_page if
+    (page - 1)
+    * per_page + per_page < total_devices else total_devices }} dari {{ total_devices }} entri </div>
+
+{% endblock %}
+
+{% block pagination %}
+    {{ pagination.links }}
+
+{% endblock %}
+
+{% block modal_data %}
+<!-- create device Modal -->
+<div class="modal fade" id="createdeviceModal" tabindex="-1" aria-labelledby="createdeviceModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 500px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createdeviceModalLabel">Buat Perangkat Baru</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{{ url_for('dm.create_device') }}">
+                    {{ form.hidden_tag() }} <!-- Adding CSRF token -->
+
+                    <div class="mb-3">
+                        {{ form.device_name.label(class_="form-label") }}
+                        {{ form.device_name(class_="form-control") }}
+                        {% if form.device_name.errors %}
+                        <div class="text-danger">
+                            {% for error in form.device_name.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.vendor.label(class_="form-label") }}
+                        {{ form.vendor(class_="form-control") }}
+                        {% if form.vendor.errors %}
+                        <div class="text-danger">
+                            {% for error in form.vendor.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.ip_address.label(class_="form-label") }}
+                        {{ form.ip_address(class_="form-control") }}
+                        {% if form.ip_address.errors %}
+                        <div class="text-danger">
+                            {% for error in form.ip_address.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.username.label(class_="form-label") }}
+                        {{ form.username(class_="form-control") }}
+                        {% if form.username.errors %}
+                        <div class="text-danger">
+                            {% for error in form.username.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.password.label(class_="form-label") }}
+                        {{ form.password(class_="form-control") }}
+                        {% if form.password.errors %}
+                        <div class="text-danger">
+                            {% for error in form.password.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.ssh.label(class_="form-label") }}
+                        {{ form.ssh(class_="form-control") }}
+                        {% if form.ssh.errors %}
+                        <div class="text-danger">
+                            {% for error in form.ssh.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.description.label(class_="form-label") }}
+                        {{ form.description(class_="form-control") }}
+                        {% if form.description.errors %}
+                        <div class="text-danger">
+                            {% for error in form.description.errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block script_js %}
+<script>
+    let timeout = null;
+
+    document.getElementById("searchInput").addEventListener("input", function () {
+        clearTimeout(timeout);
+
+        timeout = setTimeout(function () {
+            document.getElementById('searchForm').submit();
+        }, 1000);
+    });
+
+    document.getElementById("searchInput").addEventListener("input", function () {
+        const query = this.value.toLowerCase();
+        const rows = document.querySelectorAll("#deviceTable tbody tr");
+
+        rows.forEach(row => {
+            const deviceName = row.cells[2].textContent.toLowerCase();
+            const ipAddress = row.cells[3].textContent.toLowerCase();
+            const vendor = row.cells[4].textContent.toLowerCase();
+
+            if (
+                deviceName.includes(query) ||
+                ipAddress.includes(query) ||
+                vendor.includes(query)
+            ) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+    });
+</script>
+{% endblock %}

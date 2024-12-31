@@ -1,0 +1,67 @@
+{% extends "/layouts/layout.html" %}
+{% block title %}Account setting{% endblock %}
+{% block content %}
+
+<div class="card position-relative py-4 px-4">
+        <div class="card-header mb-3">
+                Account Settings
+        </div>
+        <form action="{{ url_for('profile.update_profile', user_id=user.id) }}" method="post">
+                {{ form.hidden_tag() }}
+
+                <div class="row mb-3">
+                        <div class="col-md-6">
+                                <label for="first_name" class="form-label">First Name</label>
+                                {{ form.first_name(class="form-control") }}
+                        </div>
+                        <div class="col-md-6">
+                                <label for="last_name" class="form-label">Last Name</label>
+                                {{ form.last_name(class="form-control") }}
+                        </div>
+                </div>
+                <div class="row mb-3">
+                        <div class="col-md-6">
+                                <label for="phone_number" class="form-label">Phone Number</label>
+                                {{ form.phone_number(class="form-control") }}
+                        </div>
+                        <div class="col-md-6">
+                                <label for="profile_picture" class="form-label">Profile Picture URL</label>
+                                {{ form.profile_picture(class="form-control") }}
+                        </div>
+                </div>
+                <div class="row mb-3">
+                        <div class="col-md-6">
+                                <label for="company" class="form-label">Company</label>
+                                {{ form.company(class="form-control") }}
+                        </div>
+                        <div class="col-md-6">
+                                <label for="title" class="form-label">Title</label>
+                                {{ form.title(class="form-control") }}
+                        </div>
+                </div>
+                <div class="row mb-3">
+                        <div class="col-md-6">
+                                <label for="city" class="form-label">City</label>
+                                {{ form.city(class="form-control") }}
+                        </div>
+                        <div class="col-md-6">
+                                <label for="division" class="form-label">Division</label>
+                                {{ form.division(class="form-control") }}
+                        </div>
+                </div>
+                <div class="row mb-3">
+                        <div class="col-md-6">
+                                <label for="time_zone" class="form-label">Time Zone</label>
+                                {{ form.time_zone(class="form-control") }}
+                        </div>
+                </div>
+                <button type="submit" class="btn btn-sm btn-success">
+                        <i class="fa-solid fa-check"></i> Save Changes
+                </button>
+                <a class="btn btn-sm btn-warning" href="{{ url_for('profile.index') }}">
+                        <i class="fa-solid fa-arrow-left"></i> Back
+                </a>
+        </form>
+</div>
+
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends "/layouts/layout.html" %}
+{% block title %}Update Template{% endblock %}
+{% block content %}
+<!-- Page Content for Updating Template -->
+<div class="card position-relative py-4 px-4">
+    <div class="card-header mb-3">
+        Update Template
+    </div>
+    <form action="{{ url_for('tm.update_template', template_id=template.id) }}" method="post" class="needs-validation"
+        novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="template_name" class="form-label">Template Name</label>
+                {{ form.template_name(class="form-control", id="template_name") }}
+                {% if form.template_name.errors %}
+                {% for error in form.template_name.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label for="parameter_name" class="form-label">Parameter Name</label>
+                {{ form.parameter_name(class="form-control", id="parameter_name") }}
+                {% if form.parameter_name.errors %}
+                {% for error in form.parameter_name.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="vendor" class="form-label">Vendor</label>
+                {{ form.vendor(class="form-control", id="vendor") }}
+                {% if form.vendor.errors %}
+                {% for error in form.vendor.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label for="version" class="form-label">Version</label>
+                {{ form.version(class="form-control", id="version") }}
+                {% if form.version.errors %}
+                {% for error in form.version.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            {{ form.description(class="form-control", id="description") }}
+            {% if form.description.errors %}
+            {% for error in form.description.errors %}
+            <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+            {% endif %}
+        </div>
+        <div class="mb-3">
+            <label for="template_content" class="form-label">Template Content</label>
+            {{ form.template_content(class="form-control", id="template_content", rows="5") }}
+            {% if form.template_content.errors %}
+            {% for error in form.template_content.errors %}
+            <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+            {% endif %}
+        </div>
+        <div class="mb-3">
+            <label for="parameter_content" class="form-label">Parameter Content</label>
+            {{ form.parameter_content(class="form-control", id="parameter_content", rows="5") }}
+            {% if form.parameter_content.errors %}
+            {% for error in form.parameter_content.errors %}
+            <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Tombol Aksi -->
+        <button type="submit" class="btn btn-sm btn-success">
+            <i class="fa-solid fa-check"></i> Save Changes
+        </button>
+        <a class="btn btn-sm btn-warning" href="{{ url_for('tm.index') }}">
+            <i class="fa-solid fa-arrow-left"></i> Back
+        </a>
+    </form>
+</div>
+
+{% block script_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Bootstrap validation script
+        var forms = document.querySelectorAll('.needs-validation');
+        Array.prototype.slice.call(forms).forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}
