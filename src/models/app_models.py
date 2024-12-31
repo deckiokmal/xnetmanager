@@ -20,7 +20,7 @@ class User(UserMixin, db.Model):
     __tablename__ = "users"
 
     # Use the global UUID_TYPE
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4) # for PostgreSQL
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4()) # for PostgreSQL
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     first_name = db.Column(db.String(255), nullable=False)
     last_name = db.Column(db.String(255), nullable=False)
@@ -56,6 +56,11 @@ class User(UserMixin, db.Model):
 
     # Relasi ke UserBackupShare untuk mengakses backup yang dibagikan
     backup_shares = db.relationship("UserBackupShare", back_populates="user", lazy=True)
+
+    # Relasi ke AuditLog
+    audit_logs = db.relationship(
+        "AuditLog", back_populates="performed_by_user", lazy="dynamic"
+    )
 
     # Relasi ke ConfigurationManagerShare untuk sharing konfigurasi
     configuration_shares = db.relationship(
@@ -113,7 +118,7 @@ class User(UserMixin, db.Model):
 class Role(db.Model):
     __tablename__ = "roles"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.String(64), unique=True, nullable=False)
     users = db.relationship("User", secondary="user_roles", back_populates="roles")
@@ -132,7 +137,7 @@ class Role(db.Model):
 
 class Permission(db.Model):
     __tablename__ = "permissions"
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.String(50), unique=True, nullable=False)
     description = db.Column(db.String(200))
@@ -143,7 +148,7 @@ class Permission(db.Model):
 
 class UserRoles(db.Model):
     __tablename__ = "user_roles"
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(
         UUID_TYPE, db.ForeignKey("users.id", ondelete="CASCADE"), index=True
@@ -155,7 +160,7 @@ class UserRoles(db.Model):
 
 class RolePermissions(db.Model):
     __tablename__ = "role_permissions"
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     role_id = db.Column(
         UUID_TYPE, db.ForeignKey("roles.id", ondelete="CASCADE"), index=True
@@ -173,7 +178,7 @@ class RolePermissions(db.Model):
 class DeviceManager(db.Model):
     __tablename__ = "device_manager"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     device_name = db.Column(db.String(100), unique=True, nullable=False)
     vendor = db.Column(db.String(100), nullable=False)
@@ -187,13 +192,16 @@ class DeviceManager(db.Model):
     is_active = db.Column(db.Boolean, default=True)
 
     # Relasi ke User
-    user_id = db.Column(
-        UUID_TYPE, db.ForeignKey("users.id"), nullable=True, index=True
-    )
+    user_id = db.Column(UUID_TYPE, db.ForeignKey("users.id"), nullable=True, index=True)
 
     # Relasi ke BackupData (one-to-many)
     backups = db.relationship(
         "BackupData", back_populates="device", cascade="all, delete-orphan"
+    )
+
+    # Relasi ke AIRecommendations
+    recommendations = db.relationship(
+        "AIRecommendations", back_populates="device", cascade="all, delete-orphan"
     )
 
     def __repr__(self):
@@ -203,7 +211,7 @@ class DeviceManager(db.Model):
 class TemplateManager(db.Model):
     __tablename__ = "template_manager"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     template_name = db.Column(db.String(100), unique=True, nullable=False)
     parameter_name = db.Column(db.String(100), unique=True, nullable=False)
@@ -219,7 +227,7 @@ class TemplateManager(db.Model):
 class ConfigurationManager(db.Model):
     __tablename__ = "configuration_manager"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     config_name = db.Column(db.String(100), nullable=False, unique=True)
     vendor = db.Column(db.String(100), nullable=False)
@@ -227,9 +235,7 @@ class ConfigurationManager(db.Model):
     created_by = db.Column(db.Text, nullable=True)
 
     # Relasi ke User
-    user_id = db.Column(
-        UUID_TYPE, db.ForeignKey("users.id"), nullable=True, index=True
-    )
+    user_id = db.Column(UUID_TYPE, db.ForeignKey("users.id"), nullable=True, index=True)
 
     # Relasi ke UserConfigurationShare untuk sharing konfigurasi
     shared_with = db.relationship(
@@ -243,11 +249,9 @@ class ConfigurationManager(db.Model):
 class UserConfigurationShare(db.Model):
     __tablename__ = "user_configuration_share"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = db.Column(
-        UUID_TYPE, db.ForeignKey("users.id"), nullable=True, index=True
-    )
+    user_id = db.Column(UUID_TYPE, db.ForeignKey("users.id"), nullable=True, index=True)
     configuration_id = db.Column(
         UUID_TYPE,
         db.ForeignKey("configuration_manager.id"),
@@ -273,7 +277,7 @@ class UserConfigurationShare(db.Model):
 class BackupData(db.Model):
     __tablename__ = "backup_data"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     backup_name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.String(255), nullable=True)
@@ -288,15 +292,11 @@ class BackupData(db.Model):
     retention_period_days = db.Column(db.Integer, nullable=True)
 
     # Foreign Key for User
-    user_id = db.Column(
-        UUID_TYPE, db.ForeignKey("users.id"), nullable=True, index=True
-    )
+    user_id = db.Column(UUID_TYPE, db.ForeignKey("users.id"), nullable=True, index=True)
     user = db.relationship("User", back_populates="backups")
 
     # Foreign Key for DeviceManager
-    device_id = db.Column(
-        UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False
-    )
+    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
     device = db.relationship("DeviceManager", back_populates="backups")
 
     # Relationships to other models (e.g., shared, versions, etc.)
@@ -310,7 +310,7 @@ class BackupData(db.Model):
         "BackupTag", back_populates="backup", cascade="all, delete-orphan"
     )
     audit_logs = db.relationship(
-        "BackupAuditLog", back_populates="backup", cascade="all, delete-orphan"
+        "AuditLog", back_populates="backup", cascade="all, delete-orphan"
     )
 
     @staticmethod
@@ -405,11 +405,9 @@ class BackupData(db.Model):
 class UserBackupShare(db.Model):
     __tablename__ = "user_backup_share"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = db.Column(
-        UUID_TYPE, db.ForeignKey("users.id"), nullable=True, index=True
-    )
+    user_id = db.Column(UUID_TYPE, db.ForeignKey("users.id"), nullable=True, index=True)
     backup_id = db.Column(
         UUID_TYPE, db.ForeignKey("backup_data.id"), nullable=False, index=True
     )
@@ -437,7 +435,7 @@ class UserBackupShare(db.Model):
 class GitBackupVersion(db.Model):
     __tablename__ = "git_backup_version"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     backup_id = db.Column(
         UUID_TYPE, db.ForeignKey("backup_data.id"), nullable=False, index=True
@@ -475,7 +473,7 @@ class GitBackupVersion(db.Model):
 class BackupTag(db.Model):
     __tablename__ = "backup_tags"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     backup_id = db.Column(
         UUID_TYPE, db.ForeignKey("backup_data.id"), nullable=False, index=True
@@ -494,22 +492,51 @@ class BackupTag(db.Model):
 # -----------------------------------------------------------------------
 
 
-class BackupAuditLog(db.Model):
-    __tablename__ = "backup_audit_logs"
+class AuditLog(db.Model):
+    __tablename__ = "audit_logs"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
-    # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
+    device_id = db.Column(
+        UUID_TYPE,
+        db.ForeignKey("device_manager.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     backup_id = db.Column(
         UUID_TYPE, db.ForeignKey("backup_data.id"), nullable=False, index=True
     )
-    action = db.Column(
-        db.String(50), nullable=False
-    )  # e.g., created, updated, deleted, shared
+    action = db.Column(db.String(50), nullable=False, default="created", index=True)
     performed_by = db.Column(UUID_TYPE, db.ForeignKey("users.id"), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    description = db.Column(db.String(1000), nullable=True)
 
     # Relationship to the backup this log belongs to
     backup = db.relationship("BackupData", back_populates="audit_logs")
+    performed_by_user = db.relationship("User", back_populates="audit_logs")
 
     def __repr__(self):
-        return f"<BackupAuditLog {self.action} on Backup {self.backup_id}>"
+        return f"<AuditLog {self.action} on Backup {self.backup_id}>"
+
+
+class AIRecommendations(db.Model):
+    __tablename__ = "AIRecommendations"
+
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
+    device_id = db.Column(
+        UUID_TYPE,
+        db.ForeignKey("device_manager.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    recommendation_text = db.Column(
+        db.String(1000), nullable=False
+    )  # Batas panjang teks
+    is_applied = db.Column(db.Boolean, default=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    applied_at = db.Column(db.DateTime, nullable=True)
+    priority = db.Column(db.Integer, default=1)  # 1: Low, 2: Medium, 3: High
+    category = db.Column(db.String(50), nullable=True)  # e.g., Optimization, Security
+
+    # Relasi ke DeviceManager Table
+    device = db.relationship("DeviceManager", back_populates="recommendations")
+
+    def __repr__(self):
+        return f"<AIRecommendations {self.id} for Device {self.device_id}>"

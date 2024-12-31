@@ -16,7 +16,7 @@ from src.models.app_models import (
     UserBackupShare,
     GitBackupVersion,
     BackupTag,
-    BackupAuditLog,
+    AuditLog,
     DeviceManager,
     User,
 )

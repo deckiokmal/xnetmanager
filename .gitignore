@@ -1,5 +1,6 @@
 .env
 .venv/
+venv/
 instance/
 docker/
 setupProduction/
@@ -12,3 +13,5 @@ app/
 migrations/
 data/
 certbot/
+tests/
+.pytest_cache/

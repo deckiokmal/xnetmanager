@@ -117,44 +117,16 @@
                                 <h4 class="card-title">
                                         Activity Feed
                                 </h4>
-                                <div class="d-flex mb-5">
+                                <div class="d-flex">
                                         <div>
-                                                <img src="{{ url_for('static', filename=current_user.profile_picture) if current_user.profile_picture else url_for('static', filename='img/default.jpg') }}"
+                                                <img src="{{ url_for('static', filename=current_user.profile_picture) if current_user.profile_picture else url_for('static', filename='profile_pictures/default.jpg') }}"
                                                         alt="Profile Picture" class="rounded-circle avatar-md">
                                         </div>
                                         <div class="ms-3">
-                                                <h5 class="mb-1">{{ user.first_name }} {{ user.last_name }}</h5>
-                                                <p class="text-muted mb-2">Just create a new Project in
+                                                <h5 class="fs-10 mb-1">{{ user.first_name }} {{ user.last_name }}</h5>
+                                                <p class="fs-15 mb-2 text-muted">Just create a new Project in
                                                         Dashui...</p>
-                                                <p class="fs-5 mb-0">2m ago</p>
-                                        </div>
-
-                                </div>
-                                <div class="d-flex mb-5">
-                                        <div>
-                                                <img src="{{ url_for('static', filename=current_user.profile_picture) if current_user.profile_picture else url_for('static', filename='img/default.jpg') }}"
-                                                        alt="Profile Picture" class="rounded-circle avatar-md">
-                                        </div>
-                                        <div class="ms-3 ">
-                                                <h5 class="mb-1">Irene Hargrove</h5>
-                                                <p class="text-muted mb-2">
-                                                        Comment on Bootstrap Tutorial Says Hi, I m
-                                                        irene...
-                                                </p>
-                                                <p class="fs-5 mb-0">1hour ago</p>
-                                        </div>
-                                </div>
-                                <div class="d-flex">
-                                        <div>
-                                                <img src="{{ url_for('static', filename=current_user.profile_picture) if current_user.profile_picture else url_for('static', filename='img/default.jpg') }}"
-                                                        alt="Profile Picture" class="rounded-circle avatar-md">
-                                        </div>
-                                        <div class="ms-3 ">
-                                                <h5 class="mb-1">Trevor Bradley</h5>
-                                                <p class="text-muted mb-2">
-                                                        Just share your article on Social Media..
-                                                </p>
-                                                <p class="mb-0 fs-5 text-muted">2month ago</p>
+                                                <p class="fs-20 mb-0 text-muted">2m ago</p>
                                         </div>
                                 </div>
                         </div>

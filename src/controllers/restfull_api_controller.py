@@ -15,7 +15,7 @@ from src.models.app_models import (
     BackupData,
     UserBackupShare,
     BackupTag,
-    BackupAuditLog,
+    AuditLog,
 )
 import logging
 from src.utils.schema_utils import (
