@@ -250,18 +250,19 @@ def check_status():
 
         # Fungsi pengecekan status perangkat
         def check_device_status(device):
-            cached_status = get_cached_device_status(device.id)
+            deviceid = str(device.id)
+            cached_status = get_cached_device_status(deviceid)
             if cached_status:
                 logging.info(f"Using cached status for device {device.device_name}")
-                return device.id, cached_status
+                return deviceid, cached_status
 
             utils = ConfigurationManagerUtils(ip_address=device.ip_address)
             status_json = utils.check_device_status()
             status_dict = json.loads(status_json)
 
             # Cache hasil status
-            set_device_status_cache(device.id, status_dict["status"])
-            return device.id, status_dict["status"]
+            set_device_status_cache(deviceid, status_dict["status"])
+            return deviceid, status_dict["status"]
 
         # Gunakan ThreadPoolExecutor untuk melakukan pengecekan status secara paralel
         with ThreadPoolExecutor(max_workers=10) as executor:

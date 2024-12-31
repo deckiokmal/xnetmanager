@@ -15,7 +15,7 @@
                                 <div class="d-flex align-items-center position-relative">
                                         <div class="avatar-xxl me-2 position-relative d-flex justify-content-end align-items-end mt-n10"
                                                 style="z-index: 2;">
-                                                <img src="{{ url_for('static', filename=current_user.profile_picture) if current_user.profile_picture else url_for('static', filename='img/default.jpg') }}"
+                                                <img src="{{ url_for('static', filename=current_user.profile_picture) if current_user.profile_picture else url_for('static', filename='profile_pictures/default.jpg') }}"
                                                         alt="Profile Picture" class="img-fluid rounded-circle mb-3"
                                                         style="width: 80px; height: 80px; object-fit: cover;">
 

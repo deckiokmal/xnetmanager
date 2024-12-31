@@ -107,7 +107,7 @@ class Config(object):
             "https://fonts.googleapis.com",
             "https://ka-f.fontawesome.com",
         ],
-        "img-src": ["'self'", "https://via.placeholder.com", "data:"],
+        "img-src": ["'self'", "https://via.placeholder.com","https://iili.io/JpjR5tp.png", "data:"],
         "connect-src": ["'self'", "https://ka-f.fontawesome.com"],
         "object-src": ["'none'"],
         "frame-src": ["'self'", "https://www.youtube.com"],

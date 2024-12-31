@@ -5,6 +5,7 @@
 
 {% block button_group1 %}
 <!-- Tombol Check Status -->
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <button id="checkStatusButton" type="button" class="btn btn-sm btn-info">
     Check status
 </button>
@@ -364,13 +365,15 @@
                 const currentPage = paginationElement ? parseInt(paginationElement.textContent.trim(), 10) : 1;  // Default ke halaman 1 jika tidak ada pagination
                 const perPage = parseInt(document.getElementById("itemsPerPage").value, 10) || 10;
                 const searchQuery = document.getElementById("searchInput").value.trim() || '';
+                const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 
                 showLoadingOverlay();
 
                 fetch("/check_status", {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        'X-CSRFToken': csrfToken
                     },
                     body: JSON.stringify({
                         page: currentPage,
@@ -440,10 +443,13 @@
 
             // Fungsi untuk mengambil daftar konfigurasi berdasarkan vendor yang dipilih
             function fetchConfigsByVendor(vendor) {
+                const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
                 fetch("/get_configs_by_vendor", {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        'X-CSRFToken': csrfToken
                     },
                     body: JSON.stringify({ vendor: vendor })
                 })
@@ -484,13 +490,15 @@
             document.getElementById("confirmPushConfigBtn").addEventListener("click", function () {
                 const selectedConfig = document.getElementById("configSelect").value;
                 const selectedDevices = Array.from(document.querySelectorAll(".btn-check:checked")).map(checkbox => checkbox.getAttribute("data-ip"));
+                const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 
                 if (selectedConfig && selectedDevices.length > 0) {
                     showLoadingOverlay();
                     fetch("/push_configs", {
                         method: "POST",
                         headers: {
-                            "Content-Type": "application/json"
+                            "Content-Type": "application/json",
+                            'X-CSRFToken': csrfToken
                         },
                         body: JSON.stringify({ devices: selectedDevices, config_id: selectedConfig })
                     })
@@ -551,13 +559,15 @@
                     command: document.getElementById("command").value,
                     devices: JSON.parse(document.getElementById("selectedBackupDevices").value)
                 };
+                const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 
                 showLoadingOverlay(); // Show loading overlay
 
                 fetch("/backups/create_multiple", {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        'X-CSRFToken': csrfToken
                     },
                     body: JSON.stringify(backupData)
                 })
@@ -605,10 +615,13 @@
 
             // Fungsi untuk mengambil daftar konfigurasi berdasarkan vendor untuk single device
             function fetchConfigsByVendorSingleDevice(vendor, deviceId) {
+                const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
                 fetch("/get_configs_by_vendor", {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        'X-CSRFToken': csrfToken
                     },
                     body: JSON.stringify({ vendor: vendor }) // Kirim data vendor sebagai JSON
                 })
@@ -659,6 +672,7 @@
 
                     const deviceId = form.id.replace('pushConfigForm', '');
                     const configId = document.getElementById(`configSelect${deviceId}`).value;
+                    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 
                     if (!configId) {
                         alert("Please select a config.");
@@ -670,7 +684,8 @@
                     fetch(`/push_config/${deviceId}`, {
                         method: "POST",
                         headers: {
-                            "Content-Type": "application/json"
+                            "Content-Type": "application/json",
+                            'X-CSRFToken': csrfToken
                         },
                         body: JSON.stringify({ config_id: configId })
                     })
@@ -735,6 +750,7 @@
                         backup_type: document.getElementById(`backupType${deviceId}`).value,
                         command: document.getElementById(`command${deviceId}`).value
                     };
+                    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 
                     // Tampilkan loading overlay
                     showLoadingOverlay();
@@ -743,7 +759,8 @@
                     fetch(`/backups/create_single/${deviceId}`, {
                         method: "POST",
                         headers: {
-                            "Content-Type": "application/json"
+                            "Content-Type": "application/json",
+                            'X-CSRFToken': csrfToken
                         },
                         body: JSON.stringify(backupData)
                     })
