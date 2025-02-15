@@ -20,7 +20,7 @@ class User(UserMixin, db.Model):
     __tablename__ = "users"
 
     # Use the global UUID_TYPE
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4()) # for PostgreSQL
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())  # for PostgreSQL
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     first_name = db.Column(db.String(255), nullable=False)
     last_name = db.Column(db.String(255), nullable=False)
@@ -526,17 +526,88 @@ class AIRecommendations(db.Model):
         db.ForeignKey("device_manager.id", ondelete="CASCADE"),
         nullable=False,
     )
-    recommendation_text = db.Column(
-        db.String(1000), nullable=False
-    )  # Batas panjang teks
+    category = db.Column(db.String(1000), nullable=True)
+    configuration_syntax = db.Column(db.Text, nullable=False)
     is_applied = db.Column(db.Boolean, default=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     applied_at = db.Column(db.DateTime, nullable=True)
     priority = db.Column(db.Integer, default=1)  # 1: Low, 2: Medium, 3: High
-    category = db.Column(db.String(50), nullable=True)  # e.g., Optimization, Security
 
     # Relasi ke DeviceManager Table
     device = db.relationship("DeviceManager", back_populates="recommendations")
 
     def __repr__(self):
         return f"<AIRecommendations {self.id} for Device {self.device_id}>"
+
+
+################################################################################################
+# MikroTik Parsing Database
+################################################################################################
+
+
+class Interface(db.Model):
+    __tablename__ = "interfaces"
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
+    name = db.Column(db.String(100), nullable=False)  # Nama interface setelah diubah
+    default_name = db.Column(db.String(100), nullable=False)  # Nama bawaan interface
+    status = db.Column(db.String(10), nullable=False)  # Status disable-running-check
+
+
+class RoutingTable(db.Model):
+    __tablename__ = "routing_tables"
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+
+
+class IPAddress(db.Model):
+    __tablename__ = "ip_addresses"
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
+    address = db.Column(db.String(50), nullable=False)
+    interface = db.Column(db.String(100), nullable=False)
+    network = db.Column(db.String(50), nullable=False)
+
+
+class DNSSetting(db.Model):
+    __tablename__ = "dns_settings"
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
+    allow_remote_requests = db.Column(db.Boolean, nullable=False)
+    servers = db.Column(db.JSON, nullable=False)
+
+
+class DHCPSetting(db.Model):
+    __tablename__ = "dhcp_settings"
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
+    address_pool = db.Column(db.String(100), nullable=False)
+    interface = db.Column(db.String(100), nullable=False)
+    lease_time = db.Column(db.String(50), nullable=False)
+
+
+class IPRoute(db.Model):
+    __tablename__ = "ip_routes"
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
+    destination = db.Column(db.String(50), nullable=False)
+    gateway = db.Column(db.String(50), nullable=False)
+    routing_table = db.Column(db.String(100), nullable=False)
+
+
+class FirewallRule(db.Model):
+    __tablename__ = "firewall_rules"
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
+    action = db.Column(db.String(50), nullable=False)
+    chain = db.Column(db.String(50), nullable=False)
+    comment = db.Column(db.String(255), nullable=True)
+
+
+class SystemSetting(db.Model):
+    __tablename__ = "system_settings"
+    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
+    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
+    key = db.Column(db.String(50), nullable=False)
+    value = db.Column(db.String(255), nullable=False)
