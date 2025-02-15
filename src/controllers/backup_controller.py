@@ -16,7 +16,7 @@ from src.models.app_models import (
     UserBackupShare,
     GitBackupVersion,
     BackupTag,
-    BackupAuditLog,
+    AuditLog,
     DeviceManager,
     User,
 )
@@ -777,7 +777,7 @@ def add_tag_to_backup(backup_id):
 
 def log_action(backup_id, action, user_id):
     """Helper function to log actions related to backups."""
-    audit_log = BackupAuditLog(
+    audit_log = AuditLog(
         backup_id=backup_id,
         action=action,
         performed_by=user_id,
@@ -795,7 +795,7 @@ def get_audit_logs(backup_id):
     if not backup or backup.user_id != current_user.id:
         return jsonify({"message": "Backup not found or unauthorized"}), 404
 
-    audit_logs = BackupAuditLog.query.filter_by(backup_id=backup_id).all()
+    audit_logs = AuditLog.query.filter_by(backup_id=backup_id).all()
     logs_list = [
         {
             "action": log.action,

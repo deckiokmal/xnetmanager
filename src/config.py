@@ -142,6 +142,6 @@ class TestingConfig(Config):
 
     TESTING = True
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    SQLALCHEMY_DATABASE_URI = "sqlite:///test.db"
     BCRYPT_LOG_ROUNDS = 1
     WTF_CSRF_ENABLED = False
