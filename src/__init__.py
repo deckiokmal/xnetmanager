@@ -166,6 +166,7 @@ def create_app():
     from .controllers.restfull_api_controller import restapi_bp
     from .controllers.whatsapp_gateway_controller import whatsapp_bp
     from .controllers.analytic_controller import analytics_bp
+    from .controllers.ai_analytic_controller_deepseek import ai_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(users_bp)
@@ -181,6 +182,7 @@ def create_app():
     app.register_blueprint(restapi_bp)
     app.register_blueprint(whatsapp_bp)
     app.register_blueprint(analytics_bp)
+    app.register_blueprint(ai_bp)
 
     # Set up user loader
     from .models.app_models import User

@@ -1,0 +1,135 @@
+{% extends "layouts/layout.html" %}
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <h1 class="h3 mb-4 text-gray-800">
+        AI Analytics - {{ device.name }}
+        <small class="text-muted">({{ device.ip_address }})</small>
+    </h1>
+
+    <div class="row">
+        <!-- Live Config Panel -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        Current Configuration
+                        <button class="btn btn-sm btn-secondary float-right" 
+                                data-toggle="collapse" 
+                                data-target="#configPanel">
+                            Toggle View
+                        </button>
+                    </h6>
+                </div>
+                <div class="card-body collapse show" id="configPanel">
+                    <pre class="config-pre">{{ live_config }}</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Recommendations Chat -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        AI Recommendations
+                    </h6>
+                    <div class="badge badge-pill badge-info">
+                        {{ recommendations|length }} Suggestions
+                    </div>
+                </div>
+                
+                <div class="card-body ai-chat-container">
+                    {% for rec in recommendations %}
+                    <div class="ai-message card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <h5 class="card-title">{{ rec.title }}</h5>
+                                <span class="badge badge-{{ 'success' if rec.risk_level == 'low' else 'warning' }}">
+                                    {{ rec.risk_level|upper }}
+                                </span>
+                            </div>
+                            <p class="card-text">{{ rec.description }}</p>
+                            <div class="row">
+                                <div class="col">
+                                    <small class="text-muted">
+                                        Impact Area: {{ rec.impact_area|default('security', true) }}
+                                    </small>
+                                </div>
+                                <div class="col text-right">
+                                    <button class="btn btn-sm btn-primary"
+                                            onclick="applyRecommendation('{{ rec.id }}')">
+                                        <i class="fas fa-rocket"></i> Apply
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function applyRecommendation(recId) {
+    if (confirm('Apply this configuration?')) {
+        fetch('/ai/apply', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                rec_id: recId 
+            })
+        })
+        .then(response => {
+            if (!response.ok) throw response;
+            return response.json();
+        })
+        .then(data => {
+            if(data.status === 'success') {
+                showToast('Configuration applied successfully!', 'success');
+            } else {
+                throw new Error(data.message || 'Unknown error');
+            }
+        })
+        .catch(error => {
+            error.text().then(errMsg => {
+                showToast(`Error: ${errMsg}`, 'error');
+            });
+        });
+    }
+}
+
+function showToast(message, type = 'info') {
+    // Implement toast notification UI
+}
+</script>
+
+<style>
+.config-pre {
+    font-size: 0.8rem;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.ai-chat-container {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.ai-message {
+    border-left: 3px solid #4e73df;
+    transition: transform 0.2s;
+}
+
+.ai-message:hover {
+    transform: translateX(5px);
+}
+</style>
+{% endblock %}

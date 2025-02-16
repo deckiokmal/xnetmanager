@@ -70,6 +70,14 @@ class User(UserMixin, db.Model):
         overlaps="shared_user",
     )
 
+    # Relasi ke AIRecommendations
+    applied_recommendations = db.relationship(
+        "AIRecommendations",
+        back_populates="applied_by_user",
+        lazy="dynamic",
+        foreign_keys="AIRecommendations.applied_by",
+    )
+
     def __init__(self, first_name, last_name, email, password_hash):
         self.first_name = first_name
         self.last_name = last_name
@@ -518,26 +526,122 @@ class AuditLog(db.Model):
 
 
 class AIRecommendations(db.Model):
-    __tablename__ = "AIRecommendations"
+    __tablename__ = "ai_recommendations"
+    __table_args__ = (
+        db.Index(
+            "idx_recommendation_device", "device_id", "created_at"
+        ),  # Composite index
+        db.Index(
+            "idx_recommendation_priority", "priority", "created_at"
+        ),  # Priority-based index
+        {"comment": "Stores AI-generated recommendations for network devices"},
+    )
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
+    id = db.Column(
+        UUID_TYPE,
+        primary_key=True,
+        default=uuid.uuid4(),
+        comment="Unique identifier for the recommendation",
+    )
     device_id = db.Column(
         UUID_TYPE,
         db.ForeignKey("device_manager.id", ondelete="CASCADE"),
         nullable=False,
+        comment="Foreign key referencing the device this recommendation applies to",
     )
-    category = db.Column(db.String(1000), nullable=True)
-    configuration_syntax = db.Column(db.Text, nullable=False)
-    is_applied = db.Column(db.Boolean, default=False, index=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    applied_at = db.Column(db.DateTime, nullable=True)
-    priority = db.Column(db.Integer, default=1)  # 1: Low, 2: Medium, 3: High
+    title = db.Column(
+        db.String(255),
+        nullable=False,
+        comment="Short title describing the recommendation",
+    )
+    description = db.Column(
+        db.Text, nullable=True, comment="Detailed description of the recommendation"
+    )
+    commands = db.Column(
+        db.JSON,
+        nullable=False,
+        comment="List of commands to apply the recommendation in JSON format",
+    )
+    risk_level = db.Column(
+        db.String(50),
+        nullable=False,
+        default="low",
+        comment="Risk level of applying the recommendation (low, medium, high)",
+    )
+    impact_area = db.Column(
+        db.String(255),
+        nullable=False,
+        default="security",
+        comment="Area of impact (e.g., security, availability, performance)",
+    )
+    is_applied = db.Column(
+        db.Boolean,
+        default=False,
+        index=True,
+        comment="Flag indicating whether the recommendation has been applied",
+    )
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.now(),
+        nullable=False,
+        comment="Timestamp when the recommendation was generated",
+    )
+    applied_at = db.Column(
+        db.DateTime,
+        nullable=True,
+        comment="Timestamp when the recommendation was applied",
+    )
+    priority = db.Column(
+        db.Integer,
+        default=1,
+        nullable=False,
+        comment="Priority level of the recommendation (1: Low, 2: Medium, 3: High)",
+    )
+    status = db.Column(
+        db.String(50),
+        default="generated",
+        nullable=False,
+        comment="Status of the recommendation (generated, applied, failed)",
+    )
+    applied_by = db.Column(
+        UUID_TYPE,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="User who applied the recommendation",
+    )
+    error_message = db.Column(
+        db.Text,
+        nullable=True,
+        comment="Error message if the recommendation application failed",
+    )
 
-    # Relasi ke DeviceManager Table
+    # Relationships
     device = db.relationship("DeviceManager", back_populates="recommendations")
+    applied_by_user = db.relationship(
+        "User", back_populates="applied_recommendations", foreign_keys=[applied_by]
+    )
 
     def __repr__(self):
         return f"<AIRecommendations {self.id} for Device {self.device_id}>"
+
+    def to_dict(self):
+        """Convert the recommendation object to a dictionary for API responses."""
+        return {
+            "id": str(self.id),
+            "device_id": str(self.device_id),
+            "title": self.title,
+            "description": self.description,
+            "commands": self.commands,
+            "risk_level": self.risk_level,
+            "impact_area": self.impact_area,
+            "is_applied": self.is_applied,
+            "created_at": self.created_at.isoformat(),
+            "applied_at": self.applied_at.isoformat() if self.applied_at else None,
+            "priority": self.priority,
+            "status": self.status,
+            "applied_by": str(self.applied_by) if self.applied_by else None,
+            "error_message": self.error_message,
+        }
 
 
 ################################################################################################
