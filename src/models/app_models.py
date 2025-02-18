@@ -528,19 +528,16 @@ class AuditLog(db.Model):
 class AIRecommendations(db.Model):
     __tablename__ = "ai_recommendations"
     __table_args__ = (
-        db.Index(
-            "idx_recommendation_device", "device_id", "created_at"
-        ),  # Composite index
-        db.Index(
-            "idx_recommendation_priority", "priority", "created_at"
-        ),  # Priority-based index
+        db.Index("idx_recommendation_device", "device_id", "created_at"),
+        db.Index("idx_recommendation_priority", "priority", "created_at"),
+        db.Index("idx_duplicate_status", "is_duplicate"),
         {"comment": "Stores AI-generated recommendations for network devices"},
     )
 
     id = db.Column(
         UUID_TYPE,
         primary_key=True,
-        default=uuid.uuid4(),
+        default=uuid.uuid4,  # Diperbaiki: menghapus ()
         comment="Unique identifier for the recommendation",
     )
     device_id = db.Column(
@@ -557,34 +554,45 @@ class AIRecommendations(db.Model):
     description = db.Column(
         db.Text, nullable=True, comment="Detailed description of the recommendation"
     )
-    commands = db.Column(
-        db.JSON,
+    command = db.Column(  # Diubah dari commands ke command
+        db.Text,
         nullable=False,
-        comment="List of commands to apply the recommendation in JSON format",
+        comment="CLI commands to implement the recommendation",
     )
     risk_level = db.Column(
         db.String(50),
         nullable=False,
         default="low",
-        comment="Risk level of applying the recommendation (low, medium, high)",
+        comment="Risk level (low, medium, high)",
     )
     impact_area = db.Column(
         db.String(255),
         nullable=False,
         default="security",
-        comment="Area of impact (e.g., security, availability, performance)",
+        comment="Impact area (security, availability, performance)",
+    )
+    is_duplicate = db.Column(  # Kolom baru untuk deduplikasi
+        db.Boolean,
+        default=False,
+        index=True,
+        comment="Flag marking duplicate recommendations",
+    )
+    embedding = db.Column(  # Kolom baru untuk vector embeddings
+        db.JSON,
+        nullable=True,
+        comment="Embedding vector for similarity checking",
+    )
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.now,
+        nullable=False,  # Diperbaiki: menghapus ()
+        comment="Timestamp when the recommendation was generated",
     )
     is_applied = db.Column(
         db.Boolean,
         default=False,
         index=True,
         comment="Flag indicating whether the recommendation has been applied",
-    )
-    created_at = db.Column(
-        db.DateTime,
-        default=datetime.now(),
-        nullable=False,
-        comment="Timestamp when the recommendation was generated",
     )
     applied_at = db.Column(
         db.DateTime,
@@ -595,13 +603,13 @@ class AIRecommendations(db.Model):
         db.Integer,
         default=1,
         nullable=False,
-        comment="Priority level of the recommendation (1: Low, 2: Medium, 3: High)",
+        comment="Priority level (1: Low, 2: Medium, 3: High)",
     )
     status = db.Column(
         db.String(50),
         default="generated",
         nullable=False,
-        comment="Status of the recommendation (generated, applied, failed)",
+        comment="Status (generated, applied, failed)",
     )
     applied_by = db.Column(
         UUID_TYPE,
@@ -622,20 +630,22 @@ class AIRecommendations(db.Model):
     )
 
     def __repr__(self):
-        return f"<AIRecommendations {self.id} for Device {self.device_id}>"
+        return f"<AIRecommendation {self.id[:8]} {self.title} ({self.risk_level})>"
 
     def to_dict(self):
-        """Convert the recommendation object to a dictionary for API responses."""
+        """Serialize recommendation for API responses"""
         return {
             "id": str(self.id),
             "device_id": str(self.device_id),
             "title": self.title,
             "description": self.description,
-            "commands": self.commands,
+            "command": self.command,
             "risk_level": self.risk_level,
             "impact_area": self.impact_area,
-            "is_applied": self.is_applied,
+            "is_duplicate": self.is_duplicate,
+            "embedding": self.embedding,
             "created_at": self.created_at.isoformat(),
+            "is_applied": self.is_applied,
             "applied_at": self.applied_at.isoformat() if self.applied_at else None,
             "priority": self.priority,
             "status": self.status,
