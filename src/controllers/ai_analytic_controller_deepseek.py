@@ -6,6 +6,7 @@ from src.utils.analyticUtils_deepseek import (
 from src.utils.backupUtils import BackupUtils
 from src.models.app_models import DeviceManager, AIRecommendations
 from src import db
+from src.utils.network_topology_visualization import NetworkTopologyVisualizer
 import json
 from flask_login import current_user
 import uuid
@@ -149,7 +150,24 @@ def analyze_device(device_id):
         return redirect(url_for("dm.index"))
 
 
-@ai_bp.route("/apply", methods=["POST"])
+@ai_bp.route("/visualize_topology")
+def visualize_topology():
+    try:
+        visualizer = NetworkTopologyVisualizer()
+
+        # Contoh penambahan perangkat dan koneksi
+        visualizer.add_device("1", "Router A")
+        visualizer.add_device("2", "Switch B")
+        visualizer.add_connection("1", "2")
+
+        visualizer.visualize()
+        return jsonify({"status": "success"}), 200
+
+    except Exception as e:
+        logging.error(f"Error visualizing topology: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 def apply_recommendation():
     data = request.get_json()
     try:
