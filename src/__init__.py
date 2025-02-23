@@ -128,14 +128,20 @@ def create_app():
     UUID_TYPE = get_uuid_type(app.config["SQLALCHEMY_DATABASE_URI"])
 
     # Konfigurasi logger
-    handler = StreamHandler()
-    handler.setLevel(logging.INFO)
+    # Konfigurasi logger
+    stream_handler = StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    file_handler = logging.FileHandler('app.log')
+    file_handler.setLevel(logging.INFO)
+
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
-    handler.setFormatter(formatter)
+    stream_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
 
-    app.logger.addHandler(handler)
+    app.logger.addHandler(stream_handler)
+    app.logger.addHandler(file_handler)
     app.logger.setLevel(logging.INFO)
 
     # Register context processor
