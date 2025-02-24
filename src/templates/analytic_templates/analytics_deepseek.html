@@ -14,9 +14,8 @@
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">
                         Current Configuration
-                        <button class="btn btn-sm btn-secondary float-right" 
-                                data-toggle="collapse" 
-                                data-target="#configPanel">
+                        <button class="btn btn-sm btn-secondary float-right" data-toggle="collapse"
+                            data-target="#configPanel">
                             Toggle View
                         </button>
                     </h6>
@@ -38,10 +37,10 @@
                         {{ recommendations|length }} Suggestions
                     </div>
                 </div>
-                
+
                 <div class="card-body ai-chat-container">
                     {% for rec in recommendations %}
-                    <div class="ai-message card mb-3">
+                    <div class="ai-message card mb-3" id="rec-{{ rec.id }}">
                         <div class="card-body">
                             <div class="d-flex justify-content-between">
                                 <h5 class="card-title">{{ rec.title }}</h5>
@@ -58,9 +57,13 @@
                                 </div>
                                 <div class="col text-right">
                                     <button class="btn btn-sm btn-primary"
-                                            onclick="applyRecommendation('{{ rec.id }}')">
+                                        onclick="applyRecommendation('{{ rec.id }}')">
                                         <i class="fas fa-rocket"></i> Apply
                                     </button>
+                                    <div class="spinner-border spinner-border-sm text-primary d-none" role="status"
+                                        id="spinner-{{ rec.id }}">
+                                        <span class="sr-only">Loading...</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -73,63 +76,100 @@
 </div>
 
 <script>
-function applyRecommendation(recId) {
-    if (confirm('Apply this configuration?')) {
-        fetch('/ai/apply', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-                rec_id: recId 
-            })
-        })
-        .then(response => {
-            if (!response.ok) throw response;
-            return response.json();
-        })
-        .then(data => {
-            if(data.status === 'success') {
-                showToast('Configuration applied successfully!', 'success');
-            } else {
-                throw new Error(data.message || 'Unknown error');
-            }
-        })
-        .catch(error => {
-            error.text().then(errMsg => {
-                showToast(`Error: ${errMsg}`, 'error');
-            });
-        });
-    }
-}
+    function applyRecommendation(recId) {
+        if (confirm('Apply this configuration?')) {
+            const spinner = document.getElementById(`spinner-${recId}`);
+            spinner.classList.remove('d-none');
 
-function showToast(message, type = 'info') {
-    // Implement toast notification UI
-}
+            fetch('/ai/apply', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    rec_id: recId
+                })
+            })
+                .then(response => {
+                    if (!response.ok) throw response;
+                    return response.json();
+                })
+                .then(data => {
+                    spinner.classList.add('d-none');
+                    if (data.status === 'success') {
+                        showToast('Configuration applied successfully!', 'success');
+                        document.getElementById(`rec-${recId}`).classList.add('bg-success', 'text-white');
+                    } else {
+                        throw new Error(data.message || 'Unknown error');
+                    }
+                })
+                .catch(error => {
+                    spinner.classList.add('d-none');
+                    error.text().then(errMsg => {
+                        showToast(`Error: ${errMsg}`, 'error');
+                    });
+                });
+        }
+    }
+
+    function showToast(message, type = 'info') {
+        const toastContainer = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-bg-${type} border-0`;
+        toast.role = 'alert';
+        toast.ariaLive = 'assertive';
+        toast.ariaAtomic = 'true';
+        toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    });
 </script>
 
 <style>
-.config-pre {
-    font-size: 0.8rem;
-    background: #f8f9fa;
-    padding: 15px;
-    border-radius: 5px;
-    max-height: 70vh;
-    overflow-y: auto;
-}
+    .config-pre {
+        font-size: 0.8rem;
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
 
-.ai-chat-container {
-    max-height: 70vh;
-    overflow-y: auto;
-}
+    .ai-chat-container {
+        max-height: 70vh;
+        overflow-y: auto;
+    }
 
-.ai-message {
-    border-left: 3px solid #4e73df;
-    transition: transform 0.2s;
-}
+    .ai-message {
+        border-left: 3px solid #4e73df;
+        transition: transform 0.2s;
+    }
 
-.ai-message:hover {
-    transform: translateX(5px);
-}
+    .ai-message:hover {
+        transform: translateX(5px);
+    }
+
+    .toast-container {
+        z-index: 1055;
+    }
+
+    .toast {
+        opacity: 0.9;
+    }
 </style>
 {% endblock %}

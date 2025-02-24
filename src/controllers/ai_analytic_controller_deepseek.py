@@ -12,62 +12,9 @@ from flask_login import current_user
 import uuid
 from src.utils.config_manager_utils import ConfigurationManagerUtils
 import logging
+from src.models.app_models import BackupData
 
 ai_bp = Blueprint("ai", __name__, url_prefix="/ai")
-
-
-# @ai_bp.route("/analyze/<device_id>")
-# def analyze_device(device_id):
-#     try:
-#         device = DeviceManager.query.get_or_404(device_id)
-
-#         # check status perangkat sebelum analyze
-#         utils = ConfigurationManagerUtils(ip_address=device.ip_address)
-#         status_json = utils.check_device_status()
-#         status_dict = json.loads(status_json)
-#         status_device = status_dict["status"]
-
-#         if status_device == "success":
-
-#             # Dapatkan data konfigurasi
-#             config_data = AIAnalyticsUtils.get_configuration_data(device)
-
-#             # Dapatkan rekomendasi AI
-#             recommendations = AIAnalyticsUtils.generate_recommendations(config_data)
-
-#             # Simpan ke database
-#             for recommendation_data in recommendations:
-#                 new_rec = AIRecommendations(
-#                     id=str(uuid.uuid4()),
-#                     device_id=device_id,
-#                     title=recommendation_data["title"],
-#                     description=recommendation_data.get("description", ""),
-#                     commands=recommendation_data["commands"],
-#                     risk_level=recommendation_data["risk_level"],
-#                     impact_area=recommendation_data.get("impact_area", "security"),
-#                     priority=recommendation_data.get("priority", 1),
-#                     status="generated",
-#                 )
-#                 db.session.add(new_rec)
-#             db.session.commit()
-
-#             recommendations_data = AIRecommendations.query.filter_by(
-#                 device_id=device_id
-#             ).all()
-
-#             return render_template(
-#                 "/analytic_templates/analytics_deepseek.html",
-#                 device=device,
-#                 live_config=config_data["live"],
-#                 recommendations=recommendations_data,
-#                 status_device=status_device,
-#             )
-#         else:
-#             flash("Device Offline!", "warning")
-#             return redirect(url_for("dm.index"))
-
-#     except Exception as e:
-#         return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @ai_bp.route("/analyze/<device_id>")
@@ -168,6 +115,7 @@ def visualize_topology():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@ai_bp.route("/apply", methods=["POST"])
 def apply_recommendation():
     data = request.get_json()
     try:
@@ -183,28 +131,53 @@ def apply_recommendation():
         )
 
         # Eksekusi perintah
-        commands = recommendation.commands
-        for cmd in commands:
-            utils.configure_device(cmd)
+        commands = recommendation.command
+        utils.configure_device(commands)
 
         # Update status
         recommendation.status = "applied"
         db.session.commit()
 
+        # Cek apakah backup sudah ada
+        backup_exists = BackupUtils.check_backup_exists(device_id=device.id)
+
         # Buat backup setelah perubahan
-        BackupUtils.perform_backup(
-            backup_type="incremental",
-            device=device,
+        # Ambil live config menggunakan command sesuai device type
+        command_map = {
+            "cisco_ios": "show running-config",
+            "juniper": "show configuration | display set",
+            "huawei": "display current-configuration",
+            "mikrotik": "export compact",
+            "fortinet": "show full-configuration",
+        }
+        vendor = device.vendor.lower()
+        command = command_map.get(vendor, command_map["cisco_ios"])
+
+        backup_type = "differential" if backup_exists else "full"
+        # Create a new backup for this device using the static method
+        new_backup = BackupData.create_backup(
+            backup_name=f"post-ai-{recommendation.title}",
+            description=f"After applying AI recommendation {recommendation.description}",
             user_id=current_user.id,
-            backup_name=f"post-ai-{recommendation.id}",
-            description=f"After applying AI recommendation {recommendation.title}",
-            command="auto",
-            version=1.0,
+            device_id=device.id,
+            backup_type=backup_type,
+            retention_days=7,
+            command=command,
         )
 
-        return jsonify({"status": "success"})
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Backup created successfully.",
+                    "backup_id": new_backup.id,
+                    "backup_path": new_backup.backup_path,
+                }
+            ),
+            201,
+        )
 
     except Exception as e:
         recommendation.status = f"failed: {str(e)}"
-        db.session.commit()
+        logging.error(f"Error applying recommendation: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500

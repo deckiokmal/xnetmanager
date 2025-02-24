@@ -1,2 +1,88 @@
 
 2025-02-23 12:56:05,409 - src - INFO - xnetmanager@example.com accessed index_configuration_file
+2025-02-23 22:08:38,874 - src - INFO - Request received from IP: 127.0.0.1
+2025-02-23 22:08:38,874 - src - WARNING - Unauthorized access attempt by 127.0.0.1
+2025-02-23 22:08:43,428 - src - INFO - Request received from IP: 127.0.0.1
+2025-02-23 22:08:47,103 - src - INFO - Request received from IP: 127.0.0.1
+2025-02-23 22:08:51,514 - src - INFO - User xnetmanager@example.com has authenticate.
+2025-02-23 22:08:51,593 - src - INFO - Request received from IP: 127.0.0.1
+2025-02-23 22:09:08,353 - src - INFO - Request received from IP: 127.0.0.1
+2025-02-23 22:09:08,902 - src - INFO - User xnetmanager@example.com successfully verified 2FA.
+2025-02-23 22:09:09,954 - src - INFO - Dashboard accessed by xnetmanager@example.com
+2025-02-23 22:09:23,410 - src - INFO - xnetmanager@example.com accessed index_configuration_file
+2025-02-23 22:35:00,402 - src - INFO - User xnetmanager@example.com accessed profile page.
+2025-02-23 22:35:06,314 - src - INFO - xnetmanager@example.com accessed index_configuration_file
+2025-02-23 22:54:02,027 - src - ERROR - Backup failed: Previous backup is required for incremental backup.
+2025-02-23 23:30:17,972 - src - INFO - Backup saved to file app/xnetmanager/backups\d6febd30-4e91-4605-a7f8-3c753bdafacf\post-ai-25ffb654-3e5e-4491-a611-8830dacb90ee_v1.0.backup.
+2025-02-23 23:30:59,161 - src - INFO - Backup saved to file app/xnetmanager/backups\d6febd30-4e91-4605-a7f8-3c753bdafacf\post-ai-25ffb654-3e5e-4491-a611-8830dacb90ee_v1.0.backup.
+2025-02-23 23:31:56,771 - src - INFO - xnetmanager@example.com accessed Index Backups
+2025-02-23 23:38:59,550 - src - WARNING - Backup file data/backups/d6febd30-4e91-4605-a7f8-3c753bdafacf/backup2_v1.backup does not exist.
+2025-02-23 23:39:01,883 - src - INFO - xnetmanager@example.com accessed Index Backups
+2025-02-23 23:39:06,583 - src - INFO - xnetmanager@example.com accessed index_configuration_file
+2025-02-23 23:40:18,345 - src - INFO - Backup saved to file app/xnetmanager/backups\d6febd30-4e91-4605-a7f8-3c753bdafacf\post-ai-25ffb654-3e5e-4491-a611-8830dacb90ee_v1.0.backup.
+2025-02-23 23:41:52,264 - src - INFO - xnetmanager@example.com accessed Index Backups
+2025-02-23 23:41:58,117 - src - INFO - xnetmanager@example.com accessed Index Backups
+2025-02-23 23:48:44,906 - src - INFO - xnetmanager@example.com accessed index_configuration_file
+2025-02-23 23:49:24,734 - src - INFO - Backup saved to file app/xnetmanager/backups\d6febd30-4e91-4605-a7f8-3c753bdafacf\post-ai-b4dea886-4e84-4e5a-9cee-97c5132489a9_v1.0.backup.
+2025-02-23 23:50:40,344 - src - INFO - Backup saved to file app/xnetmanager/backups\d6febd30-4e91-4605-a7f8-3c753bdafacf\post-ai-b4dea886-4e84-4e5a-9cee-97c5132489a9_v1.0.backup.
+2025-02-23 23:51:52,305 - src - INFO - Backup saved to file app/xnetmanager/backups\d6febd30-4e91-4605-a7f8-3c753bdafacf\post-ai-b4dea886-4e84-4e5a-9cee-97c5132489a9_v1.0.backup.
+2025-02-23 23:59:19,078 - src - ERROR - Error creating backup: (psycopg2.ProgrammingError) can't adapt type 'DeviceManager'
+[SQL: SELECT device_manager.id AS device_manager_id, device_manager.device_name AS device_manager_device_name, device_manager.vendor AS device_manager_vendor, device_manager.ip_address AS device_manager_ip_address, device_manager.username AS device_manager_username, device_manager.password AS device_manager_password, device_manager.ssh AS device_manager_ssh, device_manager.description AS device_manager_description, device_manager.created_by AS device_manager_created_by, device_manager.status AS device_manager_status, device_manager.is_active AS device_manager_is_active, device_manager.user_id AS device_manager_user_id 
+FROM device_manager 
+WHERE device_manager.id = %(pk_1)s::UUID]
+[parameters: {'pk_1': <DeviceManager router bkl 2>}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2025-02-24 00:01:21,329 - src - INFO - Backup saved to file app/xnetmanager/backups\d6febd30-4e91-4605-a7f8-3c753bdafacf\post-ai-Disable Unused Services_v1.backup.
+2025-02-24 00:01:27,160 - src - INFO - xnetmanager@example.com accessed Index Backups
+2025-02-24 00:02:04,659 - src - INFO - xnetmanager@example.com accessed index_configuration_file
+2025-02-24 00:03:37,954 - src - INFO - Backup saved to file app/xnetmanager/backups\d6febd30-4e91-4605-a7f8-3c753bdafacf\post-ai-Disable Default Services_v2.backup.
+2025-02-24 00:03:38,081 - src - ERROR - Error creating backup: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "backup_data_pkey"
+DETAIL:  Key (id)=(0b8b4cc6-360b-463a-923d-5565a2643e0d) already exists.
+
+[SQL: INSERT INTO backup_data (id, backup_name, description, version, created_at, backup_path, is_encrypted, is_compressed, integrity_check, backup_type, next_scheduled_backup, retention_period_days, user_id, device_id) VALUES (%(id)s::UUID, %(backup_name)s, %(description)s, %(version)s, %(created_at)s, %(backup_path)s, %(is_encrypted)s, %(is_compressed)s, %(integrity_check)s, %(backup_type)s, %(next_scheduled_backup)s, %(retention_period_days)s, %(user_id)s::UUID, %(device_id)s::UUID)]
+[parameters: {'id': UUID('0b8b4cc6-360b-463a-923d-5565a2643e0d'), 'backup_name': 'post-ai-Disable Default Services', 'description': 'After applying AI recommendation Disable Default Services', 'version': 2, 'created_at': datetime.datetime(2025, 2, 23, 17, 3, 37, 962933), 'backup_path': 'app/xnetmanager/backups\\d6febd30-4e91-4605-a7f8-3c753bdafacf\\post-ai-Disable Default Services_v2.backup', 'is_encrypted': False, 'is_compressed': False, 'integrity_check': '8cb88d4f908e2d82400c0a06d6f2015c', 'backup_type': 'incremental', 'next_scheduled_backup': None, 'retention_period_days': 7, 'user_id': UUID('d6febd30-4e91-4605-a7f8-3c753bdafacf'), 'device_id': UUID('06cdd7e6-82f1-449e-bb2e-6890a5b52c29')}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-02-24 00:11:36,174 - src - INFO - xnetmanager@example.com accessed Push Configurations
+2025-02-24 00:12:06,955 - src - INFO - Backup saved to file app/xnetmanager/backups\d6febd30-4e91-4605-a7f8-3c753bdafacf\post-ai-Disable Unused Services_v2.backup.
+2025-02-24 00:12:17,108 - src - INFO - xnetmanager@example.com accessed Index Backups
+2025-02-24 00:20:30,263 - src - INFO - xnetmanager@example.com accessed index_configuration_file
+2025-02-24 00:21:16,682 - src - INFO - Backup saved to file app/xnetmanager/backups\d6febd30-4e91-4605-a7f8-3c753bdafacf\post-ai-Disable Default Services_v3.backup.
+2025-02-24 00:27:01,074 - src - INFO - Backup saved to file app/xnetmanager/backups\d6febd30-4e91-4605-a7f8-3c753bdafacf\post-ai-Disable Default Services_v4.backup.
+2025-02-24 00:27:36,427 - src - INFO - xnetmanager@example.com accessed Index Backups
+2025-02-24 00:29:00,872 - src - INFO - xnetmanager@example.com accessed Push Configurations
+2025-02-24 00:30:08,683 - src - INFO - xnetmanager@example.com accessed index_configuration_file
+2025-02-24 00:31:30,566 - src - INFO - Backup saved to file app/xnetmanager/backups\d6febd30-4e91-4605-a7f8-3c753bdafacf\post-ai-Disable Unused Services_v5.backup.
+2025-02-24 00:31:40,374 - src - INFO - xnetmanager@example.com accessed Index Backups
+2025-02-24 00:32:50,233 - src - INFO - Dashboard accessed by xnetmanager@example.com
+2025-02-24 00:33:07,651 - src - INFO - xnetmanager@example.com accessed index_configuration_file
+2025-02-24 12:52:51,554 - src - INFO - Request received from IP: 127.0.0.1
+2025-02-24 12:52:54,323 - src - INFO - Request received from IP: 127.0.0.1
+2025-02-24 12:52:59,004 - src - INFO - User xnetmanager@example.com has authenticate.
+2025-02-24 12:52:59,215 - src - INFO - Request received from IP: 127.0.0.1
+2025-02-24 12:53:13,633 - src - INFO - Request received from IP: 127.0.0.1
+2025-02-24 12:53:14,970 - src - INFO - User xnetmanager@example.com successfully verified 2FA.
+2025-02-24 12:53:17,414 - src - INFO - Dashboard accessed by xnetmanager@example.com
+2025-02-24 12:53:36,230 - src - INFO - xnetmanager@example.com accessed index_configuration_file
+2025-02-24 12:55:09,893 - src - INFO - Backup saved to file app/xnetmanager/backups\d6febd30-4e91-4605-a7f8-3c753bdafacf\post-ai-Disable Unused Services_v6.backup.
+2025-02-24 12:56:09,956 - src - INFO - Backup saved to file app/xnetmanager/backups\d6febd30-4e91-4605-a7f8-3c753bdafacf\post-ai-Disable Unused Services_v7.backup.
+2025-02-24 12:56:10,390 - src - ERROR - Error creating backup: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "backup_data_pkey"
+DETAIL:  Key (id)=(1f05475f-38f0-4491-a084-041594021bcb) already exists.
+
+[SQL: INSERT INTO backup_data (id, backup_name, description, version, created_at, backup_path, is_encrypted, is_compressed, integrity_check, backup_type, next_scheduled_backup, retention_period_days, user_id, device_id) VALUES (%(id)s::UUID, %(backup_name)s, %(description)s, %(version)s, %(created_at)s, %(backup_path)s, %(is_encrypted)s, %(is_compressed)s, %(integrity_check)s, %(backup_type)s, %(next_scheduled_backup)s, %(retention_period_days)s, %(user_id)s::UUID, %(device_id)s::UUID)]
+[parameters: {'id': UUID('1f05475f-38f0-4491-a084-041594021bcb'), 'backup_name': 'post-ai-Disable Unused Services', 'description': "After applying AI recommendation Disabling unused services can reduce the attack surface of your network. In your current configuration, SNMP is enabled but it may not be necessary. If it's not being used, it's recommended to disable it.", 'version': 7, 'created_at': datetime.datetime(2025, 2, 24, 5, 56, 9, 959504), 'backup_path': 'app/xnetmanager/backups\\d6febd30-4e91-4605-a7f8-3c753bdafacf\\post-ai-Disable Unused Services_v7.backup', 'is_encrypted': False, 'is_compressed': False, 'integrity_check': '258e10219da34fc0cb8fce69e57bdd7c', 'backup_type': 'differential', 'next_scheduled_backup': None, 'retention_period_days': 7, 'user_id': UUID('d6febd30-4e91-4605-a7f8-3c753bdafacf'), 'device_id': UUID('06cdd7e6-82f1-449e-bb2e-6890a5b52c29')}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-02-24 13:07:28,940 - src - INFO - xnetmanager@example.com accessed index template management
+2025-02-24 13:07:29,329 - src - INFO - No template file found for user xnetmanager@example.com with query ''
+2025-02-24 13:07:43,847 - src - INFO - User xnetmanager@example.com accessed the Configuration File Manager index
+2025-02-24 13:08:26,860 - src - INFO - User xnetmanager@example.com is attempting to create an AI-generated configuration file.
+2025-02-24 13:08:26,862 - src - INFO - Generated random filename: ada_cisco firepower_vUa_24_02_2025
+2025-02-24 13:08:36,368 - src - INFO - User xnetmanager@example.com accessed the Configuration File Manager index
+2025-02-24 13:09:26,312 - src - INFO - xnetmanager@example.com accessed index_configuration_file
+2025-02-24 17:27:30,587 - src - INFO - Request received from IP: 127.0.0.1
+2025-02-24 17:27:33,749 - src - INFO - Request received from IP: 127.0.0.1
+2025-02-24 17:27:35,304 - src - INFO - User xnetmanager@example.com has authenticate.
+2025-02-24 17:27:35,526 - src - INFO - Request received from IP: 127.0.0.1
+2025-02-24 17:27:53,439 - src - INFO - Request received from IP: 127.0.0.1
+2025-02-24 17:27:55,383 - src - INFO - User xnetmanager@example.com successfully verified 2FA.
+2025-02-24 17:27:58,877 - src - INFO - Dashboard accessed by xnetmanager@example.com
+2025-02-24 17:28:27,397 - src - INFO - xnetmanager@example.com accessed index_configuration_file

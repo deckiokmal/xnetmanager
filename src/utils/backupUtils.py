@@ -5,6 +5,7 @@ import hashlib
 from datetime import datetime
 from flask import current_app
 from .config_manager_utils import ConfigurationManagerUtils
+from src import db
 
 
 class BackupUtils:
@@ -177,7 +178,9 @@ class BackupUtils:
 
     @staticmethod
     def determine_previous_backup(device, backup_type):
-        from src.models.app_models import BackupData  # Avoid circular import
+        from src.models.app_models import (
+            BackupData,
+        )  # Move import here to avoid circular import
 
         if backup_type == "incremental":
             return (
@@ -216,3 +219,14 @@ class BackupUtils:
                 raise RuntimeError(f"Failed to delete backup file {backup_path}: {e}")
         else:
             current_app.logger.warning(f"Backup file {backup_path} does not exist.")
+
+    @staticmethod
+    def check_backup_exists(device_id):
+        from src.models.app_models import (
+            BackupData,
+        )  # Move import here to avoid circular import
+
+        existing_backup = (
+            db.session.query(BackupData).filter_by(device_id=device_id).first()
+        )
+        return existing_backup is not None
