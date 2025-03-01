@@ -1,5 +1,22 @@
-import requests
 from flask import current_app
+import json
+import requests
+from openai import OpenAI
+from pydantic import BaseModel, Field
+from .config_manager_utils import ConfigurationManagerUtils
+import logging
+
+# Set up logging configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+# ----------------------------------------------------------
+# Talita API: Generate Configuration File
+# ----------------------------------------------------------
 
 
 def generate_configfile_talita(question, user_id):
@@ -126,3 +143,246 @@ def talita_chatbot(question, user_id):
         }
     except requests.exceptions.RequestException as e:
         return {"success": False, "message": f"An error occurred: {str(e)}"}
+
+
+# ----------------------------------------------------------
+# OpenAI API: Generate Configuration File
+# ----------------------------------------------------------
+class NetworkAutomationUtility:
+    def __init__(self):
+        self.client = OpenAI()
+        self.model = "gpt-4o"
+        self.tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "send_configuration",
+                    "description": "Send network configuration to a device using SSH",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "ip_address": {
+                                "type": "string",
+                                "description": "Device IP address",
+                            },
+                            "username": {
+                                "type": "string",
+                                "description": "SSH username",
+                            },
+                            "password": {
+                                "type": "string",
+                                "description": "SSH password",
+                            },
+                            "ssh": {"type": "number", "description": "SSH Port"},
+                            "command": {
+                                "type": "string",
+                                "description": "Configuration command",
+                            },
+                        },
+                        "required": [
+                            "ip_address",
+                            "username",
+                            "password",
+                            "ssh",
+                            "command",
+                        ],
+                        "additionalProperties": False,
+                    },
+                    "strict": True,
+                },
+            }
+        ]
+
+    def extract_configuration_info(self, user_input: str):
+        """First LLM call to determine if input is a configuration intent"""
+        logger.info("Starting configuration extraction analysis")
+        logger.debug(f"Input text: {user_input}")
+
+        completion = self.client.beta.chat.completions.parse(
+            model=self.model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an AI assistant specialized in network automation and configuration. "
+                        "Analyze the user's request and extract:\n"
+                        "- The **target device's IP address**\n"
+                        "- The **vendor** of the device (e.g., Mikrotik, Cisco, Fortigate)\n"
+                        "- Whether the request is a valid configuration command.\n"
+                        "Ensure that the response is structured and accurate."
+                    ),
+                },
+                {"role": "user", "content": user_input},
+            ],
+            response_format=ConfigurationExtraction,
+        )
+
+        result = completion.choices[0].message.parsed if completion.choices else None
+        if not result:
+            logger.error("LLM failed to parse the request")
+            return None
+
+        logger.info(
+            f"Extraction complete - Intent: {result.is_configuration_intent}, Confidence: {result.confidence_score:.2f}, "
+            f"IP: {result.description}"
+        )
+        return result
+
+    def parse_configuration_details(self, description: str):
+        """Second LLM call to extract specific configuration details"""
+        logger.info("Starting configuration details parsing")
+
+        completion = self.client.beta.chat.completions.parse(
+            model=self.model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Extract detailed configuration information, ensuring vendor-specific syntax is included.",
+                },
+                {"role": "user", "content": description},
+            ],
+            response_format=ConfigurationDetails,
+        )
+
+        result = completion.choices[0].message.parsed if completion.choices else None
+        if not result:
+            logger.error("LLM failed to parse configuration details")
+            return None
+
+        logger.info(
+            f"Parsed configuration - IP: {result.ip_address}, Vendor: {result.vendor}, Command: {result.command}"
+        )
+        return result
+
+    def generate_configuration(self, username, password, ssh, configuration_details):
+        """Third LLM call: Provide the configuration response"""
+        logger.info("Generating device configuration")
+
+        system_prompt = """
+        You are a network automation expert. Generate configuration commands based on the user's intent.
+        Ensure that the generated command is specific to the vendor's CLI syntax.
+        """
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {
+                "role": "user",
+                "content": f"username: {username}, password: {password}, ssh: {ssh}, {str(configuration_details.model_dump())}",
+            },
+        ]
+
+        completion = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            tools=self.tools,
+        )
+
+        if not completion.choices:
+            logger.error("LLM failed to generate configuration")
+            return None
+
+        for tool_call in completion.choices[0].message.tool_calls:
+            name = tool_call.function.name
+            args = json.loads(tool_call.function.arguments)
+            messages.append(completion.choices[0].message)
+            result = self.call_function(name, args)
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": json.dumps(result),
+                }
+            )
+
+        completion_2 = self.client.beta.chat.completions.parse(
+            model=self.model,
+            messages=messages,
+            tools=self.tools,
+            response_format=ConfigurationResponse,
+        )
+
+        if not completion_2.choices:
+            logger.error("LLM failed to generate final configuration response")
+            return None
+
+        logger.info(
+            f"Generated configuration: {completion_2.choices[0].message.parsed.command}"
+        )
+        return completion_2.choices[0].message.parsed
+
+    def process_configuration_request(self, user_input: str, username, password, ssh):
+        """Main function implementing the prompt chain"""
+        logger.info(f"Processing configuration request: {user_input}")
+
+        initial_extraction = self.extract_configuration_info(user_input)
+        # Gate check: Verify if it's a configuration event with sufficient confidence
+        if (
+            not initial_extraction.is_configuration_intent
+            or initial_extraction.confidence_score < 0.7
+        ):
+            logger.warning(
+                f"Gate check failed - is_configuration_intent: {initial_extraction.is_configuration_intent}, result: {initial_extraction.description}"
+            )
+            return initial_extraction.description
+
+        logger.info("Gate check passed, proceeding with event processing")
+
+        # Second LLM call: Extract detailed configuration info
+        configuration_details = self.parse_configuration_details(
+            initial_extraction.description
+        )
+        if not configuration_details:
+            logger.warning("Failed to extract configuration details")
+            return None
+
+        # Third LLM call: Generate configuration
+        confirmation = self.generate_configuration(
+            username, password, ssh, configuration_details
+        )
+        if not confirmation:
+            logger.warning("Failed to generate configuration")
+            return None
+
+        logger.info("Configuration request processed successfully")
+        return confirmation.response
+
+    def send_configuration(self, ip_address, username, password, ssh, command):
+        configuration = ConfigurationManagerUtils(ip_address, username, password, ssh)
+        send_command = configuration.configure_device(command)
+        status = send_command.split(" ")[0]
+        return {"success": status == "success", "message": send_command}
+
+    def call_function(self, name, args):
+        if name == "send_configuration":
+            return self.send_configuration(**args)
+        raise ValueError(f"Unknown function: {name}")
+
+
+class ConfigurationExtraction(BaseModel):
+    """First LLM call: Extract basic prompt configuration information"""
+
+    description: str = Field(
+        description="Configuration request details, including target device IP and vendor."
+    )
+    is_configuration_intent: bool = Field(
+        description="True if this is a valid network configuration request."
+    )
+    confidence_score: float = Field(description="Confidence score between 0 and 1")
+
+
+class ConfigurationDetails(BaseModel):
+    """Second LLM call: Parse specific configuration details"""
+
+    ip_address: str = Field(description="IP Address of target device")
+    vendor: str = Field(description="Device vendor (e.g., Mikrotik, Cisco)")
+    command: str = Field(description="Configuration command to be executed")
+
+
+class ConfigurationResponse(BaseModel):
+    """Third LLM call: Provide the configuration response"""
+
+    command: str = Field(description="Configuration command to be executed.")
+    response: str = Field(
+        description="Human-readable response for the user and use Bahasa Indonesia. provide an error message if the command fails."
+    )
+

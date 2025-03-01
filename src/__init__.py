@@ -13,7 +13,7 @@ from src.utils.mask_password_utils import mask_password
 from src.config import DevelopmentConfig, TestingConfig, ProductionConfig, get_uuid_type
 from flask_mail import Mail
 from flask_talisman import Talisman
-import openai
+from openai import OpenAI
 import os
 from flask_marshmallow import Marshmallow
 from flask_jwt_extended import JWTManager
@@ -89,7 +89,7 @@ def create_app():
         raise ValueError("Missing required configuration: TALITA_URL")
 
     # Set API key untuk OpenAI
-    openai.api_key = openai_api_key
+    client_openai = OpenAI(api_key=openai_api_key)
 
     # Simpan TALITA API Key dan URL ke dalam konfigurasi aplikasi
     app.config["TALITA_API_KEY"] = talita_api_key

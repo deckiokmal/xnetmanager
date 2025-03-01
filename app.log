@@ -86,3 +86,120 @@ DETAIL:  Key (id)=(1f05475f-38f0-4491-a084-041594021bcb) already exists.
 2025-02-24 17:27:55,383 - src - INFO - User xnetmanager@example.com successfully verified 2FA.
 2025-02-24 17:27:58,877 - src - INFO - Dashboard accessed by xnetmanager@example.com
 2025-02-24 17:28:27,397 - src - INFO - xnetmanager@example.com accessed index_configuration_file
+2025-03-01 20:57:18,938 - src - INFO - Request received from IP: 127.0.0.1
+2025-03-01 20:57:23,018 - src - INFO - Request received from IP: 127.0.0.1
+2025-03-01 20:57:24,765 - src - INFO - User xnetmanager@example.com has authenticate.
+2025-03-01 20:57:24,826 - src - INFO - Request received from IP: 127.0.0.1
+2025-03-01 20:57:49,395 - src - INFO - Request received from IP: 127.0.0.1
+2025-03-01 20:57:49,668 - src - INFO - User xnetmanager@example.com successfully verified 2FA.
+2025-03-01 20:57:50,230 - src - INFO - Dashboard accessed by xnetmanager@example.com
+2025-03-02 02:18:42,759 - src.utils.talita_ai_utils - INFO - Processing configuration request: konfigurasi mikrotik dengan ip target 10.0.102.10: block youtube dan facebook, gunakan 7 layer protocol mikrotik untuk memblokir situs tersebut
+2025-03-02 02:18:42,760 - src.utils.talita_ai_utils - INFO - Starting configuration extraction analysis
+2025-03-02 02:18:44,418 - src.utils.talita_ai_utils - INFO - Extraction complete - Intent: True, Confidence: 0.90, IP: Mikrotik device configuration at IP 10.0.102.10 to block YouTube and Facebook using layer 7 protocol.
+2025-03-02 02:18:44,418 - src.utils.talita_ai_utils - INFO - Gate check passed, proceeding with event processing
+2025-03-02 02:18:44,418 - src.utils.talita_ai_utils - INFO - Starting configuration details parsing
+2025-03-02 02:18:47,187 - src.utils.talita_ai_utils - INFO - Parsed configuration - IP: 10.0.102.10, Vendor: Mikrotik, Command: /ip firewall layer7-protocol
+add name=youtube regexp="(videos|video|ytimg)\\.youtube\\.com|youtu.be"
+add name=facebook regexp="facebook.com|fbcdn.net|fb.com"
+/ip firewall filter
+add chain=forward layer7-protocol=youtube action=drop comment="Block YouTube"
+add chain=forward layer7-protocol=facebook action=drop comment="Block Facebook"
+2025-03-02 02:18:47,187 - src.utils.talita_ai_utils - INFO - Generating device configuration
+2025-03-02 02:18:55,198 - src.utils.talita_ai_utils - INFO - Generated configuration: /ip firewall layer7-protocol
+add name=youtube regexp="(videos|video|ytimg)\\.youtube\\.com|youtu.be"
+add name=facebook regexp="facebook.com|fbcdn.net|fb.com"
+/ip firewall filter
+add chain=forward layer7-protocol=youtube action=drop comment="Block YouTube"
+add chain=forward layer7-protocol=facebook action=drop comment="Block Facebook"
+2025-03-02 02:18:55,199 - src.utils.talita_ai_utils - INFO - Configuration request processed successfully
+2025-03-02 02:18:55,243 - src.utils.talita_ai_utils - INFO - Processing configuration request: kirim email ke alice dan bob untuk membahas roadmap proyek
+2025-03-02 02:18:55,243 - src.utils.talita_ai_utils - INFO - Starting configuration extraction analysis
+2025-03-02 02:18:56,711 - src.utils.talita_ai_utils - INFO - Extraction complete - Intent: False, Confidence: 0.90, IP: Request to send an email to Alice and Bob to discuss project roadmap. No network configuration involved.
+2025-03-02 02:18:56,712 - src.utils.talita_ai_utils - WARNING - Gate check failed - is_configuration_intent: False, result: Request to send an email to Alice and Bob to discuss project roadmap. No network configuration involved.
+2025-03-02 02:18:59,767 - src.utils.talita_ai_utils - INFO - Processing configuration request: konfigurasi mikrotik dengan ip target 10.0.102.10: block youtube dan facebook, gunakan 7 layer protocol mikrotik untuk memblokir situs tersebut
+2025-03-02 02:18:59,767 - src.utils.talita_ai_utils - INFO - Starting configuration extraction analysis
+2025-03-02 02:19:01,521 - src.utils.talita_ai_utils - INFO - Extraction complete - Intent: True, Confidence: 0.90, IP: Configuration request for a Mikrotik device with IP address 10.0.102.10 to block YouTube and Facebook using Layer 7 protocol.
+2025-03-02 02:19:01,521 - src.utils.talita_ai_utils - INFO - Gate check passed, proceeding with event processing
+2025-03-02 02:19:01,522 - src.utils.talita_ai_utils - INFO - Starting configuration details parsing
+2025-03-02 02:19:07,958 - src.utils.talita_ai_utils - INFO - Parsed configuration - IP: 10.0.102.10, Vendor: Mikrotik, Command: /ip firewall layer7-protocol add name="block-youtube" regexp="^.+(youtube.com|ytimg.com).*$"
+/ip firewall layer7-protocol add name="block-facebook" regexp="^.+(facebook.com|fbcdn.net).*$"
+/ip firewall filter add chain=forward protocol=tcp layer7-protocol=block-youtube action=drop
+/ip firewall filter add chain=forward protocol=tcp layer7-protocol=block-facebook action=drop
+2025-03-02 02:19:07,958 - src.utils.talita_ai_utils - INFO - Generating device configuration
+2025-03-02 02:19:57,177 - src - INFO - Dashboard accessed by xnetmanager@example.com
+2025-03-02 02:20:06,324 - src.utils.talita_ai_utils - INFO - Processing configuration request: hai
+2025-03-02 02:20:06,324 - src.utils.talita_ai_utils - INFO - Starting configuration extraction analysis
+2025-03-02 02:20:08,725 - src.utils.talita_ai_utils - INFO - Extraction complete - Intent: False, Confidence: 0.10, IP: No specific request related to network configuration is made in this message.
+2025-03-02 02:20:08,725 - src.utils.talita_ai_utils - WARNING - Gate check failed - is_configuration_intent: False, result: No specific request related to network configuration is made in this message.
+2025-03-02 02:22:18,892 - src.utils.talita_ai_utils - INFO - Processing configuration request: buat konfigurasi firewall filter pada mikrotik dengan ip target 10.0.102.10 untuk memblokir tiktok
+2025-03-02 02:22:18,892 - src.utils.talita_ai_utils - INFO - Starting configuration extraction analysis
+2025-03-02 02:22:20,962 - src.utils.talita_ai_utils - INFO - Extraction complete - Intent: True, Confidence: 0.95, IP: Configuration request to create a firewall filter rule on a Mikrotik device with the target IP address of 10.0.102.10, specifically to block access to TikTok.
+2025-03-02 02:22:20,963 - src.utils.talita_ai_utils - INFO - Gate check passed, proceeding with event processing
+2025-03-02 02:22:20,963 - src.utils.talita_ai_utils - INFO - Starting configuration details parsing
+2025-03-02 02:22:23,327 - src.utils.talita_ai_utils - INFO - Parsed configuration - IP: 10.0.102.10, Vendor: Mikrotik, Command: /ip firewall filter add chain=forward src-address=10.0.102.10 dst-address-list=TikTok action=drop comment="Block TikTok access for 10.0.102.10" 
+
+/ip firewall address-list add list=TikTok address=<tiktok_ip_addresses> comment="Add known TikTok IP addresses here"
+2025-03-02 02:22:23,327 - src.utils.talita_ai_utils - INFO - Generating device configuration
+2025-03-02 02:22:29,771 - src.utils.talita_ai_utils - INFO - Generated configuration: /ip firewall filter add chain=forward src-address=10.0.102.10 dst-address-list=TikTok action=drop comment="Block TikTok access for 10.0.102.10"
+
+/ip firewall address-list add list=TikTok address=<tiktok_ip_addresses> comment="Add known TikTok IP addresses here"
+2025-03-02 02:22:29,772 - src.utils.talita_ai_utils - INFO - Configuration request processed successfully
+2025-03-02 02:28:35,138 - src.utils.talita_ai_utils - INFO - Processing configuration request: buat konfigurasi firewall filter pada mikrotik dengan ip target 10.0.102.10 untuk memblokir tiktok
+2025-03-02 02:28:35,138 - src.utils.talita_ai_utils - INFO - Starting configuration extraction analysis
+2025-03-02 02:28:36,717 - src.utils.talita_ai_utils - INFO - Extraction complete - Intent: True, Confidence: 0.95, IP: Configuration request for creating a firewall filter rule on a MikroTik device with the target IP address 10.0.102.10 to block TikTok.
+2025-03-02 02:28:36,717 - src.utils.talita_ai_utils - INFO - Gate check passed, proceeding with event processing
+2025-03-02 02:28:36,718 - src.utils.talita_ai_utils - INFO - Starting configuration details parsing
+2025-03-02 02:28:38,982 - src.utils.talita_ai_utils - INFO - Parsed configuration - IP: 10.0.102.10, Vendor: Mikrotik, Command: /ip firewall filter add chain=forward protocol=tcp src-address=10.0.102.10 content="tiktok" action=drop comment="Block TikTok traffic for IP 10.0.102.10"
+2025-03-02 02:28:38,982 - src.utils.talita_ai_utils - INFO - Generating device configuration
+2025-03-02 02:28:44,605 - src.utils.talita_ai_utils - INFO - Generated configuration: /ip firewall filter add chain=forward protocol=tcp src-address=10.0.102.10 content="tiktok" action=drop comment="Block TikTok traffic for IP 10.0.102.10"
+2025-03-02 02:28:44,605 - src.utils.talita_ai_utils - INFO - Configuration request processed successfully
+2025-03-02 02:31:09,661 - src - INFO - Dashboard accessed by xnetmanager@example.com
+2025-03-02 02:31:17,451 - src.utils.talita_ai_utils - INFO - Processing configuration request: if (!message) message = "[Error: Empty response]";
+2025-03-02 02:31:17,451 - src.utils.talita_ai_utils - INFO - Starting configuration extraction analysis
+2025-03-02 02:31:18,775 - src.utils.talita_ai_utils - INFO - Extraction complete - Intent: False, Confidence: 0.95, IP: A JavaScript code snippet checking for an empty response; not a network configuration request.
+2025-03-02 02:31:18,776 - src.utils.talita_ai_utils - WARNING - Gate check failed - is_configuration_intent: False, result: A JavaScript code snippet checking for an empty response; not a network configuration request.
+2025-03-02 02:31:52,052 - src.utils.talita_ai_utils - INFO - Processing configuration request: if (!message) message = "[Error: Empty response]";
+2025-03-02 02:31:52,052 - src.utils.talita_ai_utils - INFO - Starting configuration extraction analysis
+2025-03-02 02:31:53,768 - src.utils.talita_ai_utils - INFO - Extraction complete - Intent: False, Confidence: 0.70, IP: The user's request does not contain network configuration details. It is a conditional assignment for a message variable, likely related to error handling in programming.
+2025-03-02 02:31:53,769 - src.utils.talita_ai_utils - WARNING - Gate check failed - is_configuration_intent: False, result: The user's request does not contain network configuration details. It is a conditional assignment for a message variable, likely related to error handling in programming.
+2025-03-02 02:32:39,278 - src.utils.talita_ai_utils - INFO - Processing configuration request: blok twitter pada mikrotik target ip 10.0.102.10
+2025-03-02 02:32:39,278 - src.utils.talita_ai_utils - INFO - Starting configuration extraction analysis
+2025-03-02 02:32:41,459 - src.utils.talita_ai_utils - INFO - Extraction complete - Intent: True, Confidence: 0.95, IP: Configuration request for Mikrotik device to block Twitter for target IP 10.0.102.10
+2025-03-02 02:32:41,459 - src.utils.talita_ai_utils - INFO - Gate check passed, proceeding with event processing
+2025-03-02 02:32:41,460 - src.utils.talita_ai_utils - INFO - Starting configuration details parsing
+2025-03-02 02:32:43,973 - src.utils.talita_ai_utils - INFO - Parsed configuration - IP: 10.0.102.10, Vendor: Mikrotik, Command: /ip firewall filter add chain=forward src-address=10.0.102.10 dst-host=twitter.com action=drop comment="Block Twitter for 10.0.102.10"
+2025-03-02 02:32:43,973 - src.utils.talita_ai_utils - INFO - Generating device configuration
+2025-03-02 02:32:52,132 - src.utils.talita_ai_utils - INFO - Generated configuration: /ip firewall filter add chain=forward src-address=10.0.102.10 protocol=tcp content=twitter.com action=drop comment="Block Twitter for 10.0.102.10"
+2025-03-02 02:32:52,132 - src.utils.talita_ai_utils - INFO - Configuration request processed successfully
+2025-03-02 02:33:34,175 - src.utils.talita_ai_utils - INFO - Processing configuration request: perbaiki perintah seperti yang anda sarankan
+2025-03-02 02:33:34,175 - src.utils.talita_ai_utils - INFO - Starting configuration extraction analysis
+2025-03-02 02:33:36,795 - src.utils.talita_ai_utils - INFO - Extraction complete - Intent: False, Confidence: 0.50, IP: The request is in Indonesian and translates to 'fix the command as you suggested.' It does not contain enough information about the specific command, target device's IP address, or the vendor of the device. Therefore, it's not a valid configuration command request.
+2025-03-02 02:33:36,795 - src.utils.talita_ai_utils - WARNING - Gate check failed - is_configuration_intent: False, result: The request is in Indonesian and translates to 'fix the command as you suggested.' It does not contain enough information about the specific command, target device's IP address, or the vendor of the device. Therefore, it's not a valid configuration command request.
+2025-03-02 02:36:15,491 - src.utils.talita_ai_utils - INFO - Processing configuration request: buat konfirugasi bandwidth simple pada mikrotik target ip 10.0.102.10
+2025-03-02 02:36:15,491 - src.utils.talita_ai_utils - INFO - Starting configuration extraction analysis
+2025-03-02 02:36:17,359 - src.utils.talita_ai_utils - INFO - Extraction complete - Intent: True, Confidence: 0.95, IP: The request is for a simple bandwidth configuration on a Mikrotik device with target IP address 10.0.102.10.
+2025-03-02 02:36:17,359 - src.utils.talita_ai_utils - INFO - Gate check passed, proceeding with event processing
+2025-03-02 02:36:17,359 - src.utils.talita_ai_utils - INFO - Starting configuration details parsing
+2025-03-02 02:36:19,010 - src.utils.talita_ai_utils - INFO - Parsed configuration - IP: 10.0.102.10, Vendor: Mikrotik, Command: /queue simple add max-limit=5M/5M target=10.0.102.10 comment="Simple Bandwidth Configuration"
+2025-03-02 02:36:19,011 - src.utils.talita_ai_utils - INFO - Generating device configuration
+2025-03-02 02:36:25,127 - src.utils.talita_ai_utils - INFO - Generated configuration: /queue simple add max-limit=5M/5M target=10.0.102.10 comment="Simple Bandwidth Configuration"
+2025-03-02 02:36:25,127 - src.utils.talita_ai_utils - INFO - Configuration request processed successfully
+2025-03-02 02:37:34,149 - src - INFO - xnetmanager@example.com accessed index_configuration_file
+2025-03-02 02:38:52,985 - src.utils.talita_ai_utils - INFO - Processing configuration request: periksa status interface mikrotik target ip 10.0.102.10, apakah up atau down ?
+2025-03-02 02:38:52,985 - src.utils.talita_ai_utils - INFO - Starting configuration extraction analysis
+2025-03-02 02:38:54,665 - src.utils.talita_ai_utils - INFO - Extraction complete - Intent: True, Confidence: 0.90, IP: Check the status of Mikrotik router interfaces with IP 10.0.102.10.
+2025-03-02 02:38:54,665 - src.utils.talita_ai_utils - INFO - Gate check passed, proceeding with event processing
+2025-03-02 02:38:54,665 - src.utils.talita_ai_utils - INFO - Starting configuration details parsing
+2025-03-02 02:38:55,765 - src.utils.talita_ai_utils - INFO - Parsed configuration - IP: 10.0.102.10, Vendor: Mikrotik, Command: /interface print
+2025-03-02 02:38:55,766 - src.utils.talita_ai_utils - INFO - Generating device configuration
+2025-03-02 02:39:02,551 - src.utils.talita_ai_utils - INFO - Generated configuration: /interface print
+2025-03-02 02:39:02,552 - src.utils.talita_ai_utils - INFO - Configuration request processed successfully
+2025-03-02 02:39:54,684 - src.utils.talita_ai_utils - INFO - Processing configuration request: periksa ip neighbor apa saja yang terdeteksi pada mikrotik target ip 10.0.102.10
+2025-03-02 02:39:54,685 - src.utils.talita_ai_utils - INFO - Starting configuration extraction analysis
+2025-03-02 02:39:56,933 - src.utils.talita_ai_utils - INFO - Extraction complete - Intent: True, Confidence: 0.90, IP: The request is to check detected IP neighbors on a Mikrotik device with the target IP address 10.0.102.10.
+2025-03-02 02:39:56,933 - src.utils.talita_ai_utils - INFO - Gate check passed, proceeding with event processing
+2025-03-02 02:39:56,933 - src.utils.talita_ai_utils - INFO - Starting configuration details parsing
+2025-03-02 02:39:57,829 - src.utils.talita_ai_utils - INFO - Parsed configuration - IP: 10.0.102.10, Vendor: Mikrotik, Command: /ip neighbor print
+2025-03-02 02:39:57,829 - src.utils.talita_ai_utils - INFO - Generating device configuration
+2025-03-02 02:40:04,184 - src.utils.talita_ai_utils - INFO - Generated configuration: /ip neighbor print
+2025-03-02 02:40:04,184 - src.utils.talita_ai_utils - INFO - Configuration request processed successfully

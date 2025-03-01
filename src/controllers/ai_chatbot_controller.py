@@ -16,7 +16,7 @@ from .decorators import (
     required_2fa,
 )
 from flask_login import logout_user
-from src.utils.talita_ai_utils import talita_chatbot
+from src.utils.talita_ai_utils import talita_chatbot, NetworkAutomationUtility
 import logging
 from src import db
 
@@ -74,24 +74,45 @@ def before_request_func():
 # --------------------------------------------------------------------------------
 
 
+# @chatbot_bp.route("/chatbot/chat", methods=["POST"])
+# @login_required
+# @required_2fa
+# def chat_with_talita():
+#     # Ambil pesan dari body permintaan
+#     data = request.get_json()
+#     question = data.get("message", "").strip()
+
+#     if not question:
+#         return jsonify({"success": False, "message": "Please enter a question."}), 400
+
+#     # Ambil ID pengguna saat ini (dari Flask-Login)
+#     user_id = str(current_user.id) if current_user.is_authenticated else "anonymous"
+
+#     # Gunakan fungsi utilitas untuk mengirim pertanyaan ke TALITA
+#     response = talita_chatbot(question, user_id)
+
+#     if response["success"]:
+#         return jsonify(response), 200
+#     else:
+#         return jsonify(response), 500
+
+
 @chatbot_bp.route("/chatbot/chat", methods=["POST"])
 @login_required
 @required_2fa
 def chat_with_talita():
     # Ambil pesan dari body permintaan
     data = request.get_json()
-    question = data.get("message", "").strip()
+    user_input = data.get("message", "").strip()
 
-    if not question:
+    if not user_input:
         return jsonify({"success": False, "message": "Please enter a question."}), 400
 
-    # Ambil ID pengguna saat ini (dari Flask-Login)
-    user_id = str(current_user.id) if current_user.is_authenticated else "anonymous"
-
-    # Gunakan fungsi utilitas untuk mengirim pertanyaan ke TALITA
-    response = talita_chatbot(question, user_id)
-
-    if response["success"]:
-        return jsonify(response), 200
-    else:
-        return jsonify(response), 500
+    llm_call = NetworkAutomationUtility()
+    chat_intent = llm_call.process_configuration_request(
+        user_input,
+        "admin",
+        "admin",
+        22,
+    )
+    return jsonify({"success": True, "message": chat_intent}), 200

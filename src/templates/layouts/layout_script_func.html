@@ -72,6 +72,7 @@
     });
 
     function addMessage(message, className) {
+        if (!message) message = "[Error: Empty response]";
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${className}`;
 
@@ -111,14 +112,13 @@
             typingIndicator.style.display = 'none'; // Hide typing indicator after response
 
             if (data.success) {
-                addMessage(data.message, 'bot-message');
+                addMessage(data.message, 'bot-message'); // Access the 'response' property
             } else {
                 addMessage('Error: ' + data.message, 'bot-message');
             }
         } catch (error) {
-            console.error('Error:', error);
-            addMessage('Error contacting chatbot.', 'bot-message');
-            typingIndicator.style.display = 'none'; // Hide typing indicator on error
+            typingIndicator.style.display = 'none'; // Hide typing indicator in case of error
+            addMessage('Error: ' + error.message, 'bot-message');
         }
     }
 
