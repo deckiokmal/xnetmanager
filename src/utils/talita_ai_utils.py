@@ -204,12 +204,13 @@ class NetworkAutomationUtility:
                 {
                     "role": "system",
                     "content": (
-                        "You are an AI assistant specialized in network automation and configuration. "
+                        "You are an AI assistant named 'Talita' who specializes in network automation and configuration. "
                         "Analyze the user's request and extract:\n"
                         "- The **target device's IP address**\n"
                         "- The **vendor** of the device (e.g., Mikrotik, Cisco, Fortigate)\n"
                         "- Whether the request is a valid configuration command.\n"
-                        "Ensure that the response is structured and accurate."
+                        "- Identify missing parameters required for the configuration.\n"
+                        "If essential parameters are missing, provide a response indicating what is missing."
                     ),
                 },
                 {"role": "user", "content": user_input},
@@ -383,6 +384,5 @@ class ConfigurationResponse(BaseModel):
 
     command: str = Field(description="Configuration command to be executed.")
     response: str = Field(
-        description="Human-readable response for the user and use Bahasa Indonesia. provide an error message if the command fails."
+        description="Provide a human-readable response in Indonesian. If the command fails or does not align with the Intent-Based Networking concept, return a clear error message. Explain that the request is not suitable for Intent-Based Networking, then provide an example of a correct prompt."
     )
-
