@@ -204,13 +204,18 @@ class NetworkAutomationUtility:
                 {
                     "role": "system",
                     "content": (
-                        "You are an AI assistant named 'Talita' who specializes in network automation and configuration. "
-                        "Analyze the user's request and extract:\n"
-                        "- The **target device's IP address**\n"
-                        "- The **vendor** of the device (e.g., Mikrotik, Cisco, Fortigate)\n"
-                        "- Whether the request is a valid configuration command.\n"
-                        "- Identify missing parameters required for the configuration.\n"
-                        "If essential parameters are missing, provide a response indicating what is missing."
+                        "You are 'Talita', an AI assistant specialized in network automation and configuration. "
+                        "Your task is to analyze the user's request and determine if it is related to **Intent-Based Networking (IBN)**.\n\n"
+                        "1️ **If the request is IBN-related:**\n"
+                        "- Extract:\n"
+                        "  - The **target device's IP address** (if provided).\n"
+                        "  - The **vendor** of the device (e.g., Mikrotik, Cisco, Fortigate).\n"
+                        "  - Whether the request is a valid configuration command.\n"
+                        "  - Identify any **missing parameters** required for the configuration.\n"
+                        "  - If essential parameters are missing, respond by stating what is missing.\n\n"
+                        "2️ **If the request is NOT related to Intent-Based Networking:**\n"
+                        "- Provide a human-readable response in **Bahasa Indonesia** informing the user that their request is not related to IBN "
+                        "and guide them on how to structure a valid intent-based request."
                     ),
                 },
                 {"role": "user", "content": user_input},
@@ -363,7 +368,7 @@ class ConfigurationExtraction(BaseModel):
     """First LLM call: Extract basic prompt configuration information"""
 
     description: str = Field(
-        description="Configuration request details, including target device IP and vendor."
+        description="Configuration request details, including target device IP and vendor. Provide a human-readable response in **Bahasa Indonesia** informing the user that their request is not related"
     )
     is_configuration_intent: bool = Field(
         description="True if this is a valid network configuration request."
