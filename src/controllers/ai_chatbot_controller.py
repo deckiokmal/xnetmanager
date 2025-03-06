@@ -16,7 +16,7 @@ from .decorators import (
     required_2fa,
 )
 from flask_login import logout_user
-from src.utils.talita_ai_utils import talita_chatbot, NetworkAutomationUtility
+from src.utils.talita_ai_utils import talita_chatbot, process_intent_request
 import logging
 from src import db
 
@@ -108,11 +108,12 @@ def chat_with_talita():
     if not user_input:
         return jsonify({"success": False, "message": "Please enter a question."}), 400
 
-    llm_call = NetworkAutomationUtility()
-    chat_intent = llm_call.process_configuration_request(
-        user_input,
-        "admin",
-        "admin",
-        22,
-    )
+    chat_intent = process_intent_request(user_input)
+
+    if chat_intent == "other":
+        # Ambil ID pengguna saat ini (dari Flask-Login)
+        user_id = str(current_user.id) if current_user.is_authenticated else "anonymous"
+        response = talita_chatbot(user_input, user_id)
+        return jsonify(response), 200
+
     return jsonify({"success": True, "message": chat_intent}), 200

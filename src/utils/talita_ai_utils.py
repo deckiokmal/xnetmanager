@@ -5,6 +5,9 @@ from openai import OpenAI
 from pydantic import BaseModel, Field
 from .config_manager_utils import ConfigurationManagerUtils
 import logging
+from src.models.app_models import DeviceManager
+from typing import Optional, Literal
+import re
 
 # Set up logging configuration
 logging.basicConfig(
@@ -148,246 +151,336 @@ def talita_chatbot(question, user_id):
 # ----------------------------------------------------------
 # OpenAI API: Generate Configuration File
 # ----------------------------------------------------------
-class NetworkAutomationUtility:
-    def __init__(self):
-        self.client = OpenAI()
-        self.model = "gpt-4o"
-        self.tools = [
-            {
-                "type": "function",
-                "function": {
-                    "name": "send_configuration",
-                    "description": "Send network configuration to a device using SSH",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "ip_address": {
-                                "type": "string",
-                                "description": "Device IP address",
-                            },
-                            "username": {
-                                "type": "string",
-                                "description": "SSH username",
-                            },
-                            "password": {
-                                "type": "string",
-                                "description": "SSH password",
-                            },
-                            "ssh": {"type": "number", "description": "SSH Port"},
-                            "command": {
-                                "type": "string",
-                                "description": "Configuration command",
-                            },
-                        },
-                        "required": [
-                            "ip_address",
-                            "username",
-                            "password",
-                            "ssh",
-                            "command",
-                        ],
-                        "additionalProperties": False,
-                    },
-                    "strict": True,
-                },
-            }
-        ]
+client = OpenAI()
+model = "gpt-4o"
 
-    def extract_configuration_info(self, user_input: str):
-        """First LLM call to determine if input is a configuration intent"""
-        logger.info("Starting configuration extraction analysis")
-        logger.debug(f"Input text: {user_input}")
 
-        completion = self.client.beta.chat.completions.parse(
-            model=self.model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are 'Talita', an AI assistant specialized in network automation and configuration. "
-                        "Your task is to analyze the user's request and determine if it is related to **Intent-Based Networking (IBN)**.\n\n"
-                        "1️ **If the request is IBN-related:**\n"
-                        "- Extract:\n"
-                        "  - The **target device's IP address** (if provided).\n"
-                        "  - The **vendor** of the device (e.g., Mikrotik, Cisco, Fortigate).\n"
-                        "  - Whether the request is a valid configuration command.\n"
-                        "  - Identify any **missing parameters** required for the configuration.\n"
-                        "  - If essential parameters are missing, respond by stating what is missing.\n\n"
-                        "2️ **If the request is NOT related to Intent-Based Networking:**\n"
-                        "- Provide a human-readable response in **Bahasa Indonesia** informing the user that their request is not related to IBN "
-                        "and guide them on how to structure a valid intent-based request."
-                    ),
-                },
-                {"role": "user", "content": user_input},
-            ],
-            response_format=ConfigurationExtraction,
-        )
+# --------------------------------------------------------------
+# Step 1: Define Function logic for application
+# --------------------------------------------------------------
+class NetworkManager:
 
-        result = completion.choices[0].message.parsed if completion.choices else None
-        if not result:
-            logger.error("LLM failed to parse the request")
-            return None
-
-        logger.info(
-            f"Extraction complete - Intent: {result.is_configuration_intent}, Confidence: {result.confidence_score:.2f}, "
-            f"IP: {result.description}"
-        )
-        return result
-
-    def parse_configuration_details(self, description: str):
-        """Second LLM call to extract specific configuration details"""
-        logger.info("Starting configuration details parsing")
-
-        completion = self.client.beta.chat.completions.parse(
-            model=self.model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Extract detailed configuration information, ensuring vendor-specific syntax is included.",
-                },
-                {"role": "user", "content": description},
-            ],
-            response_format=ConfigurationDetails,
-        )
-
-        result = completion.choices[0].message.parsed if completion.choices else None
-        if not result:
-            logger.error("LLM failed to parse configuration details")
-            return None
-
-        logger.info(
-            f"Parsed configuration - IP: {result.ip_address}, Vendor: {result.vendor}, Command: {result.command}"
-        )
-        return result
-
-    def generate_configuration(self, username, password, ssh, configuration_details):
-        """Third LLM call: Provide the configuration response"""
-        logger.info("Generating device configuration")
-
-        system_prompt = """
-        You are a network automation expert. Generate configuration commands based on the user's intent.
-        Ensure that the generated command is specific to the vendor's CLI syntax.
+    @staticmethod
+    def get_credentials(ip_address: str):
         """
+        Mengambil kredensial jaringan dari database berdasarkan ip_address.
+        Jika tidak ditemukan, gunakan nilai default dari environment variable.
+        """
+        credential = DeviceManager.query.filter_by(ip_address=ip_address).first()
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {
-                "role": "user",
-                "content": f"username: {username}, password: {password}, ssh: {ssh}, {str(configuration_details.model_dump())}",
-            },
-        ]
+        if credential:
+            return credential.username, credential.password, credential.ssh
+        else:
+            return False
 
-        completion = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            tools=self.tools,
+    @staticmethod
+    def send_configuration(ip_address: str, command: str) -> dict:
+        """Send configuration commands to network device"""
+        username, password, ssh_port = NetworkManager.get_credentials(ip_address)
+        config_manager = ConfigurationManagerUtils(
+            ip_address, username, password, ssh_port
         )
+        result = config_manager.configure_device(command)
+        return {"success": "success" in result.lower(), "response": result}
 
-        if not completion.choices:
-            logger.error("LLM failed to generate configuration")
-            return None
-
-        for tool_call in completion.choices[0].message.tool_calls:
-            name = tool_call.function.name
-            args = json.loads(tool_call.function.arguments)
-            messages.append(completion.choices[0].message)
-            result = self.call_function(name, args)
-            messages.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": json.dumps(result),
-                }
-            )
-
-        completion_2 = self.client.beta.chat.completions.parse(
-            model=self.model,
-            messages=messages,
-            tools=self.tools,
-            response_format=ConfigurationResponse,
+    @staticmethod
+    def send_monitoring_command(ip_address: str, command: str) -> dict:
+        """Send monitoring command to network device"""
+        logger.debug(f"Executing monitoring command: {command} on {ip_address}")
+        username, password, ssh_port = NetworkManager.get_credentials(ip_address)
+        config_manager = ConfigurationManagerUtils(
+            ip_address, username, password, ssh_port
         )
-
-        if not completion_2.choices:
-            logger.error("LLM failed to generate final configuration response")
-            return None
-
-        logger.info(
-            f"Generated configuration: {completion_2.choices[0].message.parsed.command}"
-        )
-        return completion_2.choices[0].message.parsed
-
-    def process_configuration_request(self, user_input: str, username, password, ssh):
-        """Main function implementing the prompt chain"""
-        logger.info(f"Processing configuration request: {user_input}")
-
-        initial_extraction = self.extract_configuration_info(user_input)
-        # Gate check: Verify if it's a configuration event with sufficient confidence
-        if (
-            not initial_extraction.is_configuration_intent
-            or initial_extraction.confidence_score < 0.7
-        ):
-            logger.warning(
-                f"Gate check failed - is_configuration_intent: {initial_extraction.is_configuration_intent}, result: {initial_extraction.description}"
-            )
-            return initial_extraction.description
-
-        logger.info("Gate check passed, proceeding with event processing")
-
-        # Second LLM call: Extract detailed configuration info
-        configuration_details = self.parse_configuration_details(
-            initial_extraction.description
-        )
-        if not configuration_details:
-            logger.warning("Failed to extract configuration details")
-            return None
-
-        # Third LLM call: Generate configuration
-        confirmation = self.generate_configuration(
-            username, password, ssh, configuration_details
-        )
-        if not confirmation:
-            logger.warning("Failed to generate configuration")
-            return None
-
-        logger.info("Configuration request processed successfully")
-        return confirmation.response
-
-    def send_configuration(self, ip_address, username, password, ssh, command):
-        configuration = ConfigurationManagerUtils(ip_address, username, password, ssh)
-        send_command = configuration.configure_device(command)
-        status = send_command.split(" ")[0]
-        return {"success": status == "success", "message": send_command}
-
-    def call_function(self, name, args):
-        if name == "send_configuration":
-            return self.send_configuration(**args)
-        raise ValueError(f"Unknown function: {name}")
+        result = config_manager.configure_device(
+            command
+        )  # Pastikan ini sesuai dengan library yang digunakan
+        return {"success": "success" in result.lower(), "response": result}
 
 
-class ConfigurationExtraction(BaseModel):
-    """First LLM call: Extract basic prompt configuration information"""
+# --------------------------------------------------------------
+# Step 2: Define the data models for routing and responses
+# --------------------------------------------------------------
+class NetworkingIntentType(BaseModel):
+    """Router LLM call: Determine the type of networking intent"""
 
-    description: str = Field(
-        description="Configuration request details, including target device IP and vendor. Provide a human-readable response in **Bahasa Indonesia** informing the user that their request is not related"
-    )
-    is_configuration_intent: bool = Field(
-        description="True if this is a valid network configuration request."
+    intent: Literal["configure", "monitor", "other"] = Field(
+        description="Type of networking intent being made"
     )
     confidence_score: float = Field(description="Confidence score between 0 and 1")
+    description: str = Field(
+        description="Cleaned description of the intent with device target ip address and vendor. Always verify the configuration by executing the appropriate command and presenting the results to the user for confirmation"
+    )
 
 
 class ConfigurationDetails(BaseModel):
-    """Second LLM call: Parse specific configuration details"""
+    """Details for configuring a network device"""
 
-    ip_address: str = Field(description="IP Address of target device")
-    vendor: str = Field(description="Device vendor (e.g., Mikrotik, Cisco)")
-    command: str = Field(description="Configuration command to be executed")
-
-
-class ConfigurationResponse(BaseModel):
-    """Third LLM call: Provide the configuration response"""
-
-    command: str = Field(description="Configuration command to be executed.")
-    response: str = Field(
-        description="Provide a human-readable response in Indonesian. If the command fails or does not align with the Intent-Based Networking concept, return a clear error message. Explain that the request is not suitable for Intent-Based Networking, then provide an example of a correct prompt."
+    ip_address: str = Field(description="IP address of the target device to configure")
+    vendor: str = Field(description="Vendor of the network device")
+    command: str = Field(
+        description="This command configures the device per vendor syntax without text formatting."
     )
+
+
+class MonitoringDetails(BaseModel):
+    """Details for monitoring a network device"""
+
+    ip_address: str = Field(description="IP address of the target device to monitor")
+    vendor: str = Field(description="Vendor of the network device")
+    command: str = Field(
+        description="Command to monitor the device. If a 'ping' command needs to be executed, it must always be set to an interval of four pings only to prevent continuous output, ensuring controlled execution and optimized system performance."
+    )
+
+
+class NetworkResponse(BaseModel):
+    """Response from network operations"""
+
+    response: str = Field(description="Result of the operation")
+    success: bool = Field(
+        description="Indicates whether the operation was successful. Always verify the configuration by executing the appropriate command and presenting the results to the user for confirmation."
+    )
+
+
+# --------------------------------------------------------------
+# Step 3: Define the routing and processing functions
+# --------------------------------------------------------------
+def route_network_intent(user_input: str) -> NetworkingIntentType:
+    """Router LLM call to determine the type of user intent request"""
+    logger.info("Routing user intent request")
+
+    completion = client.beta.chat.completions.parse(
+        model=model,
+        messages=[
+            {
+                "role": "system",
+                "content": "Determine if this is a request to configure or monitor network devices.",
+            },
+            {"role": "user", "content": user_input},
+        ],
+        response_format=NetworkingIntentType,
+    )
+
+    result = completion.choices[0].message.parsed
+    logger.info(
+        f"Request routed as: {result.intent} with confidence: {result.confidence_score}"
+    )
+    return result
+
+
+def handle_configure_intent(description: str) -> ConfigurationDetails:
+    """Process a configure request and parsed command"""
+    logger.info("Processing configure request")
+
+    # Get configure details
+    completion = client.beta.chat.completions.parse(
+        model=model,
+        messages=[
+            {
+                "role": "system",
+                "content": "Extract details for creating a new configuration intent. With added command to check configuration results.",
+            },
+            {
+                "role": "user",
+                "content": description,
+            },
+        ],
+        response_format=ConfigurationDetails,
+    )
+
+    details = completion.choices[0].message.parsed
+
+    logger.info(f"New configure: {details.model_dump_json(indent=2)}")
+
+    # Generate configuration details
+    return details
+
+
+def handle_monitor_intent(description: str) -> MonitoringDetails:
+    """Process a monitor request and parsed command"""
+    logger.info("Processing monitor request")
+
+    # Get configure details
+    completion = client.beta.chat.completions.parse(
+        model=model,
+        messages=[
+            {
+                "role": "system",
+                "content": "Extract details for creating a new monitor intent.",
+            },
+            {
+                "role": "user",
+                "content": description,
+            },
+        ],
+        response_format=MonitoringDetails,
+    )
+
+    details = completion.choices[0].message.parsed
+
+    logger.info(f"New configure: {details.model_dump_json(indent=2)}")
+
+    # Generate configuration details
+    return details
+
+
+def process_intent_request(user_input: str) -> Optional[NetworkResponse]:
+    """Main function implementing the routing workflow"""
+    logger.info("Processing intent request")
+
+    # Route the request
+    route_result = route_network_intent(user_input)
+
+    # Check confidence threshold
+    if route_result.confidence_score < 0.7:
+        logger.warning(f"Low confidence score: {route_result.confidence_score}")
+        return None
+
+    # Route to appropriate handler
+    if route_result.intent == "other":
+        return f"other"
+
+    # Periksa IP Address ke database sebelum LLM Call
+    pattern = r"target\s+ip\s+(\d+\.\d+\.\d+\.\d+)"
+    match = re.search(pattern, str(user_input), re.IGNORECASE)
+    if match:
+        ip_address = match.group(1)
+        credentials = NetworkManager.get_credentials(ip_address)
+        if credentials:
+
+            # Route to appropriate handler
+            if route_result.intent == "configure":
+                configure_details = handle_configure_intent(route_result.description)
+                result = execute_command(configure_details)
+                return result.response
+            elif route_result.intent == "monitor":
+                monitor_details = handle_monitor_intent(route_result.description)
+                result = execute_command(monitor_details)
+                return result.response
+            else:
+                logger.warning("Request type not supported")
+                return f"request gagal"
+        else:
+            return f"The target IP address is not found in the Device Management system"
+    else:
+        return f"No information available for the target IP <ip_address>. Please verify the IP address and try again"
+
+
+# --------------------------------------------------------------
+# Step 4: Define Function Calling OpenAI
+# --------------------------------------------------------------
+def execute_command(configuration_details):
+    """
+    Executes a network configuration command via OpenAI API and SSH.
+    """
+    # Step 1: Generate completion with OpenAI API
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "send_configuration",
+                "description": "Send network configuration to a device using SSH",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "ip_address": {
+                            "type": "string",
+                            "description": "Device IP address",
+                        },
+                        "command": {
+                            "type": "string",
+                            "description": "Configuration command With added command to check configuration results",
+                        },
+                    },
+                    "required": [
+                        "ip_address",
+                        "command",
+                    ],
+                    "additionalProperties": False,
+                },
+                "strict": True,
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "send_monitoring_command",
+                "description": "Send monitoring command to a device using SSH",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "ip_address": {"type": "string"},
+                        "command": {"type": "string"},
+                    },
+                    "required": ["ip_address", "command"],
+                    "additionalProperties": False,
+                },
+                "strict": True,
+            },
+        },
+    ]
+
+    system_prompt = """
+    You are a network automation expert. Validate command with spesific vendor syntax.
+    - Use send_configuration for configuration changes
+    - Use send_monitoring_command for read-only monitoring commands
+    """
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {
+            "role": "user",
+            "content": f"Configuration detail: {str(configuration_details.model_dump())}",
+        },
+    ]
+
+    completion = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        tools=tools,
+    )
+
+    # Step 2: Extract function calls
+    tool_calls = completion.choices[0].message.tool_calls
+
+    if not tool_calls:  # <-- Tambahkan ini
+        logger.error("No tool calls found in OpenAI response")
+        return (
+            f"There is an issue with the system at the moment. Please try again later."
+        )
+
+    # Step 3: Execute the corresponding function
+    def call_function(name, args):
+        if name == "send_configuration":
+            return NetworkManager.send_configuration(**args)
+        elif name == "send_monitoring_command":
+            return NetworkManager.send_monitoring_command(**args)
+        raise ValueError(f"Unknown function: {name}")
+
+    for tool_call in tool_calls:
+        name = tool_call.function.name
+        args = json.loads(tool_call.function.arguments)
+        messages.append(completion.choices[0].message)
+        result = call_function(name, args)
+        messages.append(
+            {
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": json.dumps(result),
+            }
+        )
+
+    # Step 4: Process the response
+    completion_2 = client.beta.chat.completions.parse(
+        model=model,
+        messages=messages,
+        tools=tools,
+        response_format=NetworkResponse,
+    )
+    # logger.info(f"Final OpenAI Response: {completion_2}")
+
+    if completion_2 is None or not completion_2.choices:
+        logger.error("OpenAI API response is None or empty")
+        return (
+            f"There is an issue with the system at the moment. Please try again later."
+        )
+
+    return completion_2.choices[0].message.parsed
