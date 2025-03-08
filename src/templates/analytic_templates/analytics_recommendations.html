@@ -1,17 +1,25 @@
 {% extends "layouts/layout.html" %}
+{% block page_heading %}Analyze Configuration{% endblock %}
+{% block title %}Analyze Configuration{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
-    <!-- Header -->
-    <h1 class="h3 mb-4 text-gray-800">
-        AI Analytics - {{ device.name }}
-        <small class="text-muted">({{ device.ip_address }})</small>
-    </h1>
 
     <div class="row">
         <!-- Live Config Panel -->
         <div class="col-lg-6">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
+                    <!-- Header -->
+                    <h1 class="h3 mb-4 text-gray-800">
+                        AI Analytics - {{ device.name }}
+                        <small class="text-muted">({{ device.ip_address }})</small>
+                    </h1>
+                    <!-- Tombol untuk membuka modal pembuatan perangkat baru -->
+                    <a href="{{ url_for('ai_agent_bp.analyze_device', device_id=device.id) }}"
+                        class="btn btn-sm btn-success btn-sm mb-3">
+                        <i class="fas fa-rocket"></i> Re-analyze Configuration
+                    </a>
                     <h6 class="m-0 font-weight-bold text-primary">
                         Current Configuration
                         <button class="btn btn-sm btn-secondary float-right" data-toggle="collapse"
@@ -37,7 +45,6 @@
                         {{ recommendations|length }} Suggestions
                     </div>
                 </div>
-
                 <div class="card-body ai-chat-container">
                     {% for rec in recommendations %}
                     <div class="ai-message card mb-3" id="rec-{{ rec.id }}">
@@ -54,8 +61,14 @@
                                     <small class="text-muted">
                                         Impact Area: {{ rec.impact_area|default('security', true) }}
                                     </small>
+                                    <small class="text-muted">
+                                        | Status: {{ rec.status|default('generated', true) }}
+                                    </small>
                                 </div>
                                 <div class="col text-right">
+                                    <button class="btn btn-sm btn-secondary mb-1" onclick="viewCommand('{{ rec.id }}')">
+                                        <i class="fas fa-eye"></i> View
+                                    </button>
                                     <button class="btn btn-sm btn-primary"
                                         onclick="applyRecommendation('{{ rec.id }}')">
                                         <i class="fas fa-rocket"></i> Apply
@@ -64,6 +77,18 @@
                                         id="spinner-{{ rec.id }}">
                                         <span class="sr-only">Loading...</span>
                                     </div>
+                                </div>
+                            </div>
+                            <div class="command-section d-none mt-3" id="command-{{ rec.id }}">
+                                <textarea class="form-control command-text p-2 bg-light border"
+                                    id="command-text-{{ rec.id }}">{{ rec.command }}</textarea>
+                                <button class="btn btn-sm btn-success mt-2"
+                                    onclick="saveRecommendation('{{ rec.id }}')">
+                                    <i class="fas fa-save"></i> Save
+                                </button>
+                                <div class="spinner-border spinner-border-sm text-primary d-none" role="status"
+                                    id="spinner-{{ rec.id }}">
+                                    <span class="sr-only">Saving...</span>
                                 </div>
                             </div>
                         </div>
@@ -76,6 +101,50 @@
 </div>
 
 <script>
+    function viewCommand(recId) {
+        var commandSection = document.getElementById('command-' + recId);
+        if (commandSection.classList.contains('d-none')) {
+            commandSection.classList.remove('d-none');
+        } else {
+            commandSection.classList.add('d-none');
+        }
+    }
+
+    function saveRecommendation(recId) {
+        const commandInput = document.getElementById(`command-text-${recId}`);
+        const newCommand = commandInput.value.trim();
+
+        if (!newCommand) {
+            alert('Command cannot be empty!');
+            return;
+        }
+
+        if (confirm('Save this updated configuration?')) {
+            const spinner = document.getElementById(`spinner-${recId}`);
+            spinner.classList.remove('d-none');
+
+            fetch(`/ai/edit_recommendations/${recId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ command: newCommand })
+            })
+                .then(response => {
+                    if (!response.ok) return response.json().then(err => { throw err; });
+                    return response.json();
+                })
+                .then(data => {
+                    spinner.classList.add('d-none');
+                    showToast('Recommendation updated successfully!', 'success');
+                })
+                .catch(error => {
+                    spinner.classList.add('d-none');
+                    showToast(`Error: ${error.error || 'Unknown error'}`, 'error');
+                });
+        }
+    }
+
     function applyRecommendation(recId) {
         if (confirm('Apply this configuration?')) {
             const spinner = document.getElementById(`spinner-${recId}`);
@@ -140,36 +209,4 @@
     });
 </script>
 
-<style>
-    .config-pre {
-        font-size: 0.8rem;
-        background: #f8f9fa;
-        padding: 15px;
-        border-radius: 5px;
-        max-height: 70vh;
-        overflow-y: auto;
-    }
-
-    .ai-chat-container {
-        max-height: 70vh;
-        overflow-y: auto;
-    }
-
-    .ai-message {
-        border-left: 3px solid #4e73df;
-        transition: transform 0.2s;
-    }
-
-    .ai-message:hover {
-        transform: translateX(5px);
-    }
-
-    .toast-container {
-        z-index: 1055;
-    }
-
-    .toast {
-        opacity: 0.9;
-    }
-</style>
 {% endblock %}

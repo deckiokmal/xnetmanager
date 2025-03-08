@@ -278,16 +278,17 @@
             </div>
         </div>
 
-        <!-- Modal Error Template Generation -->
-        <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <!-- Modal Status Template Generation -->
+        <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content bg-danger text-light">
+                <div class="modal-content text-light">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="errorModalLabel">Error Generating Template</h5>
+                        <h5 class="modal-title" id="statusModalLabel">Generating Template Status</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <p id="errorModalMessage"></p>
+                        <p id="statusModalMessage"></p>
+                        <ul id="statusDetailsList" class="mt-2"></ul>
                     </div>
                 </div>
             </div>
@@ -318,52 +319,6 @@
                 }, 1000);
             });
 
-            document.addEventListener("DOMContentLoaded", function () {
-                document.querySelectorAll('.generate-btn').forEach(function (button) {
-                    button.addEventListener('click', function (event) {
-                        event.preventDefault();  // Prevent the default behavior
-
-                        const templateId = this.getAttribute('data-template-id');
-                        const actionUrl = `/template-generator/${templateId}`;
-                        const csrfToken = document.querySelector('input[name="csrf_token"]').value; // Ambil token CSRF dari form
-
-                        showLoadingOverlay();  // Show the loading overlay when the form is submitted
-
-                        fetch(actionUrl, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json', // Pastikan tipe konten JSON
-                                'X-CSRFToken': csrfToken           // Kirim token CSRF di header
-                            },
-                            body: JSON.stringify({}) // Sertakan payload jika diperlukan
-                        })
-                            .then(response => response.json())
-                            .then(data => {
-                                hideLoadingOverlay();  // Hide the loading overlay once the request is complete
-
-                                if (data.is_valid) {
-                                    window.location.reload();  // Reload the page if successful
-                                } else {
-                                    // Display the error in a modal
-                                    document.getElementById('errorModalMessage').textContent = data.error_message;
-                                    var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-                                    errorModal.show();
-                                }
-                            })
-                            .catch(error => {
-                                hideLoadingOverlay();  // Hide the loading overlay
-                                console.error('Error:', error);
-                                document.getElementById('errorModalMessage').textContent = 'Terjadi kesalahan saat memproses permintaan.';
-                                var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-                                errorModal.show();
-                            });
-                    });
-                });
-            });    
-        </script>
-
-        <!-- handle template detail -->
-        <script>
             // Handle template detail
             function showTemplateDetails(button) {
                 const templateId = button.getAttribute("data-template-id");
@@ -389,5 +344,88 @@
                     })
                     .catch(error => console.error('Error fetching template details:', error));
             }
+
+            document.addEventListener("DOMContentLoaded", function () {
+                document.querySelectorAll('.generate-btn').forEach(function (button) {
+                    button.addEventListener('click', function (event) {
+                        event.preventDefault(); // Mencegah aksi default tombol
+
+                        const templateId = this.getAttribute('data-template-id');
+                        const actionUrl = `/template-generator/${templateId}`;
+                        const csrfToken = document.querySelector('input[name="csrf_token"]').value; // Ambil token CSRF
+
+                        showLoadingOverlay(); // Tampilkan loading overlay
+
+                        fetch(actionUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrfToken
+                            },
+                            body: JSON.stringify({})
+                        })
+                            .then(response => response.json())
+                            .then(data => {
+                                hideLoadingOverlay(); // Sembunyikan loading overlay
+
+                                // Ambil elemen modal dan elemen pesan
+                                const statusModal = document.getElementById('statusModal');
+                                const statusMessage = document.getElementById('statusModalMessage');
+                                const statusDetails = document.getElementById('statusDetailsList');
+
+                                // Kosongkan elemen status sebelumnya
+                                statusMessage.textContent = "";
+                                statusDetails.innerHTML = "";
+
+                                // Tentukan status dan warna modal
+                                if (data.is_valid) {
+                                    statusModal.querySelector('.modal-content').classList.remove('bg-danger');
+                                    statusModal.querySelector('.modal-content').classList.add('bg-success');
+
+                                    // Tampilkan pesan sukses
+                                    statusMessage.textContent = data.message || "Template berhasil digenerate!";
+                                } else {
+                                    statusModal.querySelector('.modal-content').classList.remove('bg-success');
+                                    statusModal.querySelector('.modal-content').classList.add('bg-danger');
+
+                                    // Tampilkan pesan error
+                                    statusMessage.textContent = data.message || "Terjadi kesalahan saat validasi.";
+
+                                    // Jika ada detail error, tampilkan dalam bentuk daftar
+                                    if (data.errors && Array.isArray(data.errors)) {
+                                        data.errors.forEach(error => {
+                                            const li = document.createElement('li');
+                                            li.textContent = error;
+                                            statusDetails.appendChild(li);
+                                        });
+                                    }
+                                }
+
+                                // Tampilkan modal status
+                                var modalInstance = new bootstrap.Modal(statusModal);
+                                modalInstance.show();
+                            })
+                            .catch(error => {
+                                hideLoadingOverlay(); // Sembunyikan loading overlay
+                                console.error('Error:', error);
+
+                                // Tampilkan error di modal
+                                const statusModal = document.getElementById('statusModal');
+                                const statusMessage = document.getElementById('statusModalMessage');
+                                const statusDetails = document.getElementById('statusDetailsList');
+
+                                statusModal.querySelector('.modal-content').classList.remove('bg-success');
+                                statusModal.querySelector('.modal-content').classList.add('bg-danger');
+
+                                statusMessage.textContent = 'Terjadi kesalahan saat memproses permintaan.';
+                                statusDetails.innerHTML = "";
+
+                                var modalInstance = new bootstrap.Modal(statusModal);
+                                modalInstance.show();
+                            });
+                    });
+                });
+            });
         </script>
+
         {% endblock %}

@@ -30,7 +30,7 @@ import string
 from src import db
 import time
 from sqlalchemy.exc import SQLAlchemyError
-from src.utils.openai_utils import summarize_error_with_openai
+from src.utils.openai_utils import ConfigurationFileManagement
 
 # Membuat blueprint untuk Network Manager (nm_bp) dan Error Handling (error_bp)
 nm_bp = Blueprint("nm", __name__)
@@ -393,8 +393,8 @@ def push_configs():
             response_dict = json.loads(response_json)
 
             if "message" in response_dict:
-                error_summary = summarize_error_with_openai(
-                    response_dict["message"], device.vendor
+                error_summary = ConfigurationFileManagement.validated_configuration(
+                    configuration=response_dict["message"], device_vendor=device.vendor
                 )
                 return {
                     "device_name": device.device_name,

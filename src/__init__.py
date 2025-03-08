@@ -167,12 +167,10 @@ def create_app():
     from .controllers.config_manager_controller import nm_bp
     from .utils.error_helper_utils import error_bp
     from .controllers.backup_controller import backup_bp
-    from .controllers.ai_chatbot_controller import chatbot_bp
+    from .controllers.ai_agent_controller import ai_agent_bp
     from .controllers.config_file_manager_controller import config_file_bp
     from .controllers.restfull_api_controller import restapi_bp
     from .controllers.whatsapp_gateway_controller import whatsapp_bp
-    from .controllers.analytic_controller import analytics_bp
-    from .controllers.ai_analytic_controller_deepseek import ai_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(users_bp)
@@ -183,12 +181,10 @@ def create_app():
     app.register_blueprint(nm_bp)
     app.register_blueprint(error_bp)
     app.register_blueprint(backup_bp)
-    app.register_blueprint(chatbot_bp)
+    app.register_blueprint(ai_agent_bp)
     app.register_blueprint(config_file_bp)
     app.register_blueprint(restapi_bp)
     app.register_blueprint(whatsapp_bp)
-    app.register_blueprint(analytics_bp)
-    app.register_blueprint(ai_bp)
 
     # Set up user loader
     from .models.app_models import User

@@ -1,3 +1,4 @@
+import json
 from flask import (
     Blueprint,
     render_template,
@@ -12,9 +13,7 @@ from flask_login import login_required, current_user, logout_user
 from src import db
 from src.models.app_models import TemplateManager, ConfigurationManager
 from src.utils.config_manager_utils import ConfigurationManagerUtils
-from src.utils.openai_utils import (
-    validate_generated_template_with_openai,
-)
+
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
@@ -29,6 +28,7 @@ from src.utils.forms_utils import (
     ManualTemplateForm,
     TemplateDeleteForm,
 )
+from src.utils.ai_agent_utilities import ConfigurationFileManagement
 
 # Blueprint untuk template manager
 tm_bp = Blueprint("tm", __name__)
@@ -689,7 +689,8 @@ def delete_template(template_id):
                 f"OS error while deleting files for template ID {template_id}: {os_error} by {current_user.email}"
             )
             flash(
-                "Terjadi kesalahan sistem saat menghapus file. Silakan coba lagi.", "danger"
+                "Terjadi kesalahan sistem saat menghapus file. Silakan coba lagi.",
+                "danger",
             )
             db.session.rollback()
 
@@ -712,79 +713,90 @@ def delete_template(template_id):
     page="Templates Management",
 )
 def template_generator(template_id):
-    """Handles template generation, rendering, and saving."""
+    """Handles template generation, rendering, validation, and saving."""
+
+    # Ambil data template dari database
     template = TemplateManager.query.get_or_404(template_id)
     vendor = template.vendor
 
     template_dir = current_app.config["TEMPLATE_DIR"]
-
     jinja_template_path = os.path.join(template_dir, template.template_name)
     yaml_params_path = os.path.join(template_dir, template.parameter_name)
 
     try:
+        # Baca isi template dan parameter YAML
         jinja_template = read_file(jinja_template_path)
         yaml_params = read_file(yaml_params_path)
 
         if jinja_template is None or yaml_params is None:
             flash("Gagal memuat konten template atau parameter.", "error")
             current_app.logger.error(
-                f"Failed to load template or parameter content for template ID {template_id} by {current_user.email}."
+                f"[ERROR] Failed to load template or parameter for template ID {template_id} by {current_user.email}."
             )
-            return redirect(url_for("tm.index"))
+            return jsonify({"error": "Failed to load template or parameter"}), 400
 
         current_app.logger.info(
-            f"Successfully read Jinja template and YAML parameters for template ID {template_id} by {current_user.email}."
+            f"[INFO] Successfully loaded Jinja template and YAML parameters for template ID {template_id} by {current_user.email}."
         )
 
+        # Render template dengan parameter YAML
         net_auto = ConfigurationManagerUtils(
             ip_address="0.0.0.0", username="none", password="none", ssh=22
         )
         rendered_config = net_auto.render_template_config(jinja_template, yaml_params)
-        current_app.logger.info(
-            f"Successfully rendered Jinja template for template ID {template_id} by {current_user.email}."
-        )
 
         current_app.logger.info(
-            f"Validating rendered template with OpenAI for template ID {template_id} by {current_user.email}..."
-        )
-        config_validated = validate_generated_template_with_openai(
-            config=rendered_config, vendor=vendor
+            f"[INFO] Successfully rendered Jinja template for template ID {template_id}."
         )
 
-        if not config_validated.get("is_valid"):
-            error_message = config_validated.get("error_message")
+        # Validasi konfigurasi menggunakan OpenAI API
+        current_app.logger.info(
+            f"[INFO] Validating rendered template with OpenAI for template ID {template_id}..."
+        )
+
+        config_manager = ConfigurationFileManagement()
+        config_validated = config_manager.process_validated(
+            configuration=rendered_config, device_vendor=vendor
+        )
+
+        current_app.logger.info(f"{config_validated}...")
+
+        data = config_validated["is_valid"]
+
+        # Tidak perlu json.loads(), cukup gunakan dictionary yang dikembalikan
+        if not data:
             current_app.logger.error(
-                f"Template validation failed for template ID {template_id} by {current_user.email}"
+                f"[ERROR] Template validation failed for template ID {template_id}. Errors: {config_validated['errors']}"
             )
-            return jsonify({"is_valid": False, "error_message": error_message})
+            return config_validated, 400
 
     except Exception as e:
-        db.session.rollback()
         current_app.logger.error(
-            f"Error rendering or validating template ID {template_id} by {current_user.email}: {e}"
+            f"[ERROR] Exception occurred during template rendering/validation for template ID {template_id}: {e}"
         )
-        flash("Gagal merender atau memvalidasi template. Silakan coba lagi.", "error")
-        return jsonify(
-            {
-                "is_valid": False,
-                "error_message": f"Gagal merender atau memvalidasi template: {e}",
-            }
+        return (
+            jsonify({"error": f"Failed to render or validate template: {str(e)}"}),
+            500,
         )
 
     try:
+        # Generate nama file unik untuk konfigurasi
         gen_filename = generate_random_filename(template.vendor)
-        newFileName = f"{gen_filename}"
+        new_file_name = f"{gen_filename}"
         config_dir = current_app.config["CONFIG_DIR"]
-        new_file_path = os.path.join(config_dir, newFileName)
+        new_file_path = os.path.join(config_dir, new_file_name)
 
+        # Simpan konfigurasi yang dihasilkan ke file
         with open(new_file_path, "w", encoding="utf-8") as new_file:
             new_file.write(rendered_config)
+
         current_app.logger.info(
-            f"Successfully saved rendered config to file: {new_file_path} for template ID {template_id} by {current_user.email}."
+            f"[INFO] Successfully saved rendered config to file: {new_file_path}."
         )
 
+        # Simpan metadata konfigurasi ke database
         new_template_generate = ConfigurationManager(
-            config_name=newFileName,
+            config_name=new_file_name,
             description=f"{gen_filename} created by {current_user.email}",
             created_by=current_user.email,
             user_id=current_user.id,
@@ -792,20 +804,26 @@ def template_generator(template_id):
         )
         db.session.add(new_template_generate)
         db.session.commit()
+
         current_app.logger.info(
-            f"Successfully saved generated template to database: {newFileName} for template ID {template_id} by {current_user.email}."
+            f"[INFO] Successfully saved generated template to database: {new_file_name}."
         )
-        flash("Template berhasil digenerate.", "success")
-        return jsonify({"is_valid": True})
+
+        return jsonify(
+            {
+                "is_valid": True,
+                "file_name": new_file_name,
+                "file_path": new_file_path,
+                "message": "Template successfully generated and validated.",
+            }
+        )
 
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(
-            f"Error saving rendered config or template to database for template ID {template_id} by {current_user.email}: {e}"
+            f"[ERROR] Failed to save rendered config or template for template ID {template_id}: {e}"
         )
-        flash(
-            "Gagal menyimpan konfigurasi atau template ke database. Silakan coba lagi.",
-            "error",
+        return (
+            jsonify({"error": f"Failed to save configuration or template: {str(e)}"}),
+            500,
         )
-
-    return redirect(url_for("tm.index"))

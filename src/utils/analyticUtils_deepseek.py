@@ -4,7 +4,7 @@ import logging
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy.orm import Session
-from sqlalchemy import select, insert, update, delete
+from sqlalchemy import select, delete
 from src.models.app_models import AIRecommendations
 from .backupUtils import BackupUtils
 from src import db

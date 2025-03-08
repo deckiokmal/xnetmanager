@@ -11,10 +11,7 @@ from flask import (
 from flask_login import login_required, current_user, logout_user
 from src import db
 from src.models.app_models import ConfigurationManager
-from src.utils.openai_utils import (
-    validate_generated_template_with_openai,
-    create_configuration_with_openai,
-)
+from src.utils.openai_utils import ConfigurationFileManagement
 from src.utils.ConfigurationFileUtils import (
     check_ownership,
     read_file,
@@ -22,7 +19,7 @@ from src.utils.ConfigurationFileUtils import (
     is_safe_path,
     delete_file_safely,
 )
-from src.utils.talita_ai_utils import generate_configfile_talita
+from src.utils.ai_agent_utilities import talita_llm
 from werkzeug.utils import secure_filename
 import os
 from .decorators import login_required, role_required, required_2fa
@@ -239,8 +236,8 @@ def create_configuration_with_ai_validated():
         file_path = os.path.join(config_dir, gen_filename)
 
         try:
-            config_validated = validate_generated_template_with_openai(
-                config=configuration_content, vendor=vendor
+            config_validated = ConfigurationFileManagement.validated_configuration(
+                configuration=configuration_content, device_vendor=vendor
             )
             if config_validated.get("is_valid"):
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
@@ -331,7 +328,7 @@ def create_configuration_with_ai_automated():
         )
 
         try:
-            configuration_content, error = create_configuration_with_openai(
+            configuration_content, error = ConfigurationFileManagement.create_configuration_with_openai(
                 question=ask_configuration, vendor=vendor
             )
             if error:
@@ -415,7 +412,7 @@ def create_configuration_with_talita():
 
         try:
             # Menggunakan utility generate_configfile_talita
-            result = generate_configfile_talita(context, user_id)
+            result = talita_llm(context, user_id)
             if not result["success"]:
                 current_app.logger.warning(
                     f"Failed to get response from TALITA for user {current_user.email}: {result['message']}"

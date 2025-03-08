@@ -610,7 +610,8 @@ body {
         font-size: 0.7rem;
     }
 
-    .lh-1 h2, .lh-1 p {
+    .lh-1 h2,
+    .lh-1 p {
         margin: 5px 0;
     }
 
@@ -625,14 +626,18 @@ body {
     }
 
     .nav-lt-tab .nav-item button {
-        font-size: 10px; /* Smaller font size for precision */
-        flex: 1; /* Make buttons occupy equal space */
+        font-size: 10px;
+        /* Smaller font size for precision */
+        flex: 1;
+        /* Make buttons occupy equal space */
         text-align: center;
     }
 
     .nav-lt-tab .nav-item a {
-        font-size: 10px; /* Smaller font size for precision */
-        flex: 1; /* Make buttons occupy equal space */
+        font-size: 10px;
+        /* Smaller font size for precision */
+        flex: 1;
+        /* Make buttons occupy equal space */
         text-align: center;
     }
 
@@ -756,4 +761,36 @@ body {
 
 .page-heading {
     z-index: 1;
+}
+
+
+.config-pre {
+    font-size: 0.8rem;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.ai-chat-container {
+    max-height: 96vh;
+    overflow-y: auto;
+}
+
+.ai-message {
+    border-left: 3px solid #4e73df;
+    transition: transform 0.2s;
+}
+
+.ai-message:hover {
+    transform: translateX(5px);
+}
+
+.toast-container {
+    z-index: 1055;
+}
+
+.toast {
+    opacity: 0.9;
 }
