@@ -14,13 +14,10 @@ from src.utils.backupUtils import BackupUtils
 # ------------------------------------------------------------------------
 # User and Roles Management Section
 # ------------------------------------------------------------------------
-
-
 class User(UserMixin, db.Model):
     __tablename__ = "users"
 
-    # Use the global UUID_TYPE
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())  # for PostgreSQL
+    id = db.Column(UUID_TYPE, primary_key=True, default=lambda: uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     first_name = db.Column(db.String(255), nullable=False)
     last_name = db.Column(db.String(255), nullable=False)
@@ -126,7 +123,7 @@ class User(UserMixin, db.Model):
 class Role(db.Model):
     __tablename__ = "roles"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
+    id = db.Column(UUID_TYPE, primary_key=True, default=lambda: uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.String(64), unique=True, nullable=False)
     users = db.relationship("User", secondary="user_roles", back_populates="roles")
@@ -145,7 +142,8 @@ class Role(db.Model):
 
 class Permission(db.Model):
     __tablename__ = "permissions"
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
+
+    id = db.Column(UUID_TYPE, primary_key=True, default=lambda: uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.String(50), unique=True, nullable=False)
     description = db.Column(db.String(200))
@@ -156,7 +154,8 @@ class Permission(db.Model):
 
 class UserRoles(db.Model):
     __tablename__ = "user_roles"
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
+
+    id = db.Column(UUID_TYPE, primary_key=True, default=lambda: uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(
         UUID_TYPE, db.ForeignKey("users.id", ondelete="CASCADE"), index=True
@@ -168,7 +167,8 @@ class UserRoles(db.Model):
 
 class RolePermissions(db.Model):
     __tablename__ = "role_permissions"
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
+
+    id = db.Column(UUID_TYPE, primary_key=True, default=lambda: uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     role_id = db.Column(
         UUID_TYPE, db.ForeignKey("roles.id", ondelete="CASCADE"), index=True
@@ -181,12 +181,10 @@ class RolePermissions(db.Model):
 # ------------------------------------------------------------------------
 # Device and Configuration Management Section
 # ------------------------------------------------------------------------
-
-
 class DeviceManager(db.Model):
     __tablename__ = "device_manager"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
+    id = db.Column(UUID_TYPE, primary_key=True, default=lambda: uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     device_name = db.Column(db.String(100), unique=True, nullable=False)
     vendor = db.Column(db.String(100), nullable=False)
@@ -219,7 +217,7 @@ class DeviceManager(db.Model):
 class TemplateManager(db.Model):
     __tablename__ = "template_manager"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
+    id = db.Column(UUID_TYPE, primary_key=True, default=lambda: uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     template_name = db.Column(db.String(100), unique=True, nullable=False)
     parameter_name = db.Column(db.String(100), unique=True, nullable=False)
@@ -235,7 +233,7 @@ class TemplateManager(db.Model):
 class ConfigurationManager(db.Model):
     __tablename__ = "configuration_manager"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
+    id = db.Column(UUID_TYPE, primary_key=True, default=lambda: uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     config_name = db.Column(db.String(100), nullable=False, unique=True)
     vendor = db.Column(db.String(100), nullable=False)
@@ -257,7 +255,7 @@ class ConfigurationManager(db.Model):
 class UserConfigurationShare(db.Model):
     __tablename__ = "user_configuration_share"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
+    id = db.Column(UUID_TYPE, primary_key=True, default=lambda: uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(UUID_TYPE, db.ForeignKey("users.id"), nullable=True, index=True)
     configuration_id = db.Column(
@@ -280,12 +278,10 @@ class UserConfigurationShare(db.Model):
 # -----------------------------------------------------------------------
 # Backup Management Section
 # -----------------------------------------------------------------------
-
-
 class BackupData(db.Model):
     __tablename__ = "backup_data"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
+    id = db.Column(UUID_TYPE, primary_key=True, default=lambda: uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     backup_name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.String(255), nullable=True)
@@ -405,15 +401,10 @@ class BackupData(db.Model):
             raise RuntimeError(f"Unexpected error occurred: {e}")
 
 
-# -----------------------------------------------------------------------
-# User Backup Sharing Section
-# -----------------------------------------------------------------------
-
-
 class UserBackupShare(db.Model):
     __tablename__ = "user_backup_share"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
+    id = db.Column(UUID_TYPE, primary_key=True, default=lambda: uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(UUID_TYPE, db.ForeignKey("users.id"), nullable=True, index=True)
     backup_id = db.Column(
@@ -435,53 +426,10 @@ class UserBackupShare(db.Model):
         return f"<UserBackupShare User {self.user_id} -> Backup {self.backup_id} with {self.permission_level} access>"
 
 
-# -----------------------------------------------------------------------
-# Git Backup Version Control Section
-# -----------------------------------------------------------------------
-
-
-class GitBackupVersion(db.Model):
-    __tablename__ = "git_backup_version"
-
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
-    # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    backup_id = db.Column(
-        UUID_TYPE, db.ForeignKey("backup_data.id"), nullable=False, index=True
-    )
-    commit_hash = db.Column(db.String(40), nullable=False)  # Git commit hash
-    commit_message = db.Column(db.String(255), nullable=False)
-    committed_at = db.Column(db.DateTime, default=datetime.utcnow)
-    file_path = db.Column(db.String(255), nullable=False)
-
-    # Relationship to the backup this version belongs to
-    backup = db.relationship("BackupData", back_populates="git_versions")
-
-    def __repr__(self):
-        return f"<GitBackupVersion {self.commit_hash} for Backup {self.backup_id}>"
-
-    def validate_file_path(self):
-        """
-        Ensure that the file path is valid and does not lead to security issues.
-        """
-        base_dir = os.path.abspath(
-            os.path.dirname(__file__)
-        )  # Base directory of the application
-        abs_file_path = os.path.abspath(self.file_path)
-        if not abs_file_path.startswith(base_dir):
-            current_app.logger.error(f"Invalid file path: {self.file_path}")
-            raise ValueError(f"Invalid file path: {self.file_path}")
-        return abs_file_path
-
-
-# -----------------------------------------------------------------------
-# Backup Tagging Section (for search and categorization)
-# -----------------------------------------------------------------------
-
-
 class BackupTag(db.Model):
     __tablename__ = "backup_tags"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
+    id = db.Column(UUID_TYPE, primary_key=True, default=lambda: uuid.uuid4())
     # id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     backup_id = db.Column(
         UUID_TYPE, db.ForeignKey("backup_data.id"), nullable=False, index=True
@@ -498,12 +446,10 @@ class BackupTag(db.Model):
 # -----------------------------------------------------------------------
 # Backup Audit Logging Section
 # -----------------------------------------------------------------------
-
-
 class AuditLog(db.Model):
     __tablename__ = "audit_logs"
 
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4())
+    id = db.Column(UUID_TYPE, primary_key=True, default=lambda: uuid.uuid4())
     device_id = db.Column(
         UUID_TYPE,
         db.ForeignKey("device_manager.id", ondelete="CASCADE"),
@@ -525,6 +471,9 @@ class AuditLog(db.Model):
         return f"<AuditLog {self.action} on Backup {self.backup_id}>"
 
 
+# -----------------------------------------------------------------------
+# AI Recommendation Data
+# -----------------------------------------------------------------------
 class AIRecommendations(db.Model):
     __tablename__ = "ai_recommendations"
     __table_args__ = (
@@ -534,12 +483,7 @@ class AIRecommendations(db.Model):
         {"comment": "Stores AI-generated recommendations for network devices"},
     )
 
-    id = db.Column(
-        UUID_TYPE,
-        primary_key=True,
-        default=uuid.uuid4,  # Diperbaiki: menghapus ()
-        comment="Unique identifier for the recommendation",
-    )
+    id = db.Column(UUID_TYPE, primary_key=True, default=lambda: uuid.uuid4())
     device_id = db.Column(
         UUID_TYPE,
         db.ForeignKey("device_manager.id", ondelete="CASCADE"),
@@ -652,76 +596,3 @@ class AIRecommendations(db.Model):
             "applied_by": str(self.applied_by) if self.applied_by else None,
             "error_message": self.error_message,
         }
-
-
-################################################################################################
-# MikroTik Parsing Database
-################################################################################################
-
-
-class Interface(db.Model):
-    __tablename__ = "interfaces"
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
-    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
-    name = db.Column(db.String(100), nullable=False)  # Nama interface setelah diubah
-    default_name = db.Column(db.String(100), nullable=False)  # Nama bawaan interface
-    status = db.Column(db.String(10), nullable=False)  # Status disable-running-check
-
-
-class RoutingTable(db.Model):
-    __tablename__ = "routing_tables"
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
-    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
-    name = db.Column(db.String(100), nullable=False)
-
-
-class IPAddress(db.Model):
-    __tablename__ = "ip_addresses"
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
-    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
-    address = db.Column(db.String(50), nullable=False)
-    interface = db.Column(db.String(100), nullable=False)
-    network = db.Column(db.String(50), nullable=False)
-
-
-class DNSSetting(db.Model):
-    __tablename__ = "dns_settings"
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
-    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
-    allow_remote_requests = db.Column(db.Boolean, nullable=False)
-    servers = db.Column(db.JSON, nullable=False)
-
-
-class DHCPSetting(db.Model):
-    __tablename__ = "dhcp_settings"
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
-    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
-    address_pool = db.Column(db.String(100), nullable=False)
-    interface = db.Column(db.String(100), nullable=False)
-    lease_time = db.Column(db.String(50), nullable=False)
-
-
-class IPRoute(db.Model):
-    __tablename__ = "ip_routes"
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
-    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
-    destination = db.Column(db.String(50), nullable=False)
-    gateway = db.Column(db.String(50), nullable=False)
-    routing_table = db.Column(db.String(100), nullable=False)
-
-
-class FirewallRule(db.Model):
-    __tablename__ = "firewall_rules"
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
-    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
-    action = db.Column(db.String(50), nullable=False)
-    chain = db.Column(db.String(50), nullable=False)
-    comment = db.Column(db.String(255), nullable=True)
-
-
-class SystemSetting(db.Model):
-    __tablename__ = "system_settings"
-    id = db.Column(UUID_TYPE, primary_key=True, default=uuid.uuid4)
-    device_id = db.Column(UUID_TYPE, db.ForeignKey("device_manager.id"), nullable=False)
-    key = db.Column(db.String(50), nullable=False)
-    value = db.Column(db.String(255), nullable=False)

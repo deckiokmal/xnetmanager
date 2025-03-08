@@ -59,10 +59,11 @@
                             <div class="row">
                                 <div class="col">
                                     <small class="text-muted">
-                                        Impact Area: {{ rec.impact_area|default('security', true) }}
+                                        Impact Area: <span class="badge text-bg-primary">{{ rec.impact_area|default('security', true) }}</span>
                                     </small>
                                     <small class="text-muted">
-                                        | Status: {{ rec.status|default('generated', true) }}
+                                        | Status: <span class="badge text-bg-primary" id="status-{{ rec.id }}">{{ rec.status|default('generated',
+                                            true) }}</span>
                                     </small>
                                 </div>
                                 <div class="col text-right">
@@ -155,28 +156,27 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    rec_id: recId
-                })
+                body: JSON.stringify({ rec_id: recId })
             })
-                .then(response => {
-                    if (!response.ok) throw response;
-                    return response.json();
-                })
+                .then(response => response.json())  // Parsing JSON response
                 .then(data => {
                     spinner.classList.add('d-none');
-                    if (data.status === 'success') {
-                        showToast('Configuration applied successfully!', 'success');
-                        document.getElementById(`rec-${recId}`).classList.add('bg-success', 'text-white');
+
+                    if (data.success) {
+                        showToast(data.message || 'Configuration applied successfully!', 'success');
+
+                        // Ubah teks status menggunakan data dari server
+                        const statusElement = document.getElementById(`status-${recId}`);
+                        if (statusElement && data.status) {
+                            statusElement.textContent = data.status;
+                        }
                     } else {
                         throw new Error(data.message || 'Unknown error');
                     }
                 })
                 .catch(error => {
                     spinner.classList.add('d-none');
-                    error.text().then(errMsg => {
-                        showToast(`Error: ${errMsg}`, 'error');
-                    });
+                    showToast(`Error: ${error.message || 'Unknown error'}`, 'error');
                 });
         }
     }

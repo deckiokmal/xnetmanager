@@ -14,7 +14,6 @@ from flask_login import login_required, current_user, logout_user
 from src.models.app_models import (
     BackupData,
     UserBackupShare,
-    GitBackupVersion,
     BackupTag,
     AuditLog,
     DeviceManager,

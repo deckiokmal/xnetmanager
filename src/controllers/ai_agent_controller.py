@@ -1,5 +1,4 @@
 import logging
-import json
 from flask import (
     Blueprint,
     request,
@@ -113,12 +112,6 @@ def analyze_view(device_id):
         flash("Device tidak ditemukan", "danger")
         return redirect(url_for("dm.index"))
 
-    # Cek status device
-    utils = ConfigurationManagerUtils(ip_address=device.ip_address)
-    if json.loads(utils.check_device_status()).get("status") != "success":
-        flash("Device offline", "warning")
-        return redirect(url_for("dm.index"))
-
     # Proses analisis
     config_data = AIAnalyticsUtils.get_configuration_data(device)
 
@@ -147,12 +140,6 @@ def analyze_device(device_id):
         device = DeviceManager.query.get_or_404(device_id)
         if not device:
             flash("Device tidak ditemukan", "danger")
-            return redirect(url_for("dm.index"))
-
-        # Cek status device
-        utils = ConfigurationManagerUtils(ip_address=device.ip_address)
-        if json.loads(utils.check_device_status()).get("status") != "success":
-            flash("Device offline", "warning")
             return redirect(url_for("dm.index"))
 
         # Proses analisis
@@ -256,19 +243,20 @@ def apply_recommendation():
         # Ambil live config menggunakan command sesuai device type
         command_map = {
             "cisco_ios": "show running-config",
+            "cisco": "show running-config",
             "juniper": "show configuration | display set",
             "huawei": "display current-configuration",
             "mikrotik": "export compact",
             "fortinet": "show full-configuration",
         }
         vendor = device.vendor.lower()
-        command = command_map.get(vendor, command_map["cisco_ios"])
+        command = command_map.get(vendor, command_map["mikrotik"])
 
         backup_type = "differential" if backup_exists else "full"
         # Create a new backup for this device using the static method
         new_backup = BackupData.create_backup(
             backup_name=f"post-ai-{recommendation.title}",
-            description=f"After applying AI recommendation {recommendation.description}",
+            description=f"After applying AI recommendation {recommendation.title}",
             user_id=current_user.id,
             device_id=device.id,
             backup_type=backup_type,
@@ -280,9 +268,8 @@ def apply_recommendation():
             jsonify(
                 {
                     "success": True,
-                    "message": "Backup created successfully.",
-                    "backup_id": new_backup.id,
-                    "backup_path": new_backup.backup_path,
+                    "message": "Configuration applied successfully!",
+                    "status": recommendation.status,
                 }
             ),
             201,
@@ -291,4 +278,4 @@ def apply_recommendation():
     except Exception as e:
         recommendation.status = f"failed: {str(e)}"
         logging.error(f"Error applying recommendation: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"error": "error", "message": str(e)}), 500
