@@ -159,24 +159,24 @@ def create_app():
 
     # Register blueprints
     from .controllers.main_controller import main_bp
+    from .utils.error_helper_utils import error_bp
     from .controllers.users_controller import users_bp
     from .controllers.profile_controller import profile_bp
     from .controllers.roles_controller import roles_bp
     from .controllers.device_manager_controller import dm_bp
     from .controllers.template_manager_controller import template_bp
-    from .controllers.config_manager_controller import nm_bp
-    from .utils.error_helper_utils import error_bp
+    from .controllers.network_configurator_controller import network_configurator_bp
     from .controllers.backup_controller import backup_bp
     from .controllers.ai_agent_controller import ai_agent_bp
 
     app.register_blueprint(main_bp)
+    app.register_blueprint(error_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(roles_bp)
     app.register_blueprint(dm_bp)
     app.register_blueprint(template_bp)
-    app.register_blueprint(nm_bp)
-    app.register_blueprint(error_bp)
+    app.register_blueprint(network_configurator_bp)
     app.register_blueprint(backup_bp)
     app.register_blueprint(ai_agent_bp)
 

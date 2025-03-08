@@ -47,7 +47,7 @@ import os
 #     summarize_error_with_openai,
 # )
 from src.utils.ai_agent_utilities import talita_llm
-from src.utils.config_manager_utils import ConfigurationManagerUtils
+from src.utils.network_configurator_utilities import ConfigurationManagerUtils
 import time
 from ..src.controllers.decorators import jwt_role_required
 from concurrent.futures import ThreadPoolExecutor, as_completed

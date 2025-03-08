@@ -29,7 +29,7 @@ from flask import copy_current_request_context
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 from src.utils.forms_utils import UpdateBackupForm
-from src.utils.config_manager_utils import ConfigurationManagerUtils
+from src.utils.network_configurator_utilities import ConfigurationManagerUtils
 from werkzeug.exceptions import HTTPException
 # from src.utils.openai_utils import (
 #     validate_generated_template_with_openai,

@@ -12,7 +12,7 @@ from flask_login import login_required, current_user, logout_user
 from src import db
 from src.models.app_models import ConfigurationManager
 from src.utils.openai_utils import ConfigurationFileManagement
-from src.utils.ConfigurationFileUtils import (
+from src.utils.configuration_file_utilities import (
     check_ownership,
     read_file,
     generate_random_filename,

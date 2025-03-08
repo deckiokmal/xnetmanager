@@ -1,3 +1,12 @@
+import os
+import json
+import time
+import string
+import random
+import logging
+from datetime import datetime
+from sqlalchemy.exc import SQLAlchemyError
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import (
     Blueprint,
     render_template,
@@ -13,34 +22,28 @@ from flask_login import (
     current_user,
     logout_user,
 )
+from flask_paginate import Pagination, get_page_args
 from .decorators import (
     role_required,
     required_2fa,
 )
-import logging
-from src.models.app_models import DeviceManager, ConfigurationManager
-from src.utils.config_manager_utils import ConfigurationManagerUtils
-import os
-from flask_paginate import Pagination, get_page_args
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import json
-import random
-from datetime import datetime
-import string
 from src import db
-import time
-from sqlalchemy.exc import SQLAlchemyError
-from src.utils.openai_utils import ConfigurationFileManagement
+from src.models.app_models import DeviceManager, ConfigurationManager
+from src.utils.network_configurator_utilities import ConfigurationManagerUtils
+from src.utils.ai_agent_utilities import ConfigurationFileManagement
 
-# Membuat blueprint untuk Network Manager (nm_bp) dan Error Handling (error_bp)
-nm_bp = Blueprint("nm", __name__)
+
+# ----------------------------------------------------------------------------------------
+# Buat Blueprint untuk endpoint network_configurator_bp
+# ----------------------------------------------------------------------------------------
+network_configurator_bp = Blueprint("network_configurator_bp", __name__)
 error_bp = Blueprint("error", __name__)
 
-# Setup logging untuk aplikasi
-logging.basicConfig(level=logging.INFO)
 
-
-@nm_bp.before_app_request
+# ----------------------------------------------------------------------------------------
+# Middleware and Endpoint security
+# ----------------------------------------------------------------------------------------
+@network_configurator_bp.before_app_request
 def setup_logging():
     """
     Mengatur level logging untuk aplikasi.
@@ -60,7 +63,7 @@ def page_not_found(error):
 
 
 # Middleware untuk autentikasi dan otorisasi sebelum permintaan.
-@nm_bp.before_request
+@network_configurator_bp.before_request
 def before_request_func():
     """
     Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
@@ -82,7 +85,7 @@ def before_request_func():
         return redirect(url_for("main.login"))
 
 
-@nm_bp.context_processor
+@network_configurator_bp.context_processor
 def inject_user():
     """
     Menyediakan first_name dan last_name pengguna yang terotentikasi ke dalam template.
@@ -94,9 +97,9 @@ def inject_user():
     return dict(first_name="", last_name="")
 
 
-# --------------------------------------------------------------------------------
-# Config Management Section
-# --------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------
+# Utility
+# ----------------------------------------------------------------------------------------
 
 
 # Fungsi pembantu untuk menghasilkan nama file acak
@@ -110,8 +113,27 @@ def generate_random_filename(filename):
     return filename
 
 
-# Endpoint Network Manager index
-@nm_bp.route("/push-configuration", methods=["GET"])
+# Cache status perangkat untuk menghindari pengecekan berulang
+STATUS_CACHE_TTL = 60  # seconds
+device_status_cache = {}
+
+
+# Fungsi caching sederhana
+def get_cached_device_status(device_id):
+    cached = device_status_cache.get(device_id)
+    if cached and (time.time() - cached["timestamp"]) < STATUS_CACHE_TTL:
+        return cached["status"]
+    return None
+
+
+def set_device_status_cache(device_id, status):
+    device_status_cache[device_id] = {"status": status, "timestamp": time.time()}
+
+
+# ----------------------------------------------------------------------------------------
+# Mainpage view section
+# ----------------------------------------------------------------------------------------
+@network_configurator_bp.route("/push-configuration", methods=["GET"])
 @login_required
 @required_2fa
 @role_required(
@@ -194,105 +216,11 @@ def index():
         return redirect(url_for("users.dashboard"))
 
 
-# Cache status perangkat untuk menghindari pengecekan berulang
-STATUS_CACHE_TTL = 60  # seconds
-device_status_cache = {}
-
-
-# Fungsi caching sederhana
-def get_cached_device_status(device_id):
-    cached = device_status_cache.get(device_id)
-    if cached and (time.time() - cached["timestamp"]) < STATUS_CACHE_TTL:
-        return cached["status"]
-    return None
-
-
-def set_device_status_cache(device_id, status):
-    device_status_cache[device_id] = {"status": status, "timestamp": time.time()}
-
-
-@nm_bp.route("/check_status", methods=["POST"])
-@login_required
-@required_2fa
-@role_required(
-    roles=["Admin", "User"], permissions=["Config and Backup"], page="Config Management"
-)
-def check_status():
-    """
-    Memeriksa status perangkat yang ada di halaman tertentu berdasarkan pagination dan search query.
-    """
-    try:
-        # Ambil parameter page, per_page, dan search_query dari request JSON
-        page = int(request.json.get("page", 1))  # Default halaman 1
-        per_page = int(request.json.get("per_page", 10))  # Default 10 item per halaman
-        search_query = (
-            request.json.get("search_query", "").lower().strip()
-        )  # Default pencarian kosong
-
-        # Query perangkat sesuai dengan peran pengguna
-        if current_user.has_role("Admin"):
-            devices_query = DeviceManager.query
-        else:
-            devices_query = DeviceManager.query.filter_by(user_id=current_user.id)
-
-        # Filter perangkat jika ada search query
-        if search_query:
-            devices_query = devices_query.filter(
-                DeviceManager.device_name.ilike(f"%{search_query}%")
-                | DeviceManager.ip_address.ilike(f"%{search_query}%")
-                | DeviceManager.vendor.ilike(f"%{search_query}%")
-            )
-
-        # Pagination untuk devices
-        devices = devices_query.limit(per_page).offset((page - 1) * per_page).all()
-
-        device_status = {}
-
-        # Fungsi pengecekan status perangkat
-        def check_device_status(device):
-            deviceid = str(device.id)
-            cached_status = get_cached_device_status(deviceid)
-            if cached_status:
-                logging.info(f"Using cached status for device {device.device_name}")
-                return deviceid, cached_status
-
-            utils = ConfigurationManagerUtils(ip_address=device.ip_address)
-            status_json = utils.check_device_status()
-            status_dict = json.loads(status_json)
-
-            # Cache hasil status
-            set_device_status_cache(deviceid, status_dict["status"])
-            return deviceid, status_dict["status"]
-
-        # Gunakan ThreadPoolExecutor untuk melakukan pengecekan status secara paralel
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            futures = {
-                executor.submit(check_device_status, device): device
-                for device in devices
-            }
-
-            # Iterasi melalui hasil pengecekan
-            for future in as_completed(futures):
-                try:
-                    device_id, status = future.result()
-                    device_status[device_id] = status
-                except Exception as e:
-                    logging.error(f"Error checking status for device: {e}")
-                    device_status[device_id] = "error"
-
-        # Kembalikan hasil dalam bentuk JSON untuk ditangani oleh UI
-        return jsonify(device_status)
-
-    except Exception as e:
-        logging.error(f"Error checking device status: {str(e)}")
-        return (
-            jsonify({"error": "An error occurred while checking device status."}),
-            500,
-        )
-
-
-# Endpoint untuk push konfigurasi ke perangkat
-@nm_bp.route("/push_configs", methods=["POST"])
+# ----------------------------------------------------------------------------------------
+# Network Configurator Endpoint
+# ----------------------------------------------------------------------------------------
+# Endpoint untuk push konfigurasi multiple device dengan vendor yang sama
+@network_configurator_bp.route("/push_configs", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -392,22 +320,20 @@ def push_configs():
             response_json = config_utils.configure_device(config_content)
             response_dict = json.loads(response_json)
 
+            # Jika ada pesan yang dikembalikan, mengindikasikan bahwa terdapat error dalam proses konfigurasi
             if "message" in response_dict:
-                error_summary = ConfigurationFileManagement.validated_configuration(
-                    configuration=response_dict["message"], device_vendor=device.vendor
-                )
                 return {
                     "device_name": device.device_name,
                     "ip": device.ip_address,
-                    "status": error_summary["status"],
-                    "message": error_summary["message"],
+                    "status": response_dict["status"],
+                    "message": response_dict["message"],
                 }
             else:
                 # Jika tidak ada pesan sama sekali, konfigurasi dianggap sukses
                 return {
                     "device_name": device.device_name,
                     "ip": device.ip_address,
-                    "status": "success",
+                    "status": response_dict["status"],
                     "message": "Configuration successfully applied.",
                 }
         except Exception as e:
@@ -442,7 +368,7 @@ def push_configs():
 
 
 # Endpoint untuk push konfigurasi ke satu perangkat
-@nm_bp.route("/push_config/<device_id>", methods=["POST"])
+@network_configurator_bp.route("/push_config/<device_id>", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -516,9 +442,7 @@ def push_config_single_device(device_id):
 
             if "message" in response_dict and response_dict["message"]:
                 # Gunakan OpenAI untuk menyederhanakan error jika ada pesan error
-                error_summary = summarize_error_with_openai(
-                    response_dict["message"], device.vendor
-                )
+                error_summary = response_dict["message"]
                 return {
                     "device_name": device.device_name,
                     "ip": device.ip_address,
@@ -555,8 +479,91 @@ def push_config_single_device(device_id):
     return jsonify({"success": success, "result": result}), 200 if success else 500
 
 
+# ----------------------------------------------------------------------------------------
+# Fungsi lain: Check status dan Filter File configuration
+# ----------------------------------------------------------------------------------------
+@network_configurator_bp.route("/check_status", methods=["POST"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"], permissions=["Config and Backup"], page="Config Management"
+)
+def check_status():
+    """
+    Memeriksa status perangkat yang ada di halaman tertentu berdasarkan pagination dan search query.
+    """
+    try:
+        # Ambil parameter page, per_page, dan search_query dari request JSON
+        page = int(request.json.get("page", 1))  # Default halaman 1
+        per_page = int(request.json.get("per_page", 10))  # Default 10 item per halaman
+        search_query = (
+            request.json.get("search_query", "").lower().strip()
+        )  # Default pencarian kosong
+
+        # Query perangkat sesuai dengan peran pengguna
+        if current_user.has_role("Admin"):
+            devices_query = DeviceManager.query
+        else:
+            devices_query = DeviceManager.query.filter_by(user_id=current_user.id)
+
+        # Filter perangkat jika ada search query
+        if search_query:
+            devices_query = devices_query.filter(
+                DeviceManager.device_name.ilike(f"%{search_query}%")
+                | DeviceManager.ip_address.ilike(f"%{search_query}%")
+                | DeviceManager.vendor.ilike(f"%{search_query}%")
+            )
+
+        # Pagination untuk devices
+        devices = devices_query.limit(per_page).offset((page - 1) * per_page).all()
+
+        device_status = {}
+
+        # Fungsi pengecekan status perangkat
+        def check_device_status(device):
+            deviceid = str(device.id)
+            cached_status = get_cached_device_status(deviceid)
+            if cached_status:
+                logging.info(f"Using cached status for device {device.device_name}")
+                return deviceid, cached_status
+
+            utils = ConfigurationManagerUtils(ip_address=device.ip_address)
+            status_json = utils.check_device_status()
+            status_dict = json.loads(status_json)
+
+            # Cache hasil status
+            set_device_status_cache(deviceid, status_dict["status"])
+            return deviceid, status_dict["status"]
+
+        # Gunakan ThreadPoolExecutor untuk melakukan pengecekan status secara paralel
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = {
+                executor.submit(check_device_status, device): device
+                for device in devices
+            }
+
+            # Iterasi melalui hasil pengecekan
+            for future in as_completed(futures):
+                try:
+                    device_id, status = future.result()
+                    device_status[device_id] = status
+                except Exception as e:
+                    logging.error(f"Error checking status for device: {e}")
+                    device_status[device_id] = "error"
+
+        # Kembalikan hasil dalam bentuk JSON untuk ditangani oleh UI
+        return jsonify(device_status)
+
+    except Exception as e:
+        logging.error(f"Error checking device status: {str(e)}")
+        return (
+            jsonify({"error": "An error occurred while checking device status."}),
+            500,
+        )
+
+
 # Endpoint untuk mendapatkan daftar konfigurasi berdasarkan vendor
-@nm_bp.route("/get_configs_by_vendor", methods=["POST"])
+@network_configurator_bp.route("/get_configs_by_vendor", methods=["POST"])
 @login_required
 @required_2fa
 def get_configs_by_vendor():

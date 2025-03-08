@@ -13,7 +13,7 @@ from src.models.app_models import DeviceManager, AIRecommendations
 from sqlalchemy.orm import Session
 from sqlalchemy import select, delete
 from .backupUtils import BackupUtils
-from .config_manager_utils import ConfigurationManagerUtils
+from .network_configurator_utilities import ConfigurationManagerUtils
 
 # Set up logging configuration
 logging.basicConfig(

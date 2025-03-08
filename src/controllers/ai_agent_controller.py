@@ -21,7 +21,7 @@ from src.utils.ai_agent_utilities import (
     AgenticNetworkIntent,
 )
 from src.utils.backupUtils import BackupUtils
-from src.utils.config_manager_utils import ConfigurationManagerUtils
+from src.utils.network_configurator_utilities import ConfigurationManagerUtils
 from src import db
 
 

@@ -2,9 +2,8 @@ import os
 import json
 import difflib
 import hashlib
-from datetime import datetime
 from flask import current_app
-from .config_manager_utils import ConfigurationManagerUtils
+from .network_configurator_utilities import ConfigurationManagerUtils
 from src import db
 
 

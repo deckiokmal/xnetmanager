@@ -11,7 +11,7 @@ from flask import (
 from flask_login import login_required, current_user, logout_user
 from src import db
 from src.models.app_models import TemplateManager, ConfigurationManager
-from src.utils.config_manager_utils import ConfigurationManagerUtils
+from src.utils.network_configurator_utilities import ConfigurationManagerUtils
 
 from werkzeug.utils import secure_filename
 import os
@@ -34,7 +34,7 @@ from src.utils.forms_utils import (
     UpdateConfigurationForm,
     TalitaQuestionForm,
 )
-from src.utils.ConfigurationFileUtils import (
+from src.utils.configuration_file_utilities import (
     check_ownership,
     read_file,
     generate_random_filename,
