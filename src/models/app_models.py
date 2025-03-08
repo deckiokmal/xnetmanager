@@ -7,7 +7,6 @@ from itsdangerous import URLSafeTimedSerializer as Serializer, SignatureExpired
 from flask import current_app
 import uuid
 from src import UUID_TYPE
-import os
 from src.utils.backupUtils import BackupUtils
 
 
@@ -306,9 +305,6 @@ class BackupData(db.Model):
     # Relationships to other models (e.g., shared, versions, etc.)
     shared_with = db.relationship(
         "UserBackupShare", back_populates="backup", cascade="all, delete-orphan"
-    )
-    git_versions = db.relationship(
-        "GitBackupVersion", back_populates="backup", cascade="all, delete-orphan"
     )
     tags = db.relationship(
         "BackupTag", back_populates="backup", cascade="all, delete-orphan"
