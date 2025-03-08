@@ -1,4 +1,3 @@
-import json
 from flask import (
     Blueprint,
     render_template,
@@ -29,16 +28,31 @@ from src.utils.forms_utils import (
     TemplateDeleteForm,
 )
 from src.utils.ai_agent_utilities import ConfigurationFileManagement
+from src.utils.forms_utils import (
+    ManualConfigurationForm,
+    AIConfigurationForm,
+    UpdateConfigurationForm,
+    TalitaQuestionForm,
+)
+from src.utils.ConfigurationFileUtils import (
+    check_ownership,
+    read_file,
+    generate_random_filename,
+    is_safe_path,
+    delete_file_safely,
+)
 
-# Blueprint untuk template manager
-tm_bp = Blueprint("tm", __name__)
+# ----------------------------------------------------------------------------------------
+# Buat Blueprint untuk endpoint templating management as template_bp
+# ----------------------------------------------------------------------------------------
+template_bp = Blueprint("template_bp", __name__)
 error_bp = Blueprint("error", __name__)
 
-# Setup logging untuk aplikasi
-logging.basicConfig(level=logging.INFO)
 
-
-@tm_bp.before_app_request
+# ----------------------------------------------------------------------------------------
+# Middleware and Endpoint security
+# ----------------------------------------------------------------------------------------
+@template_bp.before_app_request
 def setup_logging():
     """
     Mengatur level logging untuk aplikasi.
@@ -58,7 +72,7 @@ def page_not_found(error):
 
 
 # Middleware untuk autentikasi dan otorisasi sebelum permintaan.
-@tm_bp.before_request
+@template_bp.before_request
 def before_request_func():
     """
     Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
@@ -80,7 +94,7 @@ def before_request_func():
         return redirect(url_for("main.login"))
 
 
-@tm_bp.context_processor
+@template_bp.context_processor
 def inject_user():
     """
     Menyediakan first_name dan last_name pengguna yang terotentikasi ke dalam template.
@@ -92,11 +106,9 @@ def inject_user():
     return dict(first_name="", last_name="")
 
 
-# --------------------------------------------------------------------------------
-# Bagian Template Management
-# --------------------------------------------------------------------------------
-
-
+# ----------------------------------------------------------------------------------------
+# Utility
+# ----------------------------------------------------------------------------------------
 def allowed_file(filename, allowed_extensions):
     """Memeriksa apakah ekstensi file termasuk dalam ekstensi yang diperbolehkan."""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in allowed_extensions
@@ -134,7 +146,10 @@ TEMPLATE_EXTENSIONS = {"j2"}
 PARAMS_EXTENSIONS = {"yml", "yaml"}
 
 
-@tm_bp.route("/templates-management", methods=["GET"])
+# ----------------------------------------------------------------------------------------
+# Mainpage Section
+# ----------------------------------------------------------------------------------------
+@template_bp.route("/templates-management", methods=["GET"])
 @login_required
 @required_2fa
 @role_required(
@@ -142,7 +157,7 @@ PARAMS_EXTENSIONS = {"yml", "yaml"}
     permissions=["Manage Templates", "View Templates"],
     page="Templates Management",
 )
-def index():
+def template_index():
     """
     Display the main page of the Templates File Manager.
     This page includes a list of Templates file and supports pagination and searching.
@@ -185,7 +200,7 @@ def index():
             flash("No template found matching your search criteria.", "info")
 
         return render_template(
-            "/template_managers/index.html",
+            "/template_managers/template_index.html",
             form=form,
             form_manual_create=form_manual_create,
             page=page,
@@ -208,7 +223,7 @@ def index():
         )  # Redirect to a safe page like dashboard
 
 
-@tm_bp.route("/template_detail/<template_id>", methods=["GET"])
+@template_bp.route("/template_detail/<template_id>", methods=["GET"])
 @login_required
 @required_2fa
 @role_required(
@@ -282,7 +297,10 @@ def template_detail(template_id):
         )
 
 
-@tm_bp.route("/upload-template", methods=["POST"])
+# ----------------------------------------------------------------------------------------
+# CRUD Templating Management Section
+# ----------------------------------------------------------------------------------------
+@template_bp.route("/upload-template", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -308,7 +326,7 @@ def upload_template():
             current_app.logger.warning(
                 f"User {current_user.email} submitted invalid template form data."
             )
-            return redirect(url_for("tm.index"))
+            return redirect(url_for("template_bp.template_index"))
 
         # Retrieve files and form data
         j2 = request.files.get("j2")
@@ -323,14 +341,14 @@ def upload_template():
             current_app.logger.warning(
                 f"User {current_user.email} attempted to upload without providing a template file."
             )
-            return redirect(url_for("tm.index"))
+            return redirect(url_for("template_bp.template_index"))
 
         if not yaml or yaml.filename == "":
             flash("File parameter tidak ada.", "danger")
             current_app.logger.warning(
                 f"User {current_user.email} attempted to upload without providing a parameter file."
             )
-            return redirect(url_for("tm.index"))
+            return redirect(url_for("template_bp.template_index"))
 
         # Validasi dan simpan file template
         template_dir = current_app.config["TEMPLATE_DIR"]
@@ -342,7 +360,7 @@ def upload_template():
             current_app.logger.warning(
                 f"User {current_user.email} uploaded an invalid template file type: {j2.filename}"
             )
-            return redirect(url_for("tm.index"))
+            return redirect(url_for("template_bp.template_index"))
 
         # Validasi dan simpan file parameter
         if yaml.filename and allowed_file(yaml.filename, PARAMS_EXTENSIONS):
@@ -353,7 +371,7 @@ def upload_template():
             current_app.logger.warning(
                 f"User {current_user.email} uploaded an invalid parameter file type: {yaml.filename}"
             )
-            return redirect(url_for("tm.index"))
+            return redirect(url_for("template_bp.template_index"))
 
         # Periksa duplikasi nama template
         existing_template = TemplateManager.query.filter_by(
@@ -364,7 +382,7 @@ def upload_template():
             current_app.logger.warning(
                 f"User {current_user.email} attempted to upload a duplicate template: {template_name}."
             )
-            return redirect(url_for("tm.index"))
+            return redirect(url_for("template_bp.template_index"))
 
         # Periksa duplikasi nama parameter
         existing_parameter = TemplateManager.query.filter_by(
@@ -375,7 +393,7 @@ def upload_template():
             current_app.logger.warning(
                 f"User {current_user.email} attempted to upload a duplicate parameter: {parameter_name}."
             )
-            return redirect(url_for("tm.index"))
+            return redirect(url_for("template_bp.template_index"))
 
         # Simpan data template baru ke database
         new_template = TemplateManager(
@@ -404,10 +422,10 @@ def upload_template():
             "danger",
         )
 
-    return redirect(url_for("tm.index"))
+    return redirect(url_for("template_bp.template_index"))
 
 
-@tm_bp.route("/create-template-manual", methods=["POST"])
+@template_bp.route("/create-template-manual", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -433,7 +451,7 @@ def create_template_manual():
         current_app.logger.warning(
             f"User {current_user.email} submitted invalid manual template form data."
         )
-        return redirect(url_for("tm.index"))
+        return redirect(url_for("template_bp.template_index"))
 
     try:
         # Extracting form data
@@ -500,10 +518,10 @@ def create_template_manual():
         )
         db.session.rollback()
 
-    return redirect(url_for("tm.index"))
+    return redirect(url_for("template_bp.template_index"))
 
 
-@tm_bp.route("/update-template/<template_id>", methods=["GET", "POST"])
+@template_bp.route("/update-template/<template_id>", methods=["GET", "POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -522,7 +540,7 @@ def update_template(template_id):
 
     if template_content is None or parameter_content is None:
         flash("Terjadi kesalahan saat memuat template atau konten parameter.", "error")
-        return redirect(url_for("tm.index"))
+        return redirect(url_for("template_bp.template_index"))
 
     # Create a form instance and pre-fill it with existing template data
     form = TemplateUpdateForm(obj=template)
@@ -551,14 +569,14 @@ def update_template(template_id):
                 TemplateManager.id != template.id,
             ).first():
                 flash(f"Nama template '{new_template_name}' sudah ada.", "danger")
-                return redirect(url_for("tm.update_template", template_id=template_id))
+                return redirect(url_for("template_bp.update_template", template_id=template_id))
 
             if TemplateManager.query.filter(
                 TemplateManager.parameter_name == new_parameter_name,
                 TemplateManager.id != template.id,
             ).first():
                 flash(f"Nama parameter '{new_parameter_name}' sudah ada.", "danger")
-                return redirect(url_for("tm.update_template", template_id=template_id))
+                return redirect(url_for("template_bp.update_template", template_id=template_id))
 
             # Handle file content changes
             template_dir = current_app.config["TEMPLATE_DIR"]
@@ -617,13 +635,13 @@ def update_template(template_id):
             db.session.commit()
             current_app.logger.info(f"Template updated successfully: {template_id}")
             flash("Pembaruan template berhasil.", "success")
-            return redirect(url_for("tm.index"))
+            return redirect(url_for("template_bp.template_index"))
 
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error updating template: {e}")
             flash("Gagal memperbarui template.", "error")
-            return redirect(url_for("tm.update_template", template_id=template_id))
+            return redirect(url_for("template_bp.update_template", template_id=template_id))
 
     return render_template(
         "/template_managers/update_template.html",
@@ -634,7 +652,7 @@ def update_template(template_id):
     )
 
 
-@tm_bp.route("/delete-template/<template_id>", methods=["POST"])
+@template_bp.route("/delete-template/<template_id>", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -701,10 +719,13 @@ def delete_template(template_id):
             flash("Gagal menghapus template. Silakan coba lagi.", "danger")
             db.session.rollback()
 
-        return redirect(url_for("tm.index"))
+        return redirect(url_for("template_bp.template_index"))
 
 
-@tm_bp.route("/template-generator/<template_id>", methods=["POST"])
+# ----------------------------------------------------------------------------------------
+# Generator Configuration File from Template and AI Validation
+# ----------------------------------------------------------------------------------------
+@template_bp.route("/template-generator/<template_id>", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -759,16 +780,20 @@ def template_generator(template_id):
             configuration=rendered_config, device_vendor=vendor
         )
 
-        current_app.logger.info(f"{config_validated}...")
-
         data = config_validated["is_valid"]
 
         # Tidak perlu json.loads(), cukup gunakan dictionary yang dikembalikan
         if not data:
-            current_app.logger.error(
-                f"[ERROR] Template validation failed for template ID {template_id}. Errors: {config_validated['errors']}"
+            return (
+                jsonify(
+                    {
+                        "is_valid": False,
+                        "errors": config_validated["errors"],
+                        "suggestions": config_validated["suggestions"],
+                    }
+                ),
+                200,
             )
-            return config_validated, 400
 
     except Exception as e:
         current_app.logger.error(
@@ -825,5 +850,303 @@ def template_generator(template_id):
         )
         return (
             jsonify({"error": f"Failed to save configuration or template: {str(e)}"}),
+            500,
+        )
+
+
+# ----------------------------------------------------------------------------------------
+# Configuration File Section
+# ----------------------------------------------------------------------------------------
+@template_bp.route("/configuration-file")
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Configuration File"],
+    page="Configuration File Management",
+)
+def configuration_file_index():
+    current_app.logger.info(
+        f"User {current_user.email} accessed the Configuration File Manager index"
+    )
+
+    # Forms
+    formManualConfiguration = ManualConfigurationForm(request.form)
+    formAIconfiguration = AIConfigurationForm(request.form)
+    formTalita = TalitaQuestionForm()
+
+    search_query = request.args.get("search", "").lower()
+    page, per_page, offset = get_page_args(
+        page_parameter="page", per_page_parameter="per_page", per_page=10
+    )
+
+    try:
+        query = (
+            ConfigurationManager.query.filter_by(user_id=current_user.id)
+            if not current_user.has_role("Admin")
+            else ConfigurationManager.query
+        )
+
+        if search_query:
+            query = query.filter(
+                ConfigurationManager.config_name.ilike(f"%{search_query}%")
+                | ConfigurationManager.vendor.ilike(f"%{search_query}%")
+                | ConfigurationManager.description.ilike(f"%{search_query}%")
+            )
+
+        total_configuration_file = query.count()
+        configurations = query.limit(per_page).offset(offset).all()
+        pagination_info = Pagination(
+            page=page, per_page=per_page, total=total_configuration_file
+        )
+
+        return render_template(
+            "template_managers/configuration_file_index.html",
+            formManualConfiguration=formManualConfiguration,
+            formAIconfiguration=formAIconfiguration,
+            formTalita=formTalita,
+            page=page,
+            per_page=per_page,
+            search_query=search_query,
+            total_configuration_file=total_configuration_file,
+            configurations=configurations,
+            pagination=pagination_info,
+        )
+
+    except Exception as e:
+        current_app.logger.error(
+            f"Error accessing Configuration Manager page: {str(e)}"
+        )
+        return (
+            jsonify(
+                {
+                    "is_valid": False,
+                    "error_message": "Failed to access Configuration Management.",
+                }
+            ),
+            500,
+        )
+
+
+@template_bp.route("/configuration-file/get-detail/<config_id>", methods=["GET"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Configuration File"],
+    page="Configuration File Management",
+)
+def get_detail_configuration(config_id):
+    configuration = ConfigurationManager.query.get_or_404(config_id)
+
+    if not check_ownership(configuration, current_user):
+        return jsonify({"error": "Unauthorized access to configuration."}), 403
+
+    try:
+        config_dir = current_app.config["CONFIG_DIR"]
+        configuration_file_path = os.path.join(config_dir, configuration.config_name)
+        if not is_safe_path(configuration_file_path, config_dir):
+            return jsonify({"error": "Unauthorized access to file path."}), 403
+
+        configuration_content = read_file(configuration_file_path)
+        if configuration_content is None:
+            return jsonify({"error": "Configuration file not found."}), 404
+
+        return (
+            jsonify(
+                {
+                    "config_name": configuration.config_name,
+                    "vendor": configuration.vendor,
+                    "description": configuration.description,
+                    "created_by": configuration.created_by,
+                    "configuration_content": configuration_content,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        current_app.logger.error(f"Unexpected error: {str(e)}")
+        return jsonify({"error": "An error occurred. Please try again later."}), 500
+
+
+@template_bp.route("/configuration-file/update/<config_id>", methods=["GET", "POST"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Configuration File"],
+    page="Configuration File Management",
+)
+def update_configuration(config_id):
+    current_app.logger.info(
+        f"Attempting to update configuration file with ID {config_id} by {current_user.email}"
+    )
+
+    # Query the config
+    config = ConfigurationManager.query.get_or_404(config_id)
+
+    # Forms
+    form = UpdateConfigurationForm()
+
+    # Ownership check
+    if not check_ownership(config, current_user):
+        current_app.logger.warning(
+            f"Unauthorized update attempt by {current_user.email} on configuration ID {config.id}"
+        )
+        return jsonify({"error": "Unauthorized access to configuration."}), 403
+
+    # Reading the content from the file
+    config_dir = current_app.config["CONFIG_DIR"]
+    config_content = read_file(os.path.join(config_dir, config.config_name))
+    if config_content is None:
+        current_app.logger.error(
+            f"Error loading config content for ID {config_id} by {current_user.email}"
+        )
+        return jsonify({"error": "Error loading config content."}), 500
+
+    # Processing form submission
+    if request.method == "POST" and form.validate_on_submit():
+        new_config_name = secure_filename(form.config_name.data)
+        new_vendor = form.vendor.data
+        new_description = form.description.data
+        new_config_content = form.config_content.data.strip()
+        processed_content = "\n".join(
+            line.rstrip() for line in new_config_content.splitlines()
+        )
+
+        # If no changes are detected, redirect silently to the index page
+        if (
+            new_config_name == config.config_name
+            and new_vendor == config.vendor
+            and new_description == config.description
+            and new_config_content == config_content
+        ):
+            current_app.logger.info(
+                f"No changes detected for configuration ID {config_id}"
+            )
+            return jsonify(
+                {"is_valid": True, "redirect_url": url_for("template_bp.configuration_file_index")}
+            )
+
+        # Check if the new config name already exists
+        if new_config_name != config.config_name:
+            existing_config = ConfigurationManager.query.filter_by(
+                config_name=new_config_name
+            ).first()
+            if existing_config:
+                current_app.logger.warning(
+                    f"File with the new name '{new_config_name}' already exists."
+                )
+                return (
+                    jsonify(
+                        {
+                            "is_valid": False,
+                            "error_message": "File with the new name already exists.",
+                        }
+                    ),
+                    400,
+                )
+
+        try:
+            # Update file content if changed
+            config_dir = current_app.config["CONFIG_DIR"]
+            if new_config_content != config_content:
+                config_path = os.path.join(config_dir, config.config_name)
+                with open(config_path, "w", encoding="utf-8") as file:
+                    file.write(processed_content)
+                current_app.logger.info(
+                    f"Successfully updated config content by user {current_user.email}"
+                )
+
+            # Rename the file if necessary
+            if new_config_name != config.config_name:
+                old_path = os.path.join(config_dir, config.config_name)
+                new_path = os.path.join(config_dir, new_config_name)
+
+                os.makedirs(os.path.dirname(new_path), exist_ok=True)
+                os.rename(old_path, new_path)
+                config.config_name = new_config_name
+                current_app.logger.info(
+                    f"Successfully renamed file by user {current_user.email}"
+                )
+
+            # Update database fields
+            config.vendor = new_vendor
+            config.description = new_description
+            db.session.commit()
+            current_app.logger.info(
+                f"Successfully updated config data in database for ID {config_id}"
+            )
+
+            flash("Update file konfigurasi berhasil!", "success")
+            return jsonify(
+                {"is_valid": True, "redirect_url": url_for("template_bp.configuration_file_index")}
+            )
+
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error updating configuration: {e}")
+            return (
+                jsonify(
+                    {
+                        "is_valid": False,
+                        "error_message": "Failed to update configuration.",
+                    }
+                ),
+                500,
+            )
+
+    # If GET request, pre-populate the form with current values
+    elif request.method == "GET":
+        form.config_name.data = config.config_name
+        form.vendor.data = config.vendor
+        form.description.data = config.description
+        form.config_content.data = config_content
+
+    # Handle form validation errors
+    elif request.method == "POST" and not form.validate_on_submit():
+        errors = {field: error for field, error in form.errors.items()}
+        current_app.logger.warning(f"Form validation failed: {errors}")
+        return jsonify({"is_valid": False, "errors": errors}), 400
+
+    return render_template(
+        "template_managers/update_configuration_file.html", config=config, form=form
+    )
+
+
+@template_bp.route("/configuration-file/delete/<config_id>", methods=["POST"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["Manage Configuration File"],
+    page="Configuration File Management",
+)
+def delete_configuration(config_id):
+    config = ConfigurationManager.query.get_or_404(config_id)
+
+    if not check_ownership(config, current_user):
+        return jsonify({"error": "Unauthorized access to configuration."}), 403
+
+    try:
+        config_dir = current_app.config["CONFIG_DIR"]
+        file_path = os.path.join(config_dir, config.config_name)
+        success, message = delete_file_safely(file_path)
+        if not success:
+            return jsonify({"error": message}), 400
+
+        db.session.delete(config)
+        db.session.commit()
+
+        flash("Delete file konfigurasi berhasil!", "success")
+        jsonify({"success": True, "redirect_url": url_for("template_bp.configuration_file_index")})
+        return redirect(url_for("template_bp.configuration_file_index"))
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting configuration: {e}")
+        return (
+            jsonify({"error": "Failed to delete configuration due to an error."}),
             500,
         )

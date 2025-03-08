@@ -28,7 +28,7 @@
 {% block table_name %}Daftar Templates{% endblock %}
 
 {% block form_filter_row %}
-<form id="perPageForm" action="{{ url_for('tm.index') }}" method="get">
+<form id="perPageForm" action="{{ url_for('template_bp.template_index') }}" method="get">
     <label class="d-flex align-items-center">
         <span>Tampilkan</span>
         <select name="per_page" class="form-select form-select-sm mx-2"
@@ -44,7 +44,7 @@
 {% endblock %}
 
 {% block form_search %}
-<form id="searchForm" method="get" action="{{ url_for('tm.index') }}" class="form-inline d-flex">
+<form id="searchForm" method="get" action="{{ url_for('template_bp.template_index') }}" class="form-inline d-flex">
     <input id="searchInput" type="text" name="search" class="form-control form-control-sm me-2" placeholder="Search..."
         value="{{ search_query }}">
     <button class="btn btn-outline-success btn-sm" type="submit">
@@ -78,10 +78,10 @@
             onclick="showTemplateDetails(this)">
             <i class="fas fa-eye"></i>
         </button>
-        <a href="{{ url_for('tm.update_template', template_id=template.id) }}" class="btn btn-success btn-sm mb-1">
+        <a href="{{ url_for('template_bp.update_template', template_id=template.id) }}" class="btn btn-success btn-sm mb-1">
             <i class="fas fa-edit"></i>
         </a>
-        <form action="{{ url_for('tm.delete_template', template_id=template.id) }}" method="post" class="d-inline">
+        <form action="{{ url_for('template_bp.delete_template', template_id=template.id) }}" method="post" class="d-inline">
             {{ delete_form.hidden_tag() }}
             <button type="submit" class="btn btn-danger btn-sm mb-1"
                 onclick="return confirm('Are you sure you want to delete this template?');">
@@ -152,7 +152,7 @@
                     </div>
                     <div class="modal-body">
                         <!-- Form pointing to upload_template endpoint -->
-                        <form id="uploadTemplateForm" method="post" action="{{ url_for('tm.upload_template') }}"
+                        <form id="uploadTemplateForm" method="post" action="{{ url_for('template_bp.upload_template') }}"
                             enctype="multipart/form-data">
                             {{ form.csrf_token }}
 
@@ -214,7 +214,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form id="manualTemplateForm" method="post" action="{{ url_for('tm.create_template_manual') }}">
+                        <form id="manualTemplateForm" method="post" action="{{ url_for('template_bp.create_template_manual') }}">
                             {{ form_manual_create.csrf_token }}
 
                             <div class="mb-3">
@@ -382,20 +382,36 @@
                                     statusModal.querySelector('.modal-content').classList.remove('bg-danger');
                                     statusModal.querySelector('.modal-content').classList.add('bg-success');
 
-                                    // Tampilkan pesan sukses
                                     statusMessage.textContent = data.message || "Template berhasil digenerate!";
                                 } else {
                                     statusModal.querySelector('.modal-content').classList.remove('bg-success');
                                     statusModal.querySelector('.modal-content').classList.add('bg-danger');
 
-                                    // Tampilkan pesan error
-                                    statusMessage.textContent = data.message || "Terjadi kesalahan saat validasi.";
+                                    // Tampilkan pesan error utama jika ada
+                                    statusMessage.textContent = "Terjadi kesalahan saat validasi.";
 
-                                    // Jika ada detail error, tampilkan dalam bentuk daftar
+                                    // Jika ada error detail, tampilkan secara rapi
                                     if (data.errors && Array.isArray(data.errors)) {
+                                        const errorTitle = document.createElement('li');
+                                        errorTitle.innerHTML = "<strong>Errors:</strong>";
+                                        statusDetails.appendChild(errorTitle);
+
                                         data.errors.forEach(error => {
                                             const li = document.createElement('li');
-                                            li.textContent = error;
+                                            li.innerHTML = `<strong>Line ${error.line}</strong>: [${error.error_code}] ${error.message}`;
+                                            statusDetails.appendChild(li);
+                                        });
+                                    }
+
+                                    // Jika ada saran perbaikan, tampilkan secara rapi
+                                    if (data.suggestions && Array.isArray(data.suggestions)) {
+                                        const suggestionTitle = document.createElement('li');
+                                        suggestionTitle.innerHTML = "<strong>Suggestions:</strong>";
+                                        statusDetails.appendChild(suggestionTitle);
+
+                                        data.suggestions.forEach(suggestion => {
+                                            const li = document.createElement('li');
+                                            li.textContent = suggestion;
                                             statusDetails.appendChild(li);
                                         });
                                     }
@@ -426,6 +442,7 @@
                     });
                 });
             });
+
         </script>
 
         {% endblock %}

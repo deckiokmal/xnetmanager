@@ -693,7 +693,7 @@ class ConfigurationFileManagement:
 
                         RESPONSE INSTRUCTIONS
                         ---------------------
-                        when responding to me, you must follow the following format:
+                        when responding to me use bahasa indonesia, you must follow the following format:
                         {{
                             "is_valid": <true/false>,
                             "errors": [
@@ -702,7 +702,6 @@ class ConfigurationFileManagement:
                                             "error_code": <short_error_code>,
                                             "message": <detailed_error_message>
                                         }},
-                                        ...
                                     ],
                             "suggestions": <list of suggested fixes if errors exist>
                         }}

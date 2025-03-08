@@ -22,7 +22,7 @@ from src.utils.ConfigurationFileUtils import (
 from src.utils.ai_agent_utilities import talita_llm
 from werkzeug.utils import secure_filename
 import os
-from .decorators import login_required, role_required, required_2fa
+from ..src.controllers.decorators import login_required, role_required, required_2fa
 from flask_paginate import Pagination, get_page_args
 from src.utils.forms_utils import (
     ManualConfigurationForm,

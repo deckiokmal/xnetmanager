@@ -2,39 +2,11 @@
 {% block page_heading %}Configuration File Management{% endblock %}
 {% block title %}Configuration File Management{% endblock %}
 
-{% block button_group1 %}
-<div class="dropdown">
-    <button class="btn btn-sm btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown"
-        aria-expanded="false">
-        Create New
-    </button>
-    <ul class="dropdown-menu p-3 shadow-lg rounded">
-        <li>
-            <button type="button" class="dropdown-item btn btn-sm btn-outline-primary mb-2 w-100 text-start"
-                data-bs-toggle="modal" data-bs-target="#createModal">
-                Create Config with AI Validated
-            </button>
-        </li>
-        <li>
-            <button type="button" class="dropdown-item btn btn-sm btn-outline-secondary mb-2 w-100 text-start"
-                data-bs-toggle="modal" data-bs-target="#createAiModal">
-                Generate Automate Config with AI
-            </button>
-        </li>
-        <li>
-            <button type="button" class="dropdown-item btn btn-sm btn-outline-secondary w-100 text-start"
-                data-bs-toggle="modal" data-bs-target="#askTalitaModal">
-                Create Automate Config with Talita
-            </button>
-        </li>
-    </ul>
-</div>
-{% endblock %}
 
 {% block table_name %}Daftar File Konfigurasi{% endblock %}
 
 {% block form_filter_row %}
-<form id="perPageForm" action="{{ url_for('config_file.index') }}" method="get">
+<form id="perPageForm" action="{{ url_for('template_bp.configuration_file_index') }}" method="get">
     <label class="d-flex align-items-center">
         <span>Tampilkan</span>
         <select name="per_page" class="form-select form-select-sm mx-2"
@@ -50,7 +22,8 @@
 {% endblock %}
 
 {% block form_search %}
-<form id="searchForm" method="get" action="{{ url_for('config_file.index') }}" class="form-inline d-flex">
+<form id="searchForm" method="get" action="{{ url_for('template_bp.configuration_file_index') }}"
+    class="form-inline d-flex">
     <input id="searchInput" type="text" name="search" class="form-control form-control-sm me-2" placeholder="Search..."
         value="{{ search_query }}">
     <button class="btn btn-outline-success btn-sm" type="submit">
@@ -79,11 +52,11 @@
         <button class="btn btn-info btn-sm mb-1" data-config-id="{{ data.id }}" onclick="showConfigDetails(this)">
             <i class="fas fa-eye"></i>
         </button>
-        <a href="{{ url_for('config_file.update_configuration', config_id=data.id) }}"
+        <a href="{{ url_for('template_bp.update_configuration', config_id=data.id) }}"
             class="btn btn-success btn-sm mb-1">
             <i class="fas fa-edit"></i>
         </a>
-        <form action="{{ url_for('config_file.delete_configuration', config_id=data.id) }}" method="post"
+        <form action="{{ url_for('template_bp.delete_configuration', config_id=data.id) }}" method="post"
             class="d-inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-danger btn-sm mb-1"
@@ -125,215 +98,6 @@
                         <p><strong>Created by:</strong> <span id="created_by"></span></p>
                         <p><strong>Config Content:</strong></p>
                         <pre id="configuration_content" class="content-data"></pre>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal Create Manual Configuration with AI Validation -->
-        <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-scrollable">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="createModalLabel">Buat File Konfigurasi</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="createManualConfigForm" method="post"
-                            action="{{ url_for('config_file.create_configuration_with_ai_validated') }}">
-                            {{ formManualConfiguration.csrf_token }}
-                            <div class="mb-3">
-                                <label for="create_filename" class="form-label">Nama file</label>
-                                {{ formManualConfiguration.filename(class="form-control", id="create_filename") }}
-                                {% if formManualConfiguration.filename.errors %}
-                                {% for error in formManualConfiguration.filename.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-                            <div class="mb-3">
-                                <label for="create_vendor" class="form-label">Vendor</label>
-                                {{ formManualConfiguration.vendor(class="form-control", id="create_vendor") }}
-                                {% if formManualConfiguration.vendor.errors %}
-                                {% for error in formManualConfiguration.vendor.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-                            <div class="mb-3">
-                                <label for="description" class="form-label">Deskripsi</label>
-                                {{ formManualConfiguration.configuration_description(class="form-control",
-                                id="description") }}
-                                {% if formManualConfiguration.configuration_description.errors %}
-                                {% for error in formManualConfiguration.configuration_description.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-                            <div class="mb-3">
-                                <label for="create_configuration_content" class="form-label">File Konfigurasi</label>
-                                {{ formManualConfiguration.configuration_content(class="form-control",
-                                id="create_configuration_content", rows="5") }}
-                                {% if formManualConfiguration.configuration_content.errors %}
-                                {% for error in formManualConfiguration.configuration_content.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-                            <button type="submit" class="btn btn-sm btn-primary ms-2"><i class="fas fa-plus"></i> Create
-                                Configuration</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal Create AI Configuration -->
-        <div class="modal fade" id="createAiModal" tabindex="-1" aria-labelledby="createAiModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog modal-dialog-scrollable">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="createAiModalLabel">Generate Automated Configuration with AI</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="createAiConfigForm" method="post"
-                            action="{{ url_for('config_file.create_configuration_with_ai_automated') }}">
-                            {{ formAIconfiguration.csrf_token }}
-
-                            <!-- Filename Input -->
-                            <div class="mb-3">
-                                <label for="filename" class="form-label">Filename</label>
-                                {{ formAIconfiguration.filename(class="form-control", id="filename") }}
-                                {% if formAIconfiguration.filename.errors %}
-                                {% for error in formAIconfiguration.filename.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <!-- Vendor Input -->
-                            <div class="mb-3">
-                                <label for="vendor" class="form-label">Vendor</label>
-                                {{ formAIconfiguration.vendor(class="form-control", id="vendor") }}
-                                {% if formAIconfiguration.vendor.errors %}
-                                {% for error in formAIconfiguration.vendor.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <!-- Description Input -->
-                            <div class="mb-3">
-                                <label for="description" class="form-label">Description</label>
-                                {{ formAIconfiguration.description(class="form-control", id="description") }}
-                                {% if formAIconfiguration.description.errors %}
-                                {% for error in formAIconfiguration.description.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <!-- Configuration Requirements Input -->
-                            <div class="mb-3">
-                                <label for="ask_configuration" class="form-label">Configuration Requirements</label>
-                                {{ formAIconfiguration.ask_configuration(class="form-control", id="ask_configuration",
-                                rows="5") }}
-                                {% if formAIconfiguration.ask_configuration.errors %}
-                                {% for error in formAIconfiguration.ask_configuration.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <!-- Submit Button -->
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Generate
-                                Configuration</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal for Asking TALITA -->
-        <div class="modal fade" id="askTalitaModal" tabindex="-1" aria-labelledby="askTalitaModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog modal-dialog-scrollable">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="askTalitaModalLabel">Ask TALITA a Question</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="createTalitaConfigForm" method="post"
-                            action="{{ url_for('config_file.create_configuration_with_talita') }}">
-                            {{ formTalita.csrf_token }}
-
-                            <!-- Configuration Name Field -->
-                            <div class="mb-3">
-                                <label for="config_name" class="form-label">Configuration Name</label>
-                                {{ formTalita.config_name(class="form-control", id="config_name") }}
-                                {% if formTalita.config_name.errors %}
-                                {% for error in formTalita.config_name.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <!-- Vendor Field -->
-                            <div class="mb-3">
-                                <label for="vendor" class="form-label">Vendor</label>
-                                {{ formTalita.vendor(class="form-control", id="vendor") }}
-                                {% if formTalita.vendor.errors %}
-                                {% for error in formTalita.vendor.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <!-- Description Field -->
-                            <div class="mb-3">
-                                <label for="description" class="form-label">Description</label>
-                                {{ formTalita.description(class="form-control", id="description") }}
-                                {% if formTalita.description.errors %}
-                                {% for error in formTalita.description.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <!-- Question Field -->
-                            <div class="mb-3">
-                                <label for="question" class="form-label">Pertanyaan</label>
-                                {{ formTalita.question(class="form-control", id="question", rows="5") }}
-                                {% if formTalita.question.errors %}
-                                {% for error in formTalita.question.errors %}
-                                <div class="text-danger">{{ error }}</div>
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <!-- Submit Button -->
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-paper-plane"></i> Submit
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal Error Config Generation -->
-        <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="errorModalLabel">Error Generating Configuration</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div id="errorModalMessage"></div>
                     </div>
                 </div>
             </div>

@@ -163,28 +163,22 @@ def create_app():
     from .controllers.profile_controller import profile_bp
     from .controllers.roles_controller import roles_bp
     from .controllers.device_manager_controller import dm_bp
-    from .controllers.template_manager_controller import tm_bp
+    from .controllers.template_manager_controller import template_bp
     from .controllers.config_manager_controller import nm_bp
     from .utils.error_helper_utils import error_bp
     from .controllers.backup_controller import backup_bp
     from .controllers.ai_agent_controller import ai_agent_bp
-    from .controllers.config_file_manager_controller import config_file_bp
-    from .controllers.restfull_api_controller import restapi_bp
-    from .controllers.whatsapp_gateway_controller import whatsapp_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(roles_bp)
     app.register_blueprint(dm_bp)
-    app.register_blueprint(tm_bp)
+    app.register_blueprint(template_bp)
     app.register_blueprint(nm_bp)
     app.register_blueprint(error_bp)
     app.register_blueprint(backup_bp)
     app.register_blueprint(ai_agent_bp)
-    app.register_blueprint(config_file_bp)
-    app.register_blueprint(restapi_bp)
-    app.register_blueprint(whatsapp_bp)
 
     # Set up user loader
     from .models.app_models import User

@@ -49,7 +49,7 @@ import os
 from src.utils.ai_agent_utilities import talita_llm
 from src.utils.config_manager_utils import ConfigurationManagerUtils
 import time
-from .decorators import jwt_role_required
+from ..src.controllers.decorators import jwt_role_required
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 from src.utils.backupUtils import BackupUtils
