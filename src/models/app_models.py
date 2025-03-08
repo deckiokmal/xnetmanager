@@ -7,7 +7,7 @@ from itsdangerous import URLSafeTimedSerializer as Serializer, SignatureExpired
 from flask import current_app
 import uuid
 from src import UUID_TYPE
-from src.utils.backupUtils import BackupUtils
+from src.utils.backup_utilities import BackupUtils
 
 
 # ------------------------------------------------------------------------

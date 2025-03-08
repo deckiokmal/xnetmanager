@@ -12,7 +12,7 @@ from src import db
 from src.models.app_models import DeviceManager, AIRecommendations
 from sqlalchemy.orm import Session
 from sqlalchemy import select, delete
-from .backupUtils import BackupUtils
+from .backup_utilities import BackupUtils
 from .network_configurator_utilities import ConfigurationManagerUtils
 
 # Set up logging configuration

@@ -52,7 +52,7 @@ import time
 from ..src.controllers.decorators import jwt_role_required
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
-from src.utils.backupUtils import BackupUtils
+from src.utils.backup_utilities import BackupUtils
 
 # Create blueprints for the device manager (restapi_bp) and error handling (error_bp)
 restapi_bp = Blueprint("restapi", __name__)

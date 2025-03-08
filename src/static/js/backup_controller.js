@@ -107,52 +107,83 @@ document.getElementById("confirmRollbackBtn").addEventListener("click", function
         .catch(error => console.error('Error during rollback:', error));
 })
 
+// Validasi input pada update_backup
+document.addEventListener("DOMContentLoaded", function () {
+    // Bootstrap validation script
+    var forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+});
 
-function openAnalyzeModal(button) {
-    const backupId = button.getAttribute("data-backup-id");
-    document.getElementById("backupId").value = backupId;
-  
-    // Show loading overlay
-    document.getElementById("loading-overlay").style.display = "block";
-    document.getElementById("analysis-result").style.display = "none";
-    document.getElementById("modal-footer").style.display = "none";
-  
-    // Initialize the Bootstrap modal and show it
-    const analyzeModal = new bootstrap.Modal(document.getElementById("AnalyzeModal"));
-    analyzeModal.show();
-  
-    fetch(`/analyze-data/${backupId}`, { method: "POST" })
-      .then(response => response.json())
-      .then(data => {
-        // Hide loading overlay and display analysis result
-        document.getElementById("loading-overlay").style.display = "none";
-        document.getElementById("analysis-result").innerHTML = data.analysis;
-  
-        // Add buttons for recommendations if available
-        const recommendations = data.recommendations;
-        if (recommendations.length > 0) {
-          const modalFooter = document.getElementById("modal-footer");
-          modalFooter.style.display = "block";
-          for (const recommendation of recommendations) {
-            const button = document.createElement("button");
-            button.classList.add("btn", "btn-primary", "mx-1");
-            button.textContent = recommendation[0]; // Recommendation text
-            button.addEventListener("click", () => handlePushConfig(recommendation[1])); // Syntax for push config
-            modalFooter.appendChild(button);
-          }
+function sortTable(n) {
+    const table = document.getElementById("dataTable");
+    if (!table) return;
+    let rows, switching, i, x, y, shouldSwitch, dir, switchCount = 0;
+    const headers = table.getElementsByTagName("TH");
+    switching = true;
+    dir = "asc";
+
+    for (let header of headers) {
+        let icon = header.querySelector("i");
+        if (icon) {
+            icon.classList.remove("fa-sort-up", "fa-sort-down");
+            icon.classList.add("fa-sort");
         }
-      })
-      .catch(error => {
-        console.error("Error analyzing backup:", error);
-        alert("An error occurred while analyzing the backup.");
-        document.getElementById("loading-overlay").style.display = "none";
-      });
-  }
-  
-  function handlePushConfig(syntax) {
-    // Implement logic to call push_config_single_device endpoint with syntax
-    // You might need to fetch additional data like device ID
-    alert("Pushing configuration with syntax:\n" + syntax);
-    // ... (make API call to push_config_single_device)
-    // ... (handle success/error and potentially close modal)
-  }
+    }
+
+    while (switching) {
+        switching = false;
+        rows = table.rows;
+
+        for (i = 1; i < (rows.length - 1); i++) {
+            shouldSwitch = false;
+            x = rows[i].getElementsByTagName("TD")[n];
+            y = rows[i + 1].getElementsByTagName("TD")[n];
+
+            if (dir === "asc") {
+                if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                    shouldSwitch = true;
+                    break;
+                }
+            } else if (dir === "desc") {
+                if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                    shouldSwitch = true;
+                    break;
+                }
+            }
+        }
+
+        if (shouldSwitch) {
+            rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+            switching = true;
+            switchCount++;
+        } else {
+            if (switchCount === 0 && dir === "asc") {
+                dir = "desc";
+                switching = true;
+            }
+        }
+    }
+
+    if (dir === "asc") {
+        headers[n].querySelector("i").classList.remove("fa-sort");
+        headers[n].querySelector("i").classList.add("fa-sort-up");
+    } else {
+        headers[n].querySelector("i").classList.remove("fa-sort");
+        headers[n].querySelector("i").classList.add("fa-sort-down");
+    }
+}
+
+document.getElementById("searchInput").addEventListener("input", function () {
+    clearTimeout(this.timeout);
+    this.timeout = setTimeout(function () {
+        document.getElementById('searchForm').submit();
+    }, 1000);
+});

@@ -6,7 +6,7 @@
     <div class="card-header mb-3">
         Update {{ backup.backup_name }}
     </div>
-    <form action="{{ url_for('backup.update_backup', backup_id=backup.id) }}" method="post" class="needs-validation"
+    <form action="{{ url_for('backup_bp.update_backup', backup_id=backup.id) }}" method="post" class="needs-validation"
         novalidate>
         {{ form.hidden_tag() }}
 
@@ -92,28 +92,13 @@
         <button type="submit" class="btn btn-sm btn-success">
             <i class="fa-solid fa-check"></i> Save Changes
         </button>
-        <a class="btn btn-sm btn-warning" href="{{ url_for('backup.index') }}">
+        <a class="btn btn-sm btn-warning" href="{{ url_for('backup_bp.index') }}">
             <i class="fa-solid fa-arrow-left"></i> Back
         </a>
     </form>
 </div>
 
 {% block script_js %}
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        // Bootstrap validation script
-        var forms = document.querySelectorAll('.needs-validation');
-        Array.prototype.slice.call(forms).forEach(function (form) {
-            form.addEventListener('submit', function (event) {
-                if (!form.checkValidity()) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }
-                form.classList.add('was-validated');
-            }, false);
-        });
-    });
-</script>
+<script src="{{ url_for('static', filename='js/backup_controller.js') }}"></script>
 {% endblock %}
-
 {% endblock %}

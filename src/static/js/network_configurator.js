@@ -256,3 +256,104 @@ document.querySelectorAll('.btn-primary[data-bs-target^="#pushConfigModal"]').fo
         fetchConfigsByVendor(deviceVendor, `configSelect${deviceId}`);
     });
 });
+
+// Fungsi untuk menangani backup single device
+document.querySelectorAll('form[id^="backupForm"]').forEach(form => {
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const deviceId = form.id.replace('backupForm', ''); // Ambil device ID dari form ID
+        const backupData = {
+            backup_name: document.getElementById(`backupName${deviceId}`).value,
+            description: document.getElementById(`description${deviceId}`).value,
+            backup_type: document.getElementById(`backupType${deviceId}`).value,
+            command: document.getElementById(`command${deviceId}`).value
+        };
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+        showLoadingOverlay(); // Tampilkan loading overlay
+
+        fetch(`/backups/create_single/${deviceId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(backupData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Backup created successfully!');
+                // Tutup modal setelah sukses
+                const backupModal = bootstrap.Modal.getInstance(document.getElementById(`backupModal${deviceId}`));
+                backupModal.hide();
+            } else {
+                alert('Failed to create backup: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error creating backup:', error);
+            alert('Error creating backup.');
+        })
+        .finally(() => {
+            hideLoadingOverlay(); // Sembunyikan loading overlay
+        });
+    });
+});
+
+// Fungsi untuk menangani backup multiple devices
+document.getElementById('createBackupForm')?.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const backupData = {
+        backup_name: document.getElementById('backupName').value,
+        description: document.getElementById('description').value,
+        backup_type: document.getElementById('backupType').value,
+        retention_days: document.getElementById('retentionDays').value,
+        command: document.getElementById('command').value,
+        devices: JSON.parse(document.getElementById('selectedBackupDevices').value) // Ambil daftar perangkat yang dipilih
+    };
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+    showLoadingOverlay(); // Tampilkan loading overlay
+
+    fetch('/backups/create_multiple', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify(backupData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        let resultTableHTML = '<table class="table table-bordered"><thead><tr><th>Device Name</th><th>IP Address</th><th>Status</th><th>Message</th></tr></thead><tbody>';
+        data.results.forEach(result => {
+            resultTableHTML += `<tr><td>${result.device_name}</td><td>${result.ip}</td><td>${result.status}</td><td>${result.message}</td></tr>`;
+        });
+        resultTableHTML += '</tbody></table>';
+
+        document.getElementById('backupResultTable').innerHTML = resultTableHTML;
+
+        // Tutup modal create backup
+        const createBackupModal = bootstrap.Modal.getInstance(document.getElementById('createBackupModal'));
+        createBackupModal.hide();
+
+        // Tampilkan modal hasil backup
+        const backupResultModal = new bootstrap.Modal(document.getElementById('backupResultModal'));
+        backupResultModal.show();
+    })
+    .catch(error => {
+        console.error('Error creating backup:', error);
+        alert('Error creating backup.');
+    })
+    .finally(() => {
+        hideLoadingOverlay(); // Sembunyikan loading overlay
+    });
+});
+
+// Reload halaman saat modal backupResultModal ditutup
+document.getElementById('backupResultModal')?.addEventListener('hidden.bs.modal', function () {
+    location.reload();
+});
