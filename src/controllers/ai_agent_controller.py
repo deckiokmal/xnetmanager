@@ -1,4 +1,5 @@
 import logging
+from werkzeug.exceptions import BadRequest, InternalServerError
 from flask import (
     Blueprint,
     request,
@@ -90,15 +91,31 @@ def chatbot():
     if not user_input:
         return jsonify({"success": False, "message": "Please enter a question."}), 400
 
-    chat_intent = AgenticNetworkIntent(user_input).process_intent_request()
+    try:
+        chat_intent = AgenticNetworkIntent(user_input).process_intent_request()
 
-    if chat_intent == "other":
-        # Ambil ID pengguna saat ini (dari Flask-Login)
-        user_id = str(current_user.id) if current_user.is_authenticated else "anonymous"
-        response = talita_llm(user_input, user_id)
-        return jsonify(response), 200
+        if chat_intent == "other":
+            # Ambil ID pengguna saat ini (dari Flask-Login)
+            user_id = (
+                str(current_user.id) if current_user.is_authenticated else "anonymous"
+            )
+            response = talita_llm(user_input, user_id)
+            return jsonify(response), 200
 
-    return jsonify({"success": True, "message": chat_intent}), 200
+        return jsonify({"success": True, "message": chat_intent}), 200
+    except BadRequest as e:
+        return jsonify({"success": False, "message": str(e)}), 400
+    except Exception as e:
+        current_app.logger.error(f"Unexpected error: {str(e)}")
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "An unexpected error occurred. Please try again later.",
+                }
+            ),
+            500,
+        )
 
 
 # --------------------------------------------------------------------------------

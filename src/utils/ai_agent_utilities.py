@@ -110,7 +110,7 @@ class AgenticNetworkIntent:
         )
         confidence_score: float = Field(description="Confidence score between 0 and 1")
         description: str = Field(
-            description="Cleaned description of the intent with device target ip address and vendor. Always verify the configuration by executing the appropriate command and presenting the results to the user for confirmation"
+            description="Cleaned description of the intent based networking with device target ip address and vendor."
         )
 
     class ConfigurationDetails(BaseModel):
@@ -121,7 +121,7 @@ class AgenticNetworkIntent:
         )
         vendor: str = Field(description="Vendor of the network device")
         command: str = Field(
-            description="This command configures the device per vendor syntax without text formatting."
+            description="Generate valid network configurations for the specified vendor and additional verification syntax to display the results of the applied configuration. Make sure 'commands' without additional text formatting, without explanation and without additional escape characters."
         )
 
     class MonitoringDetails(BaseModel):
@@ -132,7 +132,7 @@ class AgenticNetworkIntent:
         )
         vendor: str = Field(description="Vendor of the network device")
         command: str = Field(
-            description="Command to monitor the device. If a 'ping' command needs to be executed, it must always be set to an interval of four pings only to prevent continuous output, ensuring controlled execution and optimized system performance."
+            description="Commands to monitor the device. If any commands are indicated to cause continuous output to be executed (e,g.. ping,monitor traffic), they should always be set to an interval once or four count to prevent continuous output, ensuring controlled execution and optimal system performance."
         )
 
     class NetworkResponse(BaseModel):
@@ -140,7 +140,7 @@ class AgenticNetworkIntent:
 
         response: str = Field(description="Result of the operation")
         success: bool = Field(
-            description="Indicates whether the operation was successful. Always verify the configuration by executing the appropriate command and presenting the results to the user for confirmation."
+            description="Indicates whether the operation was successful. Always verify the configuration by running the appropriate commands and present the results in good text formatting to the user for confirmation. If there are any missing parameters that cause errors in the configuration, ask the user to provide the missing parameters and display the configuration syntax."
         )
 
     # --------------------------------------------------------------
@@ -165,22 +165,12 @@ class AgenticNetworkIntent:
         result = config_manager.configure_device(command)
         return {"success": "success" in result.lower(), "response": result}
 
-    def send_monitoring_command(self, ip_address: str, command: str) -> dict:
-        """Send monitoring command to network device"""
-        logger.debug(f"Executing monitoring command: {command} on {ip_address}")
-        username, password, ssh = self.get_credentials(ip_address)
-        config_manager = ConfigurationManagerUtils(ip_address, username, password, ssh)
-        result = config_manager.configure_device(
-            command
-        )  # Pastikan ini sesuai dengan library yang digunakan
-        return {"success": "success" in result.lower(), "response": result}
-
     # --------------------------------------------------------------
     # Step 3: Define the routing and processing functions
     # --------------------------------------------------------------
     def route_network_intent(self, user_input: str) -> NetworkingIntentType:
         """Router LLM call to determine the type of user intent request"""
-        logger.info("Routing user intent request")
+        # logger.info("Routing user intent request")
 
         completion = self.client.beta.chat.completions.parse(
             model=self.model,
@@ -195,14 +185,14 @@ class AgenticNetworkIntent:
         )
 
         result = completion.choices[0].message.parsed
-        logger.info(
-            f"Request routed as: {result.intent} with confidence: {result.confidence_score}"
-        )
+        # logger.info(
+        #     f"Request routed as: {result.intent} with confidence: {result.confidence_score}"
+        # )
         return result
 
     def handle_configure_intent(self, description: str) -> ConfigurationDetails:
         """Process a configure request and parsed command"""
-        logger.info("Processing configure request")
+        # logger.info("Processing configure request")
 
         # Get configure details
         completion = self.client.beta.chat.completions.parse(
@@ -210,7 +200,7 @@ class AgenticNetworkIntent:
             messages=[
                 {
                     "role": "system",
-                    "content": "Extract details for creating a new configuration intent. With added command to check configuration results.",
+                    "content": "Extract details for creating a new configuration intent. Configuration and checking of configuration results in valid syntax without additional text formatting and without additional escape caracters.",
                 },
                 {
                     "role": "user",
@@ -222,14 +212,14 @@ class AgenticNetworkIntent:
 
         details = completion.choices[0].message.parsed
 
-        logger.info(f"New configure: {details.model_dump_json(indent=2)}")
+        # logger.info(f"New configure: {details.model_dump_json(indent=2)}")
 
         # Generate configuration details
         return details
 
     def handle_monitor_intent(self, description: str) -> MonitoringDetails:
         """Process a monitor request and parsed command"""
-        logger.info("Processing monitor request")
+        # logger.info("Processing monitor request")
 
         # Get configure details
         completion = self.client.beta.chat.completions.parse(
@@ -249,14 +239,14 @@ class AgenticNetworkIntent:
 
         details = completion.choices[0].message.parsed
 
-        logger.info(f"New configure: {details.model_dump_json(indent=2)}")
+        # logger.info(f"New configure: {details.model_dump_json(indent=2)}")
 
         # Generate configuration details
         return details
 
     def process_intent_request(self) -> Optional[NetworkResponse]:
         """Main function implementing the routing workflow"""
-        logger.info("Processing intent request")
+        # logger.info("Processing intent request")
 
         # Route the request
         route_result = self.route_network_intent(self.user_input)
@@ -283,6 +273,9 @@ class AgenticNetworkIntent:
                     configure_details = self.handle_configure_intent(
                         route_result.description
                     )
+                    # current_app.logger.info(
+                    #     f"hasil parsing configure: {configure_details}"
+                    # )
                     result = self.execute_command(configure_details)
                     return result.response
                 elif route_result.intent == "monitor":
@@ -322,7 +315,7 @@ class AgenticNetworkIntent:
                             },
                             "command": {
                                 "type": "string",
-                                "description": "Configuration command With added command to check configuration results",
+                                "description": "Valid network configuration syntax for the specified vendor and provide the corresponding verification commands to confirm that the configuration has been applied correctly",
                             },
                         },
                         "required": [
@@ -334,29 +327,10 @@ class AgenticNetworkIntent:
                     "strict": True,
                 },
             },
-            {
-                "type": "function",
-                "function": {
-                    "name": "send_monitoring_command",
-                    "description": "Send monitoring command to a device using SSH",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "ip_address": {"type": "string"},
-                            "command": {"type": "string"},
-                        },
-                        "required": ["ip_address", "command"],
-                        "additionalProperties": False,
-                    },
-                    "strict": True,
-                },
-            },
         ]
 
         system_prompt = """
-        You are a network automation expert. Validate command with spesific vendor syntax.
-        - Use send_configuration for configuration changes
-        - Use send_monitoring_command for read-only monitoring commands
+        You are a highly skilled and expert network engineer. Your job is to create, validate and optimize network configuration syntax based on 'commands' with specific 'vendors' in Detail configuration. Make sure 'commands' without additional text formatting, without explanation and without additional escape characters. Then add configuration result checks.
         """
         messages = [
             {"role": "system", "content": system_prompt},
@@ -370,26 +344,36 @@ class AgenticNetworkIntent:
             model=self.model,
             messages=messages,
             tools=tools,
+            tool_choice={
+                "type": "function",
+                "function": {"name": "send_configuration"},
+            },
         )
 
         # Step 2: Extract function calls
         tool_calls = completion.choices[0].message.tool_calls
 
+        # current_app.logger.info(f"tool calls 1 result: {tool_calls}")
+
         if not tool_calls:  # <-- Tambahkan ini
-            logger.error("No tool calls found in OpenAI response")
+            # logger.error("No tool calls found in OpenAI response")
             return f"There is an issue with the system at the moment. Please try again later."
 
         # Step 3: Execute the corresponding function
         def call_function(name, args):
             if name == "send_configuration":
                 return self.send_configuration(**args)
-            elif name == "send_monitoring_command":
-                return self.send_monitoring_command(**args)
+            # elif name == "send_monitoring_command":
+            #     return self.send_monitoring_command(**args)
             raise ValueError(f"Unknown function: {name}")
 
         for tool_call in tool_calls:
             name = tool_call.function.name
             args = json.loads(tool_call.function.arguments)
+            # Perbaiki formatting command agar tidak ada escape karakter
+            # args["command"] = args["command"].encode().decode("unicode_escape")
+
+            # current_app.logger.info(f"hasil parsing escape karakter: {args}")
             messages.append(completion.choices[0].message)
             result = call_function(name, args)
             messages.append(
@@ -410,7 +394,7 @@ class AgenticNetworkIntent:
         # logger.info(f"Final OpenAI Response: {completion_2}")
 
         if completion_2 is None or not completion_2.choices:
-            logger.error("OpenAI API response is None or empty")
+            # logger.error("OpenAI API response is None or empty")
             return f"There is an issue with the system at the moment. Please try again later."
 
         return completion_2.choices[0].message.parsed

@@ -71,6 +71,15 @@ class ConfigurationManagerUtils:
             f"Unable to establish SSH connection to {self.ip_address} after {self.MAX_RETRIES} retries."
         )
 
+    def _split_commands(self, command):
+        """
+        Memisahkan perintah multi-baris menjadi daftar perintah tunggal.
+
+        :param command: Perintah multi-baris yang dipisahkan oleh \n.
+        :return: Daftar perintah tunggal.
+        """
+        return command.strip().split("\n")
+
     def configure_device(self, command):
         """
         Mengonfigurasi perangkat melalui SSH dengan perintah yang diberikan.
@@ -82,16 +91,26 @@ class ConfigurationManagerUtils:
         try:
             start_time = time.time()
             with self._connect_ssh() as ssh_client:
-                stdin, stdout, stderr = ssh_client.exec_command(command)
-                stdout.channel.recv_exit_status()
-                response = stdout.read().decode()
+                # Pisahkan perintah multi-baris
+                commands = self._split_commands(command)
+                responses = []
+
+                for cmd in commands:
+                    if cmd.strip():  # Abaikan baris kosong
+                        stdin, stdout, stderr = ssh_client.exec_command(cmd)
+                        stdout.channel.recv_exit_status()
+                        response = stdout.read().decode()
+                        responses.append(response)
+
                 elapsed_time = time.time() - start_time
                 logging.info(
                     "Konfigurasi berhasil pada %s dalam %.2fs",
                     self.ip_address,
                     elapsed_time,
                 )
-                return json.dumps({"message": response, "status": "success"})
+                return json.dumps(
+                    {"message": "\n".join(responses), "status": "success"}
+                )
         except paramiko.AuthenticationException:
             error_message = "Autentikasi gagal, periksa kredensial Anda."
             logging.error(

@@ -114,11 +114,11 @@
             if (data.success) {
                 addMessage(data.message, 'bot-message'); // Access the 'response' property
             } else {
-                addMessage('Error: ' + data.message, 'bot-message');
+                addMessage('An unexpected error occurred. Please try again later.', 'bot-message');
             }
         } catch (error) {
             typingIndicator.style.display = 'none'; // Hide typing indicator in case of error
-            addMessage('Error: ' + error.message, 'bot-message');
+            addMessage('An unexpected error occurred. Please try again later.', 'bot-message');
         }
     }
 
