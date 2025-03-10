@@ -131,14 +131,20 @@ def analyze_view(device_id):
 
     # Proses analisis
     config_data = AIAnalyticsUtils.get_configuration_data(device)
-    current_app.logger.info(f"config_data: {config_data}")
+    # current_app.logger.info(f"config_data: {config_data}")
 
-    if config_data["live"]:
+    if config_data["live"] != None:
         show_config_data = config_data["live"]
-    elif config_data["backup"] != "No backup available":
+    elif config_data["backup"] != None:
         show_config_data = config_data["backup"]
     else:
-        flash("Device koneksi atau Backup tidak valid.", "warning")
+        flash("No available data, check your device connection.", "warning")
+        return redirect(url_for("dm.index"))
+
+    #handle jika data live config dan backup tidak ada
+    if show_config_data == "No data available":
+        current_app.logger.info(f"Live config & Backup data not available - AI Agent.")
+        flash("No data available, please check your device connection.","warning")
         return redirect(url_for("dm.index"))
 
     # Ambil hasil rekomendasi

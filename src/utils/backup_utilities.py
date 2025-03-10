@@ -129,12 +129,12 @@ class BackupUtils:
                 ssh=device.ssh,
             )
             response_json = config_utils.backup_configuration(command=command)
-            current_app.logger.info(f"response_json backup utils: {response_json}")
             response_dict = json.loads(response_json)
-            current_app.logger.info(f"response_dict backup utils: {response_dict}")
 
             if response_dict.get("status") == "success":
-                return response_dict.get("message", "")
+                return response_dict
+            elif response_dict.get("status") == "error":
+                return response_dict
             else:
                 error_message = response_dict.get("message", "Unknown error")
                 raise RuntimeError(f"Failed to retrieve device config: {error_message}")

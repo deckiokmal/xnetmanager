@@ -427,20 +427,25 @@ class AIAnalyticsUtils:
             )  # Default lebih aman
 
             live_config = BackupUtils.get_device_config(device, command)
-            current_app.logger.info(f"live_config_data error: {live_config}")
+            if live_config["status"] == "success":
+                live_data = live_config["message"]
+            else:
+                live_data = "No data available"
 
+            # lanjutkan dengan pengecekan backup data
             latest_backup = BackupUtils.determine_previous_backup(device, "full")
 
             backup_config = (
                 BackupUtils.read_backup_file(latest_backup.backup_path)
                 if latest_backup
-                else "No backup available"
+                else "No data available"
             )
+            backup_data = backup_config
 
             return {
-                "live": live_config,
-                "backup": backup_config,
-                "combined": f"LIVE CONFIGURATION:\n{live_config}\n\nBACKUP CONFIGURATION:\n{backup_config}",
+                "live": live_data,
+                "backup": backup_data,
+                "combined": f"LIVE CONFIGURATION:\n{live_config}\n\nBACKUP CONFIGURATION:\n{backup_data}",
             }
 
         except Exception as e:
