@@ -443,9 +443,10 @@ body {
     /* Tidak bisa di-resize */
     height: auto;
     /* Pastikan tinggi otomatis */
-    max-height: 100px;
+    max-height: 150px;
+    transition: height 0.2s ease;
     /* Batasi tinggi maksimum */
-    overflow-y: hidden;
+    /* overflow-y: hidden; */
     /* Sembunyikan scrollbar */
     font-size: 0.8em;
     /* Ukuran teks lebih kecil */
@@ -799,6 +800,7 @@ body {
 .step {
     display: none;
 }
+
 .step.active {
     display: block;
 }

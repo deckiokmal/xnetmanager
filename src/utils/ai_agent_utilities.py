@@ -253,8 +253,8 @@ class AgenticNetworkIntent:
 
         # Check confidence threshold
         if route_result.confidence_score < 0.7:
-            logger.warning(f"Low confidence score: {route_result.confidence_score}")
-            return None
+            # logger.warning(f"Low confidence score: {route_result.confidence_score}")
+            return f"Please provide clear input."
 
         # Route to appropriate handler
         if route_result.intent == "other":
