@@ -584,3 +584,20 @@ def get_configs_by_vendor():
 
     config_list = [{"id": config.id, "name": config.config_name} for config in configs]
     return jsonify({"success": True, "configs": config_list})
+
+
+# ----------------------------------------------------------------------------------------
+# Initial Configuration Wizard Endpoint
+# ----------------------------------------------------------------------------------------
+@network_configurator_bp.route("/initial-configuration", methods=["GET"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"], permissions=["Config and Backup"], page="Config Management"
+)
+def initial_configuration():
+    """
+    Menampilkan Wizard Initial Configuration.
+    Fitur: Memilih perangkat, basic parameter, dan generate configuration with AI based on given parameter.
+    """
+    pass

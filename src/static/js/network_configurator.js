@@ -80,6 +80,35 @@ document.addEventListener('DOMContentLoaded', function () {
             alert('Please select at least one device.');
         }
     });
+
+    // Initial Configuration Button
+    document.getElementById('InitialConfigButton')?.addEventListener('click', function () {
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    
+        showLoadingOverlay();
+    
+        fetch('/initial-configuration', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.text(); // Karena ini merender template, bukan JSON
+        })
+        .then(html => {
+            document.open();
+            document.write(html);
+            document.close();
+        })
+        .catch(handleFetchError)
+        .finally(hideLoadingOverlay);
+    });
+    
 });
 
 
@@ -357,3 +386,58 @@ document.getElementById('createBackupForm')?.addEventListener('submit', function
 document.getElementById('backupResultModal')?.addEventListener('hidden.bs.modal', function () {
     location.reload();
 });
+
+// initial configuration wizard
+
+let currentStep = 1;
+
+function nextStep(step) {
+    document.getElementById(`step-${currentStep}`).classList.remove('active');
+    document.getElementById(`step-${step}`).classList.add('active');
+    currentStep = step;
+    updateProgressBar();
+}
+
+function prevStep(step) {
+    document.getElementById(`step-${currentStep}`).classList.remove('active');
+    document.getElementById(`step-${step}`).classList.add('active');
+    currentStep = step;
+    updateProgressBar();
+}
+
+function updateProgressBar() {
+    const progress = (currentStep - 1) * 20;
+    document.getElementById('progress-bar').style.width = `${progress}%`;
+    document.getElementById('progress-bar').textContent = `Step ${currentStep}`;
+}
+
+function saveConfig() {
+    document.getElementById('config-preview').textContent = "Konfigurasi berhasil dibuat dalam format Jinja2 & YAML.";
+    nextStep(6);
+}
+
+function downloadConfig() {
+    alert("File konfigurasi siap diunduh.");
+}
+
+function toggleDHCP() {
+    const dhcpDiv = document.getElementById("dhcp-options");
+    const checkbox = document.getElementById("enable-dhcp");
+
+    if (checkbox.checked) {
+        dhcpDiv.style.display = "block";
+    } else {
+        dhcpDiv.style.display = "none";
+    }
+}
+
+function toggleNatOptions(type) {
+    const optionsDiv = document.getElementById(`nat-${type}-options`);
+    const checkbox = document.getElementById(`nat-${type}`);
+
+    if (checkbox.checked) {
+        optionsDiv.style.display = "block";
+    } else {
+        optionsDiv.style.display = "none";
+    }
+}

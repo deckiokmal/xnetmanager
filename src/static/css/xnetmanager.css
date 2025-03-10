@@ -794,3 +794,11 @@ body {
 .toast {
     opacity: 0.9;
 }
+
+/* wizard initial konfigurasi */
+.step {
+    display: none;
+}
+.step.active {
+    display: block;
+}
