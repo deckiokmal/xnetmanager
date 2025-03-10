@@ -2,7 +2,7 @@ import os
 import json
 import difflib
 import hashlib
-from flask import current_app
+from flask import current_app, jsonify
 from .network_configurator_utilities import ConfigurationManagerUtils
 from src import db
 
@@ -121,20 +121,33 @@ class BackupUtils:
 
     @staticmethod
     def get_device_config(device, command):
-        config_utils = ConfigurationManagerUtils(
-            ip_address=device.ip_address,
-            username=device.username,
-            password=device.password,
-            ssh=device.ssh,
-        )
-        response_json = config_utils.backup_configuration(command=command)
-        response_dict = json.loads(response_json)
+        try:
+            config_utils = ConfigurationManagerUtils(
+                ip_address=device.ip_address,
+                username=device.username,
+                password=device.password,
+                ssh=device.ssh,
+            )
+            response_json = config_utils.backup_configuration(command=command)
+            current_app.logger.info(f"response_json backup utils: {response_json}")
+            response_dict = json.loads(response_json)
+            current_app.logger.info(f"response_dict backup utils: {response_dict}")
 
-        if response_dict.get("status") == "success":
-            return response_dict.get("message", "")
-        else:
-            error_message = response_dict.get("message", "Unknown error")
-            raise RuntimeError(f"Failed to retrieve device config: {error_message}")
+            if response_dict.get("status") == "success":
+                return response_dict.get("message", "")
+            else:
+                error_message = response_dict.get("message", "Unknown error")
+                raise RuntimeError(f"Failed to retrieve device config: {error_message}")
+        except RuntimeError as e:
+            current_app.logger.info(f"backup utils runtimeerror: {str(e)}")
+            return jsonify({"status": "error", "message": str(e)}), 400
+        except Exception as e:
+            return (
+                jsonify(
+                    {"status": "error", "message": "Terjadi kesalahan pada server"}
+                ),
+                500,
+            )
 
     @staticmethod
     def calculate_integrity(backup_path):

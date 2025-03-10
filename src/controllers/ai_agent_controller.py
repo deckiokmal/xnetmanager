@@ -131,6 +131,15 @@ def analyze_view(device_id):
 
     # Proses analisis
     config_data = AIAnalyticsUtils.get_configuration_data(device)
+    current_app.logger.info(f"config_data: {config_data}")
+
+    if config_data["live"]:
+        show_config_data = config_data["live"]
+    elif config_data["backup"] != "No backup available":
+        show_config_data = config_data["backup"]
+    else:
+        flash("Device koneksi atau Backup tidak valid.", "warning")
+        return redirect(url_for("dm.index"))
 
     # Ambil hasil rekomendasi
     recommendations_data = (
@@ -142,7 +151,7 @@ def analyze_view(device_id):
     return render_template(
         "/analytic_templates/analytics_recommendations.html",
         device=device,
-        live_config=config_data["live"],
+        live_config=show_config_data,
         recommendations=recommendations_data,
         status_device="success",
     )

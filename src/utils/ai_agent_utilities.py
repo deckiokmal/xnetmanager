@@ -427,6 +427,8 @@ class AIAnalyticsUtils:
             )  # Default lebih aman
 
             live_config = BackupUtils.get_device_config(device, command)
+            current_app.logger.info(f"live_config_data error: {live_config}")
+
             latest_backup = BackupUtils.determine_previous_backup(device, "full")
 
             backup_config = (
