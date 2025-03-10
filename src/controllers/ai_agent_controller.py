@@ -310,4 +310,4 @@ def apply_recommendation():
     except Exception as e:
         recommendation.status = f"failed: {str(e)}"
         logging.error(f"Error applying recommendation: {str(e)}")
-        return jsonify({"error": "error", "message": str(e)}), 500
+        return jsonify({"success": False, "message": str(e)}), 500

@@ -96,9 +96,10 @@ class BackupUtils:
     @staticmethod
     def incremental_backup(device, previous_backup, command):
         current_config = BackupUtils.get_device_config(device, command)
+        current_data = current_config["message"]
         previous_config = BackupUtils.read_backup_file(previous_backup.backup_path)
         changes = BackupUtils.compare_data_for_incremental(
-            previous_config, current_config
+            previous_config, current_data
         )
 
         if changes:
@@ -109,9 +110,10 @@ class BackupUtils:
     @staticmethod
     def differential_backup(device, previous_backup, command):
         current_config = BackupUtils.get_device_config(device, command)
+        current_data = current_config["message"]
         previous_config = BackupUtils.read_backup_file(previous_backup.backup_path)
         changes = BackupUtils.compare_data_for_differential(
-            previous_config, current_config
+            previous_config, current_data
         )
 
         if changes:

@@ -59,10 +59,12 @@
                             <div class="row">
                                 <div class="col">
                                     <small class="text-muted">
-                                        Impact Area: <span class="badge text-bg-primary">{{ rec.impact_area|default('security', true) }}</span>
+                                        Impact Area: <span class="badge text-bg-primary">{{
+                                            rec.impact_area|default('security', true) }}</span>
                                     </small>
                                     <small class="text-muted">
-                                        | Status: <span class="badge text-bg-primary" id="status-{{ rec.id }}">{{ rec.status|default('generated',
+                                        | Status: <span class="badge text-bg-primary" id="status-{{ rec.id }}">{{
+                                            rec.status|default('generated',
                                             true) }}</span>
                                     </small>
                                 </div>
@@ -141,7 +143,7 @@
                 })
                 .catch(error => {
                     spinner.classList.add('d-none');
-                    showToast(`Error: ${error.error || 'Unknown error'}`, 'error');
+                    showToast(`Error: ${error.error || 'Unknown error'}`, 'danger');
                 });
         }
     }
@@ -171,12 +173,13 @@
                             statusElement.textContent = data.status;
                         }
                     } else {
-                        throw new Error(data.message || 'Unknown error');
+                        showToast('Unknown error', 'danger');
+                        return;
                     }
                 })
                 .catch(error => {
                     spinner.classList.add('d-none');
-                    showToast(`Error: ${error.message || 'Unknown error'}`, 'error');
+                    showToast('Unexpected error occurred. Please try again later', 'danger');
                 });
         }
     }

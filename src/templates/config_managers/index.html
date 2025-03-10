@@ -4,19 +4,27 @@
 
 {% block button_group1 %}
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button id="checkStatusButton" type="button" class="btn btn-sm btn-info">Check status</button>
+<span class="tt" data-bs-placement="top" title="Check status with count=4 for each device show in device list table">
+    <button id="checkStatusButton" type="button" class="btn btn-sm btn-info">Check status</button>
+</span>
 {% endblock %}
 
 {% block button_group2 %}
-<button id="pushConfigBtn" type="button" class="btn btn-sm btn-success">Push configs</button>
+<span class="tt" data-bs-placement="top" title="Send configuration to multiple devices with same vendor. Select target device first">
+    <button id="pushConfigBtn" type="button" class="btn btn-sm btn-success">Push configs</button>
+</span>
 {% endblock %}
 
 {% block button_group3 %}
-<button type="button" class="btn btn-sm btn-danger" id="backupMultipleBtn">Backup configs</button>
+<span class="tt" data-bs-placement="top" title="Backup current configuration to multiple devices with same vendor. Select target device first">
+    <button type="button" class="btn btn-sm btn-danger" id="backupMultipleBtn">Backup configs</button>
+</span>
 <!-- # Wizard initial configuration button  -->
-<button class="btn btn-sm btn-primary ml-4" data-bs-toggle="modal" data-bs-target="#wizardModal">
-    Buka Wizard Konfigurasi
-</button>
+<span class="tt" data-bs-placement="top" title="Wizard for basic/initial device configuration">
+    <button class="btn btn-sm btn-primary ml-4" data-bs-toggle="modal" data-bs-target="#wizardModal">
+        Configuration wizard
+    </button>
+</span>
 {% endblock %}
 
 {% block table_name %}Daftar Perangkat{% endblock %}
@@ -80,10 +88,14 @@
         <div id="statusIndicator{{ device.id }}" class="status-indicator"></div>
     </td>
     <td>
-        <button class="btn btn-sm btn-primary mb-1" data-bs-toggle="modal"
-            data-bs-target="#pushConfigModal{{ device.id }}">Config</button>
-        <button class="btn btn-sm btn-danger mb-1" data-bs-toggle="modal"
-            data-bs-target="#backupModal{{ device.id }}">Backup</button>
+        <span class="tt" data-bs-placement="top" title="Send configuration for spesific device">
+            <button class="btn btn-sm btn-primary mb-1" data-bs-toggle="modal"
+                data-bs-target="#pushConfigModal{{ device.id }}">Config</button>
+        </span>
+        <span class="tt" data-bs-placement="top" title="Backup configuration for spesific device">
+            <button class="btn btn-sm btn-danger mb-1" data-bs-toggle="modal"
+                data-bs-target="#backupModal{{ device.id }}">Backup</button>
+        </span>
     </td>
 </tr>
 {% endfor %}
