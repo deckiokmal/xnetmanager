@@ -1,20 +1,55 @@
 {% extends "main/base_layouts.html" %}
-{% block title %}Login - XNET{% endblock %}
+{% block title %}Setup & Verifikasi 2FA{% endblock %}
 
 {% block content %}
-<!-- Kolom Kiri (Gambar & Kotak Warna) -->
+<!-- Kolom Kiri (Instruksi & QR Code) -->
 <div class="login-image">
-    <div class="color-box box1"></div>
-    <div class="color-box box2"></div>
-    <div class="color-box box3"></div>
-    <img src="{{ url_for('static', filename='img/login-banner.jpeg') }}" alt="Login Illustration">
+    <form class="form-container form-container-dark" role="form">
+        <h4 class="text-center mt-2">Setup Two-Factor Authentication</h4>
+        <ul>
+            <li class="small">
+                Download
+                <a class="small"
+                    href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2"
+                    target="_blank">
+                    Google Authenticator
+                </a>
+            </li>
+            <li class="small">Scan QR Code atau salin Secret Token</li>
+        </ul>
+
+        <div class="text-center">
+            <img src="data:image/png;base64, {{ qr_image }}" alt="QR Code" style="width:200px;height:200px" />
+        </div>
+
+        <div class="mb-3 mt-3">
+            <label for="secret" class="form-label">Secret Token</label>
+            <input type="text" class="form-control" id="secret" value="{{ secret }}" disabled>
+        </div>
+
+        <div class="mb-3">
+            <button type="button" class="btn btn-primary" onclick="copySecret()">
+                Salin Secret
+            </button>
+        </div>
+    </form>
 </div>
 
-<!-- Kolom Form Login -->
+<!-- Kolom Kanan (Form Verifikasi OTP) -->
 <div class="login-form">
-    <div class="logo">
-        <img src="{{ url_for('static', filename='favicon.ico') }}" alt="XNET Logo">
-        <h1>Wellcome!</h1>
+    <form class="form-container form-container-dark" method="POST">
+        {{ form.csrf_token }}
+        {{ form.hidden_tag() }}
+        <h4 class="text-center">Verifikasi 2FA</h4>
+
+        <div class="mb-3 mt-5">
+            {{ form.otp.label(class="form-control-label mb-2") }}
+            {{ form.otp(class="form-control", placeholder="Masukkan 6-digit OTP") }}
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Verifikasi</button>
+
+        <!-- Flash Message Section -->
         <div class="flash_message mt-2">
             {% with errors = get_flashed_messages(category_filter=["error"]) %}
             {% if errors %}
@@ -71,22 +106,6 @@
             {% endif %}
             {% endwith %}
         </div>
-    </div>
-    <form id="loginForm" method="post" action="{{url_for('main.login')}}">
-        {{ form.csrf_token }}
-        {{ form.hidden_tag() }}
-        <div class="input-group">
-            <label for="InputEmail">Email</label>
-            {{ form.email(id="email", placeholder="Enter username...", required=True)
-            }}
-        </div>
-        <div class="input-group">
-            <label for="InputPassword">Password</label>
-            {{ form.password(id="password", placeholder="Enter password...", required=True)
-            }}
-        </div>
-        <button type="submit">Login</button>
-        <p class="register-link">Powered by <a href="#">Talita</a></p>
     </form>
 </div>
 {% endblock %}

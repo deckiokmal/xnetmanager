@@ -1,166 +1,248 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap');
-
-* {
-    padding: 0;
-    margin: 0;
-    box-sizing: border-box;
-}
-
+/* Menggunakan font modern */
 body {
     font-family: 'Poppins', sans-serif;
-    background: linear-gradient(90deg, rgba(2, 0, 36, 1) 0%, rgba(75, 14, 154, 1) 35%, rgba(0, 212, 255, 1) 100%);
-    /* Dark mode background color */
-    color: #e0e0e0;
-    /* Default text color for dark mode */
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-.form-container {
-    width: 90%;
-    max-width: 400px;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin: 0 auto;
-    background-color: rgba(0, 0, 0, 0.174);
-    /* Transparent black background */
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-.btn-primary {
-    width: 100%;
-    border: none;
-    border-radius: 50px;
-    background: linear-gradient(90deg, rgba(2, 0, 36, 1) 0%, rgba(75, 14, 154, 1) 35%, rgba(0, 212, 255, 1) 100%);
-}
-
-.form-control {
-    color: #333333;
-    /* Dark text for better readability */
-    background-color: #ffffff;
-    /* Light background for input fields */
-    border: none;
-    border-bottom: 1px solid #555555;
-    border-radius: 4px 4px 0 0;
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-.form-control:focus {
-    background-color: #f0f0f0;
-    /* Slightly lighter background on focus */
-    color: #333333;
-    outline: none;
-    box-shadow: none;
-}
-
-h4 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #ffffff;
-    /* Ensure heading is visible in dark mode */
-}
-
-.form-label {
-    font-weight: 500;
-    color: #cccccc;
-    /* Lighter label text for better contrast */
-}
-
-a {
-    color: #ffffff;
-    /* Link color in dark mode */
-}
-
-@media (max-width: 768px) {
-    .form-container {
-        width: 95%;
-        padding: 20px;
-    }
-}
-
-@media (min-width: 769px) and (max-width: 1200px) {
-    .form-container {
-        width: 60%;
-    }
-}
-
-
-/* Global Styles */
-body,
-html {
-    height: 100%;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    background-color: #f8f9fa;
-    font-family: 'Arial', sans-serif;
-}
-
-#layoutError {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 100vh;
-}
-
-#layoutError_content {
-    flex: 1;
-}
-
-main {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 20px;
+    height: 100vh;
+    background: linear-gradient(to right, #4a90e2, #50bfa0);
+    margin: 0;
 }
 
-.container {
-    max-width: 100%;
-    padding: 0 15px;
+/* Container Login */
+.login-container {
+    display: flex;
+    width: 800px;
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0px 5px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* Error Image */
-.img-error {
+/* Kolom Kiri: Gambar & Kotak Warna */
+.login-image {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #f4f4f4;
+}
+
+/* Gambar */
+.login-image img {
     width: 100%;
-    max-width: 400px;
-    height: auto;
+    height: 100%;
+    object-fit: cover;
+    position: relative;
+    z-index: 1;
 }
 
-/* Footer Styles */
-footer {
-    background-color: #343a40;
+/* Kotak Warna dengan z-index */
+.color-box {
+    position: absolute;
+    border-radius: 10px;
+    opacity: 0.8;
+}
+
+/* Kotak 1 (Biru) */
+.box1 {
+    width: 120px;
+    height: 120px;
+    background: #4a90e2;
+    top: 20px;
+    left: 20px;
+    z-index: 2;
+}
+
+/* Kotak 2 (Hijau) */
+.box2 {
+    width: 100px;
+    height: 100px;
+    background: #50bfa0;
+    top: 60px;
+    left: 80px;
+    z-index: 3;
+}
+
+/* Kotak 3 (Ungu) */
+.box3 {
+    width: 80px;
+    height: 80px;
+    background: #8e44ad;
+    top: 100px;
+    left: 140px;
+    z-index: 4;
+}
+
+/* Kolom Kanan: Form Login */
+.login-form {
+    flex: 1;
+    padding: 2rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.login-form input {
+    width: 100%;
+}
+
+/* Styling untuk tombol login agar tetap di tengah */
+.login-form button {
+    width: 100%;
+    /* Pastikan tombol melebar sesuai form */
+    margin-top: 1rem;
+    /* Jarak dari input */
+    padding: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    background: #007bff;
+    /* Warna biru modern */
+    color: white;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.login-form button:hover {
+    background: #0056b3;
+    /* Warna lebih gelap saat hover */
+}
+
+/* Logo */
+.logo img {
+    width: 80px;
+}
+
+.logo h1 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+/* Input & Tombol */
+.input-group {
+    text-align: left;
+    margin: 15px 0;
+}
+
+.input-group label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background: #4a90e2;
+    border: none;
+    color: white;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    background: #357abd;
+}
+
+/* Link Daftar */
+.register-link {
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.register-link a {
+    color: #4a90e2;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+/* Powered by - Glassy Background */
+.powered-by {
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.075);
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+    margin-top: 20px;
+}
+
+.powered-by p {
+    margin: 0;
+    font-size: 14px;
     color: #ffffff;
 }
 
-footer .small {
+.powered-by span {
+    font-weight: bold;
+    color: #ffcc00;
+}
+
+/* Responsif untuk Mobile */
+@media (max-width: 768px) {
+    .login-container {
+        flex-direction: column;
+        width: 90%;
+    }
+
+    .login-image {
+        display: none;
+        /* Sembunyikan kolom gambar */
+    }
+
+    .powered-by {
+        margin-top: 10px;
+    }
+}
+
+/* Pastikan flash_message terlihat dan tidak tertutup */
+.flash_message {
+    position: relative; /* Agar tidak tertutup */
+    z-index: 1000; /* Pastikan di atas elemen lain */
+    width: 100%;
+    max-width: 90%;
+    margin: 10px auto;
     text-align: center;
 }
 
-footer .text-light {
-    color: #e9ecef;
+/* Styling alert agar terlihat lebih jelas */
+.alert {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    border-radius: 5px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
 }
 
-/* Responsive Styles */
+.alert.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Tambahan untuk tampilan responsif */
 @media (max-width: 768px) {
-    .col-lg-6 {
-        width: 100%;
-    }
-
-    .img-error {
-        max-width: 300px;
-    }
-
-    footer {
-        padding: 20px;
-    }
-}
-
-@media (max-width: 576px) {
-    .img-error {
-        max-width: 250px;
-    }
-
-    footer {
-        padding: 15px;
+    .flash_message {
+        max-width: 100%;
+        padding: 0 15px;
     }
 }

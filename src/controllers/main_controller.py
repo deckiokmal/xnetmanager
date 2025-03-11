@@ -61,7 +61,7 @@ def before_request_func():
     # Exempt pages that should not trigger authentication or force logout
     exempt_pages = [url_for("main.login")]
 
-    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+    ip_address = request.headers.get("X-Forwarded-For", request.remote_addr)
     current_app.logger.info(f"Request received from IP: {ip_address}")
 
     if request.path in exempt_pages:
@@ -100,9 +100,8 @@ def inject_user():
 
 
 # Main APP starting
-HOME_URL = "users.dashboard"
-SETUP_2FA_URL = "main.setup_2fa"
-VERIFY_2FA_URL = "main.verify_2fa"
+DASHBOARD_URL = "users.dashboard"
+SETUP_VERIFY_2FA_URL = "main.setup_and_verify_2fa"
 
 
 # Login Page
@@ -112,11 +111,11 @@ def login():
         # Cek apakah pengguna sudah memverifikasi 2FA
         if current_user.is_2fa_enabled:
             if session.get("2fa_verified", False):
-                return redirect(url_for(HOME_URL))
+                return redirect(url_for(DASHBOARD_URL))
             else:
-                return redirect(url_for(VERIFY_2FA_URL))
+                return redirect(url_for(SETUP_VERIFY_2FA_URL))
         else:
-            return redirect(url_for(SETUP_2FA_URL))
+            return redirect(url_for(SETUP_VERIFY_2FA_URL))
 
     form = LoginForm()
     if form.validate_on_submit():
@@ -127,7 +126,8 @@ def login():
         try:
             user = User.query.filter_by(email=username).first()
             if not user:
-                flash(f"Invalid username or password", "warning")
+                flash(f"Invalid username or password", "danger")
+                return redirect(url_for("main.login"))
             elif user and bcrypt.check_password_hash(
                 user.password_hash, form.password.data
             ):
@@ -142,9 +142,9 @@ def login():
                 # Cek apakah pengguna sudah mengaktifkan 2FA
                 if user.is_2fa_enabled:
                     session["pre_2fa"] = True
-                    return redirect(url_for(VERIFY_2FA_URL))
+                    return redirect(url_for(SETUP_VERIFY_2FA_URL))
                 else:
-                    return redirect(url_for(SETUP_2FA_URL))
+                    return redirect(url_for(SETUP_VERIFY_2FA_URL))
 
             else:
                 current_app.logger.warning(f"Failed login attempt for {username}.")
@@ -184,13 +184,15 @@ def logout():
 # --------------------------------------------------------------------------------
 # 2FA Page Section
 # --------------------------------------------------------------------------------
-
-
-# Setup 2FA Google Authenticator dan Scan QR Code
-@main_bp.route("/setup-2fa")
+@main_bp.route("/setup-verify-2fa", methods=["GET", "POST"])
 @login_required
-def setup_2fa():
+def setup_and_verify_2fa():
+    timezone = pytz.timezone("Asia/Jakarta")
+    current_time = datetime.now(timezone)
     user = current_user
+    form = TwoFactorForm()
+
+    # Generate Secret Token & QR Code
     try:
         if not user.secret_token:
             user.secret_token = pyotp.random_base32()
@@ -199,6 +201,7 @@ def setup_2fa():
         totp = pyotp.TOTP(user.secret_token)
         uri = totp.provisioning_uri(user.email, issuer_name="XNETMANAGER")
 
+        # Generate QR Code
         qr = qrcode.QRCode()
         qr.add_data(uri)
         qr.make()
@@ -207,47 +210,35 @@ def setup_2fa():
         img.save(buf)
         img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
 
-        current_app.logger.info(f"User {user.email} set up 2FA.")
-        return render_template(
-            "main/setup_2fa.html", qr_image=img_b64, secret=user.secret_token
-        )
     except Exception as e:
         current_app.logger.error(f"2FA setup error for {user.email}: {str(e)}")
         flash("Terjadi kesalahan saat setup 2FA. Silakan coba lagi.", "danger")
-        return redirect(url_for(HOME_URL))
+        return redirect(url_for("main.setup_and_verify_2fa"))
 
-
-# Verifikasi kode OTP Google Authenticator jika user mengaktifkan 2FA di user profile
-@main_bp.route("/verify-2fa", methods=["GET", "POST"])
-@login_required
-def verify_2fa():
-    # Get the time zone object for a specific time zone
-    timezone = pytz.timezone("Asia/Jakarta")
-
-    # Get the current time in the specified time zone
-    current_time = datetime.now(timezone)
-
-    form = TwoFactorForm()
+    # Handle OTP Verification
     if form.validate_on_submit():
         try:
-            if current_user.is_otp_valid(form.otp.data):
-                current_user.is_2fa_enabled = True
-                current_user.last_login = current_time
+            if user.is_otp_valid(form.otp.data):
+                user.is_2fa_enabled = True
+                user.last_login = current_time
                 db.session.commit()
                 session.pop("pre_2fa", None)
                 session["2fa_verified"] = True
-                flash("2FA verification successful. You are logged in!", "success")
-                current_app.logger.info(
-                    f"User {current_user.email} successfully verified 2FA."
-                )
-                return redirect(url_for(HOME_URL))
+                flash("Verifikasi 2FA berhasil! Anda sekarang masuk.", "success")
+                current_app.logger.info(f"User {user.email} berhasil verifikasi 2FA.")
+                return redirect(url_for(DASHBOARD_URL))
             else:
                 current_app.logger.warning(
-                    f"Invalid OTP attempt for {current_user.email}."
+                    f"Percobaan OTP tidak valid untuk {user.email}."
                 )
-                flash("Invalid OTP. Please try again.", "error")
+                flash("Kode OTP tidak valid. Silakan coba lagi.", "danger")
         except Exception as e:
-            current_app.logger.error(f"2FA verification error: {str(e)}")
-            flash("Terjadi kesalahan saat verifikasi 2FA. Silakan coba lagi.", "danger")
+            current_app.logger.error(f"Error verifikasi 2FA: {str(e)}")
+            flash("Terjadi kesalahan saat verifikasi. Silakan coba lagi.", "danger")
 
-    return render_template("main/verify_2fa.html", form=form)
+    return render_template(
+        "main/setup_verify_2fa.html",  # Template yang sudah digabung
+        qr_image=img_b64,
+        secret=user.secret_token,
+        form=form,
+    )
