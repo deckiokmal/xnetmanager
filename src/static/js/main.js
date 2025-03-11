@@ -25,3 +25,27 @@ function copySecret() {
     document.execCommand("copy");
     alert("Successfully copied TOTP secret token!");
 }
+
+// Toggle tampilan dinamis di mobile
+function toggleInstructions() {
+    const instruction = document.querySelector('.tfa-instruction');
+    const toggleBtn = document.querySelector('.mobile-instruction-toggle');
+    instruction.classList.toggle('show');
+    
+    if (instruction.classList.contains('show')) {
+        toggleBtn.textContent = 'Sembunyikan Instruksi';
+    } else {
+        toggleBtn.textContent = 'Tampilkan Instruksi';
+    }
+}
+
+function showAlert(message, type) {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.role = "alert";
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.querySelector('.tfa-form').prepend(alert);
+}

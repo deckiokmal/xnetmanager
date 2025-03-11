@@ -2,9 +2,13 @@
 {% block title %}Setup & Verifikasi 2FA{% endblock %}
 
 {% block content %}
+<!-- Toggle Instruction untuk Mobile -->
+<button class="mobile-instruction-toggle btn btn-link d-md-none" onclick="toggleInstructions()">
+    Tampilkan Instruksi
+</button>
 <!-- Kolom Kiri (Instruksi & QR Code) -->
-<div class="login-image">
-    <form class="form-container form-container-dark" role="form">
+<div class="tfa-instruction">
+    <form class="tfa-card" role="form">
         <h4 class="text-center mt-2">Setup Two-Factor Authentication</h4>
         <ul>
             <li class="small">
@@ -36,13 +40,13 @@
 </div>
 
 <!-- Kolom Kanan (Form Verifikasi OTP) -->
-<div class="login-form">
-    <form class="form-container form-container-dark" method="POST">
+<div class="tfa-form">
+    <form class="tfa-card" method="POST">
         {{ form.csrf_token }}
         {{ form.hidden_tag() }}
         <h4 class="text-center">Verifikasi 2FA</h4>
 
-        <div class="mb-3 mt-5">
+        <div class="mb-3 mt-2">
             {{ form.otp.label(class="form-control-label mb-2") }}
             {{ form.otp(class="form-control", placeholder="Masukkan 6-digit OTP") }}
         </div>
