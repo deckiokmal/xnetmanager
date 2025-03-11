@@ -15,3 +15,5 @@ certbot/
 tests/
 .pytest_cache/
 app.log
+API Docs/
+cookbook/
