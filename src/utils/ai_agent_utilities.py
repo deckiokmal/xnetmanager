@@ -27,17 +27,18 @@ logger = logging.getLogger(__name__)
 # ----------------------------------------------------------
 # Talita API: Chatbot with RAG Knowledge Based
 # ----------------------------------------------------------
-def talita_llm(question, user_id):
+def talita_llm(user_input, user_id):
     """
     Mengirimkan permintaan POST ke API TALITA untuk mendapatkan jawaban dari chat completion.
 
     Parameters:
-    question (str): Pertanyaan yang ingin diajukan kepada TALITA.
+    user_input (str): Pertanyaan yang ingin diajukan kepada TALITA.
     user_id (str): ID pengguna yang mengajukan pertanyaan.
 
     Returns:
     dict: Hasil dalam format JSON, termasuk 'success' sebagai boolean dan 'message' sebagai string.
     """
+    # current_app.logger.info(f"Permintaan TALITA dimulai.")
 
     talita_url = current_app.config["TALITA_URL"]
     talita_api_key = current_app.config["TALITA_API_KEY"]
@@ -50,17 +51,19 @@ def talita_llm(question, user_id):
 
     # Data yang akan dikirim dalam body request, dalam format JSON
     data = {
-        "question": question,
-        "user_id": user_id,
+        "question": user_input,
+        "user_id": str(user_id),
     }
 
     try:
         # Mengirimkan permintaan POST
         response = requests.post(talita_url, headers=headers, json=data, verify=False)
+        # current_app.logger.info(f"hasil raw jawaban TALITA: {response}")
 
         # Mengecek status kode dari respon
         if response.status_code == 200:
             answer = response.json().get("TALITA", "No valid response received.")
+            # current_app.logger.info(f"Jawaban dari TALITA yang diparsing: {answer}")
             return {"success": True, "message": answer}
         else:
             # Menangani berbagai status kesalahan
@@ -177,7 +180,7 @@ class AgenticNetworkIntent:
             messages=[
                 {
                     "role": "system",
-                    "content": "Determine if this is a request to configure or monitor network devices.",
+                    "content": "Determine if this is a request to 'configure', 'monitor' network devices. If user mention about talita or ask a queston about some knowledge without specify target ip this mean request to 'other'.",
                 },
                 {"role": "user", "content": user_input},
             ],
@@ -258,6 +261,7 @@ class AgenticNetworkIntent:
 
         # Route to appropriate handler
         if route_result.intent == "other":
+            # current_app.logger.info(f"other talita di trigger")
             return f"other"
 
         # Periksa IP Address ke database sebelum LLM Call

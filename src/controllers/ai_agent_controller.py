@@ -97,7 +97,7 @@ def chatbot():
         if chat_intent == "other":
             # Ambil ID pengguna saat ini (dari Flask-Login)
             user_id = (
-                str(current_user.id) if current_user.is_authenticated else "anonymous"
+                current_user.id if current_user.is_authenticated else "anonymous"
             )
             response = talita_llm(user_input, user_id)
             return jsonify(response), 200
