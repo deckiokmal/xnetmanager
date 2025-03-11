@@ -309,7 +309,7 @@ body {
     position: fixed;
     bottom: 90px;
     right: 20px;
-    width: 350px;
+    width: 400px;
     border-radius: 10px;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
     background-color: #fff;
@@ -443,7 +443,7 @@ body {
     /* Tidak bisa di-resize */
     height: auto;
     /* Pastikan tinggi otomatis */
-    max-height: 150px;
+    max-height: 100px;
     transition: height 0.2s ease;
     /* Batasi tinggi maksimum */
     /* overflow-y: hidden; */

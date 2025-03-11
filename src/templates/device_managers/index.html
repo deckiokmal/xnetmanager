@@ -4,7 +4,7 @@
 
 {% block button_group1 %}
 <!-- Tombol untuk membuka modal pembuatan perangkat baru -->
-<span class="tt" data-bs-placement="top" title="Adding the device with spesific vendor and target ip">
+<span class="tt" data-bs-placement="bottom" title="Adding the device with spesific vendor and target ip">
     <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createdeviceModal">
         Add device
     </button>
@@ -66,19 +66,19 @@
     </td>
     <td>{{ data.ssh }}</td>
     <td>
-        <span class="tt" data-bs-placement="top" title="View the detail of device information.">
+        <span class="tt" data-bs-placement="bottom" title="View the detail of device information.">
             <button class="btn btn-info btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#detailModal{{ data.id }}">
                 <i class="fas fa-eye"></i>
             </button>
         </span>
-        <span class="tt" data-bs-placement="top" title="Edit device information such as ip address and vendor name">
+        <span class="tt" data-bs-placement="bottom" title="Edit device information such as ip address and vendor name">
             <a href="{{ url_for('dm.update_device', device_id=data.id) }}" class="btn btn-success btn-sm mb-1">
                 <i class="fas fa-edit"></i>
             </a>
         </span>
         <form action="{{ url_for('dm.delete_device', device_id=data.id) }}" method="post" style="display:inline;">
             {{ form.csrf_token }} <!-- Adding CSRF token -->
-            <span class="tt" data-bs-placement="top"
+            <span class="tt" data-bs-placement="bottom"
                 title="Be careful for deleting device, will cause backup data loss">
                 <button type="submit" class="btn btn-danger btn-sm mb-1"
                     onclick="return confirm('Apakah Anda yakin ingin menghapus ?');">
@@ -86,7 +86,7 @@
                 </button>
             </span>
         </form>
-        <span class="tt" data-bs-placement="top"
+        <span class="tt" data-bs-placement="bottom"
             title="Analyze device current configuration for optimizing availability and security">
             <a href="{{ url_for('ai_agent_bp.analyze_view', device_id=data.id) }}"
                 class="btn btn-warning btn-sm mb-1">AI</a>

@@ -259,7 +259,7 @@ document.querySelectorAll('.btn-check').forEach(button => {
                 // Set vendor pertama yang dipilih dan ambil konfigurasi berdasarkan vendor
                 selectedVendor = deviceVendor;
                 fetchConfigsByVendor(selectedVendor);
-            } else if (selectedVendor !== deviceVendor) {
+            } else if (selectedVendor.toLowerCase() !== deviceVendor.toLowerCase()) {
                 // Vendor tidak cocok, tampilkan pesan peringatan dan batalkan pemilihan
                 alert('You can only select devices with the same vendor.');
                 this.checked = false;

@@ -262,7 +262,7 @@ def push_configs():
         )
 
     # Cek konsistensi vendor
-    unique_vendors = {device.vendor for device in devices}
+    unique_vendors = {device.vendor for device in devices.lower()}
     if len(unique_vendors) > 1:
         return (
             jsonify(
