@@ -10,8 +10,10 @@ src/controllers/__pycache__/
 src/models/__pycache__/
 src/utils/__pycache__/
 app/
-migrations/
 data/
 certbot/
 tests/
 .pytest_cache/
+app.log
+API Docs/
+cookbook/

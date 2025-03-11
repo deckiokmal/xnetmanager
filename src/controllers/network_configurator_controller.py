@@ -1,3 +1,12 @@
+import os
+import json
+import time
+import string
+import random
+import logging
+from datetime import datetime
+from sqlalchemy.exc import SQLAlchemyError
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import (
     Blueprint,
     render_template,
@@ -13,34 +22,28 @@ from flask_login import (
     current_user,
     logout_user,
 )
+from flask_paginate import Pagination, get_page_args
 from .decorators import (
     role_required,
     required_2fa,
 )
-import logging
-from src.models.app_models import DeviceManager, ConfigurationManager
-from src.utils.config_manager_utils import ConfigurationManagerUtils
-import os
-from flask_paginate import Pagination, get_page_args
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import json
-import random
-from datetime import datetime
-import string
 from src import db
-import time
-from sqlalchemy.exc import SQLAlchemyError
-from src.utils.openai_utils import summarize_error_with_openai
+from src.models.app_models import DeviceManager, ConfigurationManager
+from src.utils.network_configurator_utilities import ConfigurationManagerUtils
+from src.utils.ai_agent_utilities import ConfigurationFileManagement
 
-# Membuat blueprint untuk Network Manager (nm_bp) dan Error Handling (error_bp)
-nm_bp = Blueprint("nm", __name__)
+
+# ----------------------------------------------------------------------------------------
+# Buat Blueprint untuk endpoint network_configurator_bp
+# ----------------------------------------------------------------------------------------
+network_configurator_bp = Blueprint("network_configurator_bp", __name__)
 error_bp = Blueprint("error", __name__)
 
-# Setup logging untuk aplikasi
-logging.basicConfig(level=logging.INFO)
 
-
-@nm_bp.before_app_request
+# ----------------------------------------------------------------------------------------
+# Middleware and Endpoint security
+# ----------------------------------------------------------------------------------------
+@network_configurator_bp.before_app_request
 def setup_logging():
     """
     Mengatur level logging untuk aplikasi.
@@ -60,7 +63,7 @@ def page_not_found(error):
 
 
 # Middleware untuk autentikasi dan otorisasi sebelum permintaan.
-@nm_bp.before_request
+@network_configurator_bp.before_request
 def before_request_func():
     """
     Memeriksa apakah pengguna telah terotentikasi sebelum setiap permintaan.
@@ -82,7 +85,7 @@ def before_request_func():
         return redirect(url_for("main.login"))
 
 
-@nm_bp.context_processor
+@network_configurator_bp.context_processor
 def inject_user():
     """
     Menyediakan first_name dan last_name pengguna yang terotentikasi ke dalam template.
@@ -94,9 +97,9 @@ def inject_user():
     return dict(first_name="", last_name="")
 
 
-# --------------------------------------------------------------------------------
-# Config Management Section
-# --------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------
+# Utility
+# ----------------------------------------------------------------------------------------
 
 
 # Fungsi pembantu untuk menghasilkan nama file acak
@@ -110,8 +113,27 @@ def generate_random_filename(filename):
     return filename
 
 
-# Endpoint Network Manager index
-@nm_bp.route("/push-configuration", methods=["GET"])
+# Cache status perangkat untuk menghindari pengecekan berulang
+STATUS_CACHE_TTL = 60  # seconds
+device_status_cache = {}
+
+
+# Fungsi caching sederhana
+def get_cached_device_status(device_id):
+    cached = device_status_cache.get(device_id)
+    if cached and (time.time() - cached["timestamp"]) < STATUS_CACHE_TTL:
+        return cached["status"]
+    return None
+
+
+def set_device_status_cache(device_id, status):
+    device_status_cache[device_id] = {"status": status, "timestamp": time.time()}
+
+
+# ----------------------------------------------------------------------------------------
+# Mainpage view section
+# ----------------------------------------------------------------------------------------
+@network_configurator_bp.route("/push-configuration", methods=["GET"])
 @login_required
 @required_2fa
 @role_required(
@@ -194,24 +216,273 @@ def index():
         return redirect(url_for("users.dashboard"))
 
 
-# Cache status perangkat untuk menghindari pengecekan berulang
-STATUS_CACHE_TTL = 60  # seconds
-device_status_cache = {}
+# ----------------------------------------------------------------------------------------
+# Network Configurator Endpoint
+# ----------------------------------------------------------------------------------------
+# Endpoint untuk push konfigurasi multiple device dengan vendor yang sama
+@network_configurator_bp.route("/push_configs", methods=["POST"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"], permissions=["Config and Backup"], page="Config Management"
+)
+def push_configs():
+    """
+    Mengirimkan konfigurasi ke perangkat yang dipilih.
+    Fitur: Memvalidasi input, membaca file konfigurasi, dan push konfigurasi secara paralel ke banyak perangkat.
+    """
+    data = request.get_json()
+    device_ips = data.get("devices", [])
+    config_id = data.get("config_id")
+
+    # Validasi input
+    if not device_ips:
+        return jsonify({"success": False, "message": "No devices selected."}), 400
+    if not config_id:
+        return jsonify({"success": False, "message": "No config selected."}), 400
+
+    # Query perangkat berdasarkan peran user
+    if current_user.has_role("Admin"):
+        devices = DeviceManager.query.filter(
+            DeviceManager.ip_address.in_(device_ips)
+        ).all()
+    else:
+        devices = DeviceManager.query.filter(
+            DeviceManager.ip_address.in_(device_ips),
+            DeviceManager.user_id == current_user.id,
+        ).all()
+
+    # Jika tidak ada perangkat yang ditemukan
+    if not devices:
+        return (
+            jsonify(
+                {"success": False, "message": "No devices found for the provided IPs."}
+            ),
+            404,
+        )
+
+    # Cek konsistensi vendor
+    unique_vendors = {device.vendor for device in devices.lower()}
+    if len(unique_vendors) > 1:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Selected devices must have the same vendor.",
+                }
+            ),
+            400,
+        )
+
+    # Query konfigurasi berdasarkan peran user
+    if current_user.has_role("Admin"):
+        config = ConfigurationManager.query.filter_by(id=config_id).first()
+    else:
+        config = ConfigurationManager.query.filter_by(
+            id=config_id, user_id=current_user.id
+        ).first()
+
+    # Jika konfigurasi tidak ditemukan
+    if not config:
+        return jsonify({"success": False, "message": "Selected config not found."}), 404
+
+    # Membaca file konfigurasi
+    def read_config(filename):
+        config_dir = current_app.config["CONFIG_DIR"]
+        config_path = os.path.join(config_dir, filename)
+        try:
+            with open(config_path, "r") as file:
+                return file.read()
+        except FileNotFoundError:
+            logging.error("Config file not found: %s", config_path)
+            return None
+        except Exception as e:
+            logging.error("Error reading config file: %s", e)
+            return None
+
+    config_content = read_config(config.config_name)
+    if not config_content:
+        return jsonify({"success": False, "message": "Error reading config."}), 500
+
+    results = []
+    success = True
+
+    # Fungsi untuk mengkonfigurasi perangkat
+    def configure_device(device):
+        nonlocal success
+        try:
+            config_utils = ConfigurationManagerUtils(
+                ip_address=device.ip_address,
+                username=device.username,
+                password=device.password,
+                ssh=device.ssh,
+            )
+            response_json = config_utils.configure_device(config_content)
+            response_dict = json.loads(response_json)
+
+            # Jika ada pesan yang dikembalikan, mengindikasikan bahwa terdapat error dalam proses konfigurasi
+            if "message" in response_dict:
+                return {
+                    "device_name": device.device_name,
+                    "ip": device.ip_address,
+                    "status": response_dict["status"],
+                    "message": response_dict["message"],
+                }
+            else:
+                # Jika tidak ada pesan sama sekali, konfigurasi dianggap sukses
+                return {
+                    "device_name": device.device_name,
+                    "ip": device.ip_address,
+                    "status": response_dict["status"],
+                    "message": "Configuration successfully applied.",
+                }
+        except Exception as e:
+            logging.error("Error configuring device %s: %s", device.ip_address, e)
+            success = False
+            return {
+                "device_name": device.device_name,
+                "ip": device.ip_address,
+                "status": "error",
+                "message": f"Configuration failed with error: {str(e)}",
+            }
+
+    # Push konfigurasi ke perangkat secara paralel menggunakan threading
+    max_threads = 10  # Jumlah maksimal thread yang digunakan
+    with ThreadPoolExecutor(max_threads) as executor:
+        futures = {
+            executor.submit(configure_device, device): device for device in devices
+        }
+
+        for future in as_completed(futures):
+            result = future.result()
+            results.append(result)
+            if result["status"] != "success":
+                success = False
+
+    summary_message = (
+        "All configurations pushed successfully."
+        if success
+        else "Some configurations failed. Check individual device messages."
+    )
+    return jsonify({"success": success, "message": summary_message, "results": results})
 
 
-# Fungsi caching sederhana
-def get_cached_device_status(device_id):
-    cached = device_status_cache.get(device_id)
-    if cached and (time.time() - cached["timestamp"]) < STATUS_CACHE_TTL:
-        return cached["status"]
-    return None
+# Endpoint untuk push konfigurasi ke satu perangkat
+@network_configurator_bp.route("/push_config/<device_id>", methods=["POST"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"], permissions=["Config and Backup"], page="Config Management"
+)
+def push_config_single_device(device_id):
+    """
+    Mengirimkan konfigurasi ke satu perangkat yang dipilih berdasarkan device_id.
+    Fitur: Memvalidasi input, membaca file konfigurasi, dan push konfigurasi ke satu perangkat.
+    """
+    data = request.get_json()
+    config_id = data.get("config_id")
+
+    # Validasi input
+    if not config_id:
+        return jsonify({"success": False, "message": "No config selected."}), 400
+
+    # Query perangkat berdasarkan device_id dan peran user
+    if current_user.has_role("Admin"):
+        device = DeviceManager.query.filter_by(id=device_id).first()
+    else:
+        device = DeviceManager.query.filter_by(
+            id=device_id, user_id=current_user.id
+        ).first()
+
+    # Jika perangkat tidak ditemukan
+    if not device:
+        return jsonify({"success": False, "message": "Device not found."}), 404
+
+    # Query konfigurasi berdasarkan peran user
+    if current_user.has_role("Admin"):
+        config = ConfigurationManager.query.filter_by(id=config_id).first()
+    else:
+        config = ConfigurationManager.query.filter_by(
+            id=config_id, user_id=current_user.id
+        ).first()
+
+    # Jika konfigurasi tidak ditemukan
+    if not config:
+        return jsonify({"success": False, "message": "Selected config not found."}), 404
+
+    # Membaca file konfigurasi
+    def read_config(filename):
+        config_dir = current_app.config["CONFIG_DIR"]
+        config_path = os.path.join(config_dir, filename)
+        try:
+            with open(config_path, "r") as file:
+                return file.read()
+        except FileNotFoundError:
+            logging.error("Config file not found: %s", config_path)
+            return None
+        except Exception as e:
+            logging.error("Error reading config file: %s", e)
+            return None
+
+    config_content = read_config(config.config_name)
+    if not config_content:
+        return jsonify({"success": False, "message": "Error reading config."}), 500
+
+    # Fungsi untuk mengkonfigurasi perangkat
+    def configure_device(device):
+        try:
+            config_utils = ConfigurationManagerUtils(
+                ip_address=device.ip_address,
+                username=device.username,
+                password=device.password,
+                ssh=device.ssh,
+            )
+            response_json = config_utils.configure_device(config_content)
+            response_dict = json.loads(response_json)
+
+            if "message" in response_dict and response_dict["message"]:
+                # Gunakan OpenAI untuk menyederhanakan error jika ada pesan error
+                error_summary = response_dict["message"]
+                return {
+                    "device_name": device.device_name,
+                    "ip": device.ip_address,
+                    "status": "error",
+                    "message": error_summary.get("message", "Unknown error occurred."),
+                }
+            else:
+                return {
+                    "device_name": device.device_name,
+                    "ip": device.ip_address,
+                    "status": "success",
+                    "message": "Configuration successfully applied.",
+                }
+        except json.JSONDecodeError as e:
+            logging.error("Error decoding JSON response: %s", e)
+            return {
+                "device_name": device.device_name,
+                "ip": device.ip_address,
+                "status": "error",
+                "message": "Error decoding JSON response",
+            }
+        except Exception as e:
+            logging.error("Error configuring device %s: %s", device.ip_address, e)
+            return {
+                "device_name": device.device_name,
+                "ip": device.ip_address,
+                "status": "error",
+                "message": str(e),
+            }
+
+    result = configure_device(device)
+    success = result["status"] == "success"
+
+    return jsonify({"success": success, "result": result}), 200 if success else 500
 
 
-def set_device_status_cache(device_id, status):
-    device_status_cache[device_id] = {"status": status, "timestamp": time.time()}
-
-
-@nm_bp.route("/check_status", methods=["POST"])
+# ----------------------------------------------------------------------------------------
+# Fungsi lain: Check status dan Filter File configuration
+# ----------------------------------------------------------------------------------------
+@network_configurator_bp.route("/check_status", methods=["POST"])
 @login_required
 @required_2fa
 @role_required(
@@ -291,272 +562,8 @@ def check_status():
         )
 
 
-# Endpoint untuk push konfigurasi ke perangkat
-@nm_bp.route("/push_configs", methods=["POST"])
-@login_required
-@required_2fa
-@role_required(
-    roles=["Admin", "User"], permissions=["Config and Backup"], page="Config Management"
-)
-def push_configs():
-    """
-    Mengirimkan konfigurasi ke perangkat yang dipilih.
-    Fitur: Memvalidasi input, membaca file konfigurasi, dan push konfigurasi secara paralel ke banyak perangkat.
-    """
-    data = request.get_json()
-    device_ips = data.get("devices", [])
-    config_id = data.get("config_id")
-
-    # Validasi input
-    if not device_ips:
-        return jsonify({"success": False, "message": "No devices selected."}), 400
-    if not config_id:
-        return jsonify({"success": False, "message": "No config selected."}), 400
-
-    # Query perangkat berdasarkan peran user
-    if current_user.has_role("Admin"):
-        devices = DeviceManager.query.filter(
-            DeviceManager.ip_address.in_(device_ips)
-        ).all()
-    else:
-        devices = DeviceManager.query.filter(
-            DeviceManager.ip_address.in_(device_ips),
-            DeviceManager.user_id == current_user.id,
-        ).all()
-
-    # Jika tidak ada perangkat yang ditemukan
-    if not devices:
-        return (
-            jsonify(
-                {"success": False, "message": "No devices found for the provided IPs."}
-            ),
-            404,
-        )
-
-    # Cek konsistensi vendor
-    unique_vendors = {device.vendor for device in devices}
-    if len(unique_vendors) > 1:
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Selected devices must have the same vendor.",
-                }
-            ),
-            400,
-        )
-
-    # Query konfigurasi berdasarkan peran user
-    if current_user.has_role("Admin"):
-        config = ConfigurationManager.query.filter_by(id=config_id).first()
-    else:
-        config = ConfigurationManager.query.filter_by(
-            id=config_id, user_id=current_user.id
-        ).first()
-
-    # Jika konfigurasi tidak ditemukan
-    if not config:
-        return jsonify({"success": False, "message": "Selected config not found."}), 404
-
-    # Membaca file konfigurasi
-    def read_config(filename):
-        config_dir = current_app.config["CONFIG_DIR"]
-        config_path = os.path.join(config_dir, filename)
-        try:
-            with open(config_path, "r") as file:
-                return file.read()
-        except FileNotFoundError:
-            logging.error("Config file not found: %s", config_path)
-            return None
-        except Exception as e:
-            logging.error("Error reading config file: %s", e)
-            return None
-
-    config_content = read_config(config.config_name)
-    if not config_content:
-        return jsonify({"success": False, "message": "Error reading config."}), 500
-
-    results = []
-    success = True
-
-    # Fungsi untuk mengkonfigurasi perangkat
-    def configure_device(device):
-        nonlocal success
-        try:
-            config_utils = ConfigurationManagerUtils(
-                ip_address=device.ip_address,
-                username=device.username,
-                password=device.password,
-                ssh=device.ssh,
-            )
-            response_json = config_utils.configure_device(config_content)
-            response_dict = json.loads(response_json)
-
-            if "message" in response_dict:
-                error_summary = summarize_error_with_openai(
-                    response_dict["message"], device.vendor
-                )
-                return {
-                    "device_name": device.device_name,
-                    "ip": device.ip_address,
-                    "status": error_summary["status"],
-                    "message": error_summary["message"],
-                }
-            else:
-                # Jika tidak ada pesan sama sekali, konfigurasi dianggap sukses
-                return {
-                    "device_name": device.device_name,
-                    "ip": device.ip_address,
-                    "status": "success",
-                    "message": "Configuration successfully applied.",
-                }
-        except Exception as e:
-            logging.error("Error configuring device %s: %s", device.ip_address, e)
-            success = False
-            return {
-                "device_name": device.device_name,
-                "ip": device.ip_address,
-                "status": "error",
-                "message": f"Configuration failed with error: {str(e)}",
-            }
-
-    # Push konfigurasi ke perangkat secara paralel menggunakan threading
-    max_threads = 10  # Jumlah maksimal thread yang digunakan
-    with ThreadPoolExecutor(max_threads) as executor:
-        futures = {
-            executor.submit(configure_device, device): device for device in devices
-        }
-
-        for future in as_completed(futures):
-            result = future.result()
-            results.append(result)
-            if result["status"] != "success":
-                success = False
-
-    summary_message = (
-        "All configurations pushed successfully."
-        if success
-        else "Some configurations failed. Check individual device messages."
-    )
-    return jsonify({"success": success, "message": summary_message, "results": results})
-
-
-# Endpoint untuk push konfigurasi ke satu perangkat
-@nm_bp.route("/push_config/<device_id>", methods=["POST"])
-@login_required
-@required_2fa
-@role_required(
-    roles=["Admin", "User"], permissions=["Config and Backup"], page="Config Management"
-)
-def push_config_single_device(device_id):
-    """
-    Mengirimkan konfigurasi ke satu perangkat yang dipilih berdasarkan device_id.
-    Fitur: Memvalidasi input, membaca file konfigurasi, dan push konfigurasi ke satu perangkat.
-    """
-    data = request.get_json()
-    config_id = data.get("config_id")
-
-    # Validasi input
-    if not config_id:
-        return jsonify({"success": False, "message": "No config selected."}), 400
-
-    # Query perangkat berdasarkan device_id dan peran user
-    if current_user.has_role("Admin"):
-        device = DeviceManager.query.filter_by(id=device_id).first()
-    else:
-        device = DeviceManager.query.filter_by(
-            id=device_id, user_id=current_user.id
-        ).first()
-
-    # Jika perangkat tidak ditemukan
-    if not device:
-        return jsonify({"success": False, "message": "Device not found."}), 404
-
-    # Query konfigurasi berdasarkan peran user
-    if current_user.has_role("Admin"):
-        config = ConfigurationManager.query.filter_by(id=config_id).first()
-    else:
-        config = ConfigurationManager.query.filter_by(
-            id=config_id, user_id=current_user.id
-        ).first()
-
-    # Jika konfigurasi tidak ditemukan
-    if not config:
-        return jsonify({"success": False, "message": "Selected config not found."}), 404
-
-    # Membaca file konfigurasi
-    def read_config(filename):
-        config_dir = current_app.config["CONFIG_DIR"]
-        config_path = os.path.join(config_dir, filename)
-        try:
-            with open(config_path, "r") as file:
-                return file.read()
-        except FileNotFoundError:
-            logging.error("Config file not found: %s", config_path)
-            return None
-        except Exception as e:
-            logging.error("Error reading config file: %s", e)
-            return None
-
-    config_content = read_config(config.config_name)
-    if not config_content:
-        return jsonify({"success": False, "message": "Error reading config."}), 500
-
-    # Fungsi untuk mengkonfigurasi perangkat
-    def configure_device(device):
-        try:
-            config_utils = ConfigurationManagerUtils(
-                ip_address=device.ip_address,
-                username=device.username,
-                password=device.password,
-                ssh=device.ssh,
-            )
-            response_json = config_utils.configure_device(config_content)
-            response_dict = json.loads(response_json)
-
-            if "message" in response_dict and response_dict["message"]:
-                # Gunakan OpenAI untuk menyederhanakan error jika ada pesan error
-                error_summary = summarize_error_with_openai(
-                    response_dict["message"], device.vendor
-                )
-                return {
-                    "device_name": device.device_name,
-                    "ip": device.ip_address,
-                    "status": "error",
-                    "message": error_summary.get("message", "Unknown error occurred."),
-                }
-            else:
-                return {
-                    "device_name": device.device_name,
-                    "ip": device.ip_address,
-                    "status": "success",
-                    "message": "Configuration successfully applied.",
-                }
-        except json.JSONDecodeError as e:
-            logging.error("Error decoding JSON response: %s", e)
-            return {
-                "device_name": device.device_name,
-                "ip": device.ip_address,
-                "status": "error",
-                "message": "Error decoding JSON response",
-            }
-        except Exception as e:
-            logging.error("Error configuring device %s: %s", device.ip_address, e)
-            return {
-                "device_name": device.device_name,
-                "ip": device.ip_address,
-                "status": "error",
-                "message": str(e),
-            }
-
-    result = configure_device(device)
-    success = result["status"] == "success"
-
-    return jsonify({"success": success, "result": result}), 200 if success else 500
-
-
 # Endpoint untuk mendapatkan daftar konfigurasi berdasarkan vendor
-@nm_bp.route("/get_configs_by_vendor", methods=["POST"])
+@network_configurator_bp.route("/get_configs_by_vendor", methods=["POST"])
 @login_required
 @required_2fa
 def get_configs_by_vendor():
@@ -577,3 +584,20 @@ def get_configs_by_vendor():
 
     config_list = [{"id": config.id, "name": config.config_name} for config in configs]
     return jsonify({"success": True, "configs": config_list})
+
+
+# ----------------------------------------------------------------------------------------
+# Initial Configuration Wizard Endpoint
+# ----------------------------------------------------------------------------------------
+@network_configurator_bp.route("/initial-configuration", methods=["GET"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"], permissions=["Config and Backup"], page="Config Management"
+)
+def initial_configuration():
+    """
+    Menampilkan Wizard Initial Configuration.
+    Fitur: Memilih perangkat, basic parameter, dan generate configuration with AI based on given parameter.
+    """
+    pass

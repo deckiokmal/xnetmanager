@@ -28,4 +28,4 @@ python db_init.py
 
 # Mulai aplikasi menggunakan Gunicorn
 echo "Memulai aplikasi XnetManager dengan Gunicorn..."
-exec gunicorn --bind 0.0.0.0:8000 --workers 4 manage:app
+exec gunicorn --bind 0.0.0.0:8000 --workers 4 run:app

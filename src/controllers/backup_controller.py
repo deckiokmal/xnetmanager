@@ -1,51 +1,46 @@
+import logging
+from datetime import datetime
+from sqlalchemy.orm import joinedload
+from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.exceptions import HTTPException
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from .decorators import login_required, role_required, required_2fa
 from flask import (
     Blueprint,
     render_template,
     jsonify,
     request,
     current_app,
-    copy_current_request_context,
     redirect,
     url_for,
     flash,
 )
-from src import db
+from flask_paginate import Pagination, get_page_args
 from flask_login import login_required, current_user, logout_user
+from src import db
 from src.models.app_models import (
     BackupData,
     UserBackupShare,
-    GitBackupVersion,
     BackupTag,
     AuditLog,
     DeviceManager,
     User,
 )
-from src.utils.backupUtils import BackupUtils
-from .decorators import login_required, role_required, required_2fa
-from flask_paginate import Pagination, get_page_args
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import logging
-from datetime import datetime
-from flask import copy_current_request_context
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import joinedload
+from src.utils.backup_utilities import BackupUtils
 from src.utils.forms_utils import UpdateBackupForm
-from src.utils.config_manager_utils import ConfigurationManagerUtils
-from werkzeug.exceptions import HTTPException
-from src.utils.openai_utils import (
-    validate_generated_template_with_openai,
-    create_configuration_with_openai,
-    analyze_device_with_openai,
-)
+from src.utils.network_configurator_utilities import ConfigurationManagerUtils
 
-# Membuat blueprint untuk Backup Manager (backup_bp) dan Error Handling (error_bp)
-backup_bp = Blueprint("backup", __name__)
+
+# ----------------------------------------------------------------------------------------
+# Buat Blueprint untuk endpoint backup_bp
+# ----------------------------------------------------------------------------------------
+backup_bp = Blueprint("backup_bp", __name__)
 error_bp = Blueprint("error", __name__)
 
-# Setup logging untuk aplikasi
-logging.basicConfig(level=logging.INFO)
 
-
+# ----------------------------------------------------------------------------------------
+# Middleware and Endpoint security
+# ----------------------------------------------------------------------------------------
 @backup_bp.before_app_request
 def setup_logging():
     """Mengatur level logging untuk aplikasi."""
@@ -96,12 +91,9 @@ def inject_user():
     return dict(first_name="", last_name="")
 
 
-# ------------------------------------------------------------
-# CRUD OPERATIONS for BackupData
-# ------------------------------------------------------------
-
-
-# Read/List Backups
+# ----------------------------------------------------------------------------------------
+# Mainpage view
+# ----------------------------------------------------------------------------------------
 @backup_bp.route("/backups", methods=["GET"])
 @login_required
 @required_2fa
@@ -163,7 +155,7 @@ def index():
             flash("Tidak ada backups apapun di halaman ini.", "info")
 
         return render_template(
-            "backup_managers/index.html",
+            "backup_managers/backup_index.html",
             backups=backups,
             page=page,
             per_page=per_page,
@@ -192,6 +184,9 @@ def index():
         return redirect(url_for("users.dashboard"))
 
 
+# ----------------------------------------------------------------------------------------
+# CRUD Operation for Backup
+# ----------------------------------------------------------------------------------------
 @backup_bp.route("/backups/create_multiple", methods=["POST"])
 @login_required
 @required_2fa
@@ -532,10 +527,10 @@ def update_backup(backup_id):
             db.session.commit()
 
             flash("Backup updated successfully!", "success")
-            return redirect(url_for("backup.index", backup_id=backup.id))
+            return redirect(url_for("backup_bp.index", backup_id=backup.id))
 
         # Render the update template
-        return render_template("backup_managers/update.html", form=form, backup=backup)
+        return render_template("backup_managers/update_backup.html", form=form, backup=backup)
 
     except Exception as e:
         current_app.logger.error(f"Error updating backup: {e}")
@@ -591,6 +586,9 @@ def delete_backup(backup_id):
 # ------------------------------------------------------------
 
 
+# ----------------------------------------------------------------------------------------
+# Fungsi lain untuk backup: Sharing, Rollback
+# ----------------------------------------------------------------------------------------
 @backup_bp.route("/share-backup", methods=["POST"])
 @login_required
 @required_2fa
@@ -694,12 +692,6 @@ def share_backup():
     )
 
 
-# ------------------------------------------------------------
-# Backup Versioning (Git Integration)
-# ------------------------------------------------------------
-
-
-# Rollback to Specific Version
 @backup_bp.route("/rollback-backup/<backup_id>", methods=["POST"])
 @login_required
 @required_2fa
@@ -741,12 +733,6 @@ def rollback_backup(backup_id):
         return jsonify({"message": f"Error during rollback: {e}"}), 500
 
 
-# ------------------------------------------------------------
-# Backup Tags
-# ------------------------------------------------------------
-
-
-# Add Tag to Backup
 @backup_bp.route("/backups/<backup_id>/tags", methods=["POST"])
 @login_required
 def add_tag_to_backup(backup_id):
@@ -770,11 +756,9 @@ def add_tag_to_backup(backup_id):
         return jsonify({"message": f"Error adding tag: {str(e)}"}), 500
 
 
-# ------------------------------------------------------------
+# ----------------------------------------------------------------------------------------
 # Backup Audit Logging
-# ------------------------------------------------------------
-
-
+# ----------------------------------------------------------------------------------------
 def log_action(backup_id, action, user_id):
     """Helper function to log actions related to backups."""
     audit_log = AuditLog(
@@ -805,25 +789,3 @@ def get_audit_logs(backup_id):
         for log in audit_logs
     ]
     return jsonify(logs_list), 200
-
-
-@backup_bp.route("/analyze-data/<backup_id>", methods=["GET", "POST"])
-@login_required
-def analyze_data(backup_id):
-    # Query the backup by ID
-    backup = BackupData.query.get(backup_id)
-
-    # Read data
-    backup_content = BackupUtils.read_backup_file(backup.backup_path)
-
-    analysis, recommendations = analyze_device_with_openai(backup_content)
-
-    print(analysis)
-    for recommendation, syntax in recommendations:
-        print(f"- {recommendation}:")
-        print(f"  `\n{syntax}\n`")
-    
-    return jsonify({
-        "analysis": analysis,
-        "recommendations": recommendations
-    })

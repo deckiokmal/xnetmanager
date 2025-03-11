@@ -14,7 +14,7 @@
     </div>
 
     <!-- Form for Updating Configuration -->
-    <form id="updateConfigForm" action="{{ url_for('config_file.update_configuration', config_id=config.id) }}"
+    <form id="updateConfigForm" action="{{ url_for('template_bp.update_configuration', config_id=config.id) }}"
         method="post">
         {{ form.csrf_token }}
 
@@ -66,7 +66,7 @@
         <button type="submit" class="btn btn-sm btn-success">
             <i class="fa-solid fa-check"></i> Save Changes
         </button>
-        <a class="btn btn-sm btn-warning" href="{{ url_for('config_file.index') }}">
+        <a class="btn btn-sm btn-warning" href="{{ url_for('template_bp.configuration_file_index') }}">
             <i class="fa-solid fa-arrow-left"></i> Back
         </a>
     </form>

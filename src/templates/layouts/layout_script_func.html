@@ -45,7 +45,9 @@
     chatbotButton.style.backgroundImage = 'url("https://iili.io/JpjR5tp.png")';
 
     // Event listener for opening and closing the chatbot
-    chatbotButton.addEventListener('click', () => {
+    chatbotButton.addEventListener('click', (e) => {
+        e.stopPropagation(); // Mencegah event bubbling
+
         if (chatbotContainer.style.display === 'none' || chatbotContainer.style.display === '') {
             chatbotContainer.style.display = 'block';
             chatbotButton.classList.add('clicked');
@@ -54,15 +56,30 @@
                 <path
                     d="M18.601 8.39897C18.269 8.06702 17.7309 8.06702 17.3989 8.39897L12 13.7979L6.60099 8.39897C6.26904 8.06702 5.73086 8.06702 5.39891 8.39897C5.06696 8.73091 5.06696 9.2691 5.39891 9.60105L11.3989 15.601C11.7309 15.933 12.269 15.933 12.601 15.601L18.601 9.60105C18.9329 9.2691 18.9329 8.73091 18.601 8.39897Z">
                 </path>
-            </svg>
-        `;
-            localStorage.setItem('chatbotOpen', 'true'); // Save state as open
+            </svg>`;
+            localStorage.setItem('chatbotOpen', 'true');
         } else {
-            chatbotContainer.style.display = 'none';
-            chatbotButton.classList.remove('clicked');
-            chatbotButton.innerHTML = '';
-            chatbotButton.style.backgroundImage = 'url("https://iili.io/JpjR5tp.png")';
-            localStorage.setItem('chatbotOpen', 'false'); // Save state as closed
+            closeChatbot();
+        }
+    });
+
+    // Fungsi untuk menutup chatbot
+    function closeChatbot() {
+        chatbotContainer.style.display = 'none';
+        chatbotButton.classList.remove('clicked');
+        chatbotButton.innerHTML = '';
+        chatbotButton.style.backgroundImage = 'url("https://iili.io/JpjR5tp.png")';
+        localStorage.setItem('chatbotOpen', 'false');
+    }
+
+    // Handle klik di luar container
+    document.addEventListener('click', (e) => {
+        const isChatbotVisible = chatbotContainer.style.display === 'block';
+        const clickedInsideChatbot = chatbotContainer.contains(e.target);
+        const clickedOnButton = e.target === chatbotButton;
+
+        if (isChatbotVisible && !clickedInsideChatbot && !clickedOnButton) {
+            closeChatbot();
         }
     });
 
@@ -72,6 +89,7 @@
     });
 
     function addMessage(message, className) {
+        if (!message) message = "[Error: Empty response]";
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${className}`;
 
@@ -99,7 +117,7 @@
         typingIndicator.style.display = 'inline'; // Show typing indicator
 
         try {
-            const response = await fetch('/chatbot/chat', {
+            const response = await fetch('/ai/chatbot', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -111,18 +129,32 @@
             typingIndicator.style.display = 'none'; // Hide typing indicator after response
 
             if (data.success) {
-                addMessage(data.message, 'bot-message');
+                addMessage(data.message, 'bot-message'); // Access the 'response' property
             } else {
-                addMessage('Error: ' + data.message, 'bot-message');
+                addMessage('An unexpected error occurred. Please try again later.', 'bot-message');
             }
         } catch (error) {
-            console.error('Error:', error);
-            addMessage('Error contacting chatbot.', 'bot-message');
-            typingIndicator.style.display = 'none'; // Hide typing indicator on error
+            typingIndicator.style.display = 'none'; // Hide typing indicator in case of error
+            addMessage('An unexpected error occurred. Please try again later.', 'bot-message');
         }
     }
 
     sendBtn.addEventListener('click', sendMessage);
+
+    // Handle keyboard input
+    userInput.addEventListener('keydown', (e) => {
+        // Shift + Enter = New line
+        if (e.key === 'Enter' && e.shiftKey) {
+            // Biarkan default behavior (new line)
+            return;
+        }
+
+        // Enter saja = Kirim pesan
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault(); // Mencegah new line
+            sendMessage();
+        }
+    });
 </script>
 
 <!-- JavaScript handle sort table -->

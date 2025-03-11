@@ -6,20 +6,24 @@
 <div class="dropdown">
     <button class="btn btn-sm btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown"
         aria-expanded="false">
-        Create New
+        New template
     </button>
     <ul class="dropdown-menu p-2 shadow-lg rounded">
         <li>
-            <button type="button" class="dropdown-item btn btn-outline-primary mb-2 w-100 text-start"
-                data-bs-toggle="modal" data-bs-target="#uploadTemplateModal">
-                <i class="bi bi-cloud-upload"></i> Upload Template
-            </button>
+            <span class="tt" data-bs-placement="right" title="Upload your custom template with j2,yaml format">
+                <button type="button" class="dropdown-item btn btn-outline-primary mb-2 w-100 text-start"
+                    data-bs-toggle="modal" data-bs-target="#uploadTemplateModal">
+                    <i class="bi bi-cloud-upload"></i> Upload Template
+                </button>
+            </span>
         </li>
         <li>
-            <button type="button" class="dropdown-item btn btn-outline-secondary w-100 text-start"
-                data-bs-toggle="modal" data-bs-target="#createManualTemplateModal">
-                <i class="bi bi-file-earmark-plus"></i> Create Template
-            </button>
+            <span class="tt" data-bs-placement="right" title="Create configuration template manualy">
+                <button type="button" class="dropdown-item btn btn-outline-secondary w-100 text-start"
+                    data-bs-toggle="modal" data-bs-target="#createManualTemplateModal">
+                    <i class="bi bi-file-earmark-plus"></i> Create Template
+                </button>
+            </span>
         </li>
     </ul>
 </div>
@@ -28,7 +32,7 @@
 {% block table_name %}Daftar Templates{% endblock %}
 
 {% block form_filter_row %}
-<form id="perPageForm" action="{{ url_for('tm.index') }}" method="get">
+<form id="perPageForm" action="{{ url_for('template_bp.template_index') }}" method="get">
     <label class="d-flex align-items-center">
         <span>Tampilkan</span>
         <select name="per_page" class="form-select form-select-sm mx-2"
@@ -44,7 +48,7 @@
 {% endblock %}
 
 {% block form_search %}
-<form id="searchForm" method="get" action="{{ url_for('tm.index') }}" class="form-inline d-flex">
+<form id="searchForm" method="get" action="{{ url_for('template_bp.template_index') }}" class="form-inline d-flex">
     <input id="searchInput" type="text" name="search" class="form-control form-control-sm me-2" placeholder="Search..."
         value="{{ search_query }}">
     <button class="btn btn-outline-success btn-sm" type="submit">
@@ -74,26 +78,37 @@
     <td>{{ template.version }}</td>
     <td>{{ template.description }}</td>
     <td>
-        <button class="btn btn-info btn-sm mb-1" data-template-id="{{ template.id }}"
-            onclick="showTemplateDetails(this)">
-            <i class="fas fa-eye"></i>
-        </button>
-        <a href="{{ url_for('tm.update_template', template_id=template.id) }}" class="btn btn-success btn-sm mb-1">
-            <i class="fas fa-edit"></i>
-        </a>
-        <form action="{{ url_for('tm.delete_template', template_id=template.id) }}" method="post" class="d-inline">
-            {{ delete_form.hidden_tag() }}
-            <button type="submit" class="btn btn-danger btn-sm mb-1"
-                onclick="return confirm('Are you sure you want to delete this template?');">
-                <i class="fas fa-trash"></i>
+        <span class="tt" data-bs-placement="bottom" title="View template detail">
+            <button class="btn btn-info btn-sm mb-1" data-template-id="{{ template.id }}"
+                onclick="showTemplateDetails(this)">
+                <i class="fas fa-eye"></i>
             </button>
+        </span>
+        <span class="tt" data-bs-placement="bottom" title="Editing template">
+            <a href="{{ url_for('template_bp.update_template', template_id=template.id) }}"
+                class="btn btn-success btn-sm mb-1">
+                <i class="fas fa-edit"></i>
+            </a>
+        </span>
+        <form action="{{ url_for('template_bp.delete_template', template_id=template.id) }}" method="post"
+            class="d-inline">
+            {{ delete_form.hidden_tag() }}
+            <span class="tt" data-bs-placement="bottom" title="Be careful while deleting template">
+                <button type="submit" class="btn btn-danger btn-sm mb-1"
+                    onclick="return confirm('Are you sure you want to delete this template?');">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </span>
         </form>
         <form class="generate-form d-inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="button" class="btn btn-primary btn-sm mb-1 generate-btn" data-template-id="{{ template.id }}"
-                onclick="return confirm('Are you sure you want to generate this template?');">
-                Generate
-            </button>
+            <span class="tt" data-bs-placement="bottom" title="Generated configuration file with AI validation">
+                <button type="button" class="btn btn-primary btn-sm mb-1 generate-btn"
+                    data-template-id="{{ template.id }}"
+                    onclick="return confirm('Are you sure you want to generate this template?');">
+                    Generate
+                </button>
+            </span>
         </form>
     </td>
 </tr>
@@ -152,8 +167,8 @@
                     </div>
                     <div class="modal-body">
                         <!-- Form pointing to upload_template endpoint -->
-                        <form id="uploadTemplateForm" method="post" action="{{ url_for('tm.upload_template') }}"
-                            enctype="multipart/form-data">
+                        <form id="uploadTemplateForm" method="post"
+                            action="{{ url_for('template_bp.upload_template') }}" enctype="multipart/form-data">
                             {{ form.csrf_token }}
 
                             <div class="mb-3">
@@ -214,7 +229,8 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form id="manualTemplateForm" method="post" action="{{ url_for('tm.create_template_manual') }}">
+                        <form id="manualTemplateForm" method="post"
+                            action="{{ url_for('template_bp.create_template_manual') }}">
                             {{ form_manual_create.csrf_token }}
 
                             <div class="mb-3">
@@ -278,16 +294,17 @@
             </div>
         </div>
 
-        <!-- Modal Error Template Generation -->
-        <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <!-- Modal Status Template Generation -->
+        <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content bg-danger text-light">
+                <div class="modal-content text-light">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="errorModalLabel">Error Generating Template</h5>
+                        <h5 class="modal-title" id="statusModalLabel">Generating Template Status</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <p id="errorModalMessage"></p>
+                        <p id="statusModalMessage"></p>
+                        <ul id="statusDetailsList" class="mt-2"></ul>
                     </div>
                 </div>
             </div>
@@ -318,52 +335,6 @@
                 }, 1000);
             });
 
-            document.addEventListener("DOMContentLoaded", function () {
-                document.querySelectorAll('.generate-btn').forEach(function (button) {
-                    button.addEventListener('click', function (event) {
-                        event.preventDefault();  // Prevent the default behavior
-
-                        const templateId = this.getAttribute('data-template-id');
-                        const actionUrl = `/template-generator/${templateId}`;
-                        const csrfToken = document.querySelector('input[name="csrf_token"]').value; // Ambil token CSRF dari form
-
-                        showLoadingOverlay();  // Show the loading overlay when the form is submitted
-
-                        fetch(actionUrl, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json', // Pastikan tipe konten JSON
-                                'X-CSRFToken': csrfToken           // Kirim token CSRF di header
-                            },
-                            body: JSON.stringify({}) // Sertakan payload jika diperlukan
-                        })
-                            .then(response => response.json())
-                            .then(data => {
-                                hideLoadingOverlay();  // Hide the loading overlay once the request is complete
-
-                                if (data.is_valid) {
-                                    window.location.reload();  // Reload the page if successful
-                                } else {
-                                    // Display the error in a modal
-                                    document.getElementById('errorModalMessage').textContent = data.error_message;
-                                    var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-                                    errorModal.show();
-                                }
-                            })
-                            .catch(error => {
-                                hideLoadingOverlay();  // Hide the loading overlay
-                                console.error('Error:', error);
-                                document.getElementById('errorModalMessage').textContent = 'Terjadi kesalahan saat memproses permintaan.';
-                                var errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-                                errorModal.show();
-                            });
-                    });
-                });
-            });    
-        </script>
-
-        <!-- handle template detail -->
-        <script>
             // Handle template detail
             function showTemplateDetails(button) {
                 const templateId = button.getAttribute("data-template-id");
@@ -389,5 +360,105 @@
                     })
                     .catch(error => console.error('Error fetching template details:', error));
             }
+
+            document.addEventListener("DOMContentLoaded", function () {
+                document.querySelectorAll('.generate-btn').forEach(function (button) {
+                    button.addEventListener('click', function (event) {
+                        event.preventDefault(); // Mencegah aksi default tombol
+
+                        const templateId = this.getAttribute('data-template-id');
+                        const actionUrl = `/template-generator/${templateId}`;
+                        const csrfToken = document.querySelector('input[name="csrf_token"]').value; // Ambil token CSRF
+
+                        showLoadingOverlay(); // Tampilkan loading overlay
+
+                        fetch(actionUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrfToken
+                            },
+                            body: JSON.stringify({})
+                        })
+                            .then(response => response.json())
+                            .then(data => {
+                                hideLoadingOverlay(); // Sembunyikan loading overlay
+
+                                // Ambil elemen modal dan elemen pesan
+                                const statusModal = document.getElementById('statusModal');
+                                const statusMessage = document.getElementById('statusModalMessage');
+                                const statusDetails = document.getElementById('statusDetailsList');
+
+                                // Kosongkan elemen status sebelumnya
+                                statusMessage.textContent = "";
+                                statusDetails.innerHTML = "";
+
+                                // Tentukan status dan warna modal
+                                if (data.is_valid) {
+                                    statusModal.querySelector('.modal-content').classList.remove('bg-danger');
+                                    statusModal.querySelector('.modal-content').classList.add('bg-success');
+
+                                    statusMessage.textContent = data.message || "Template berhasil digenerate!";
+                                } else {
+                                    statusModal.querySelector('.modal-content').classList.remove('bg-success');
+                                    statusModal.querySelector('.modal-content').classList.add('bg-danger');
+
+                                    // Tampilkan pesan error utama jika ada
+                                    statusMessage.textContent = "Terjadi kesalahan saat validasi.";
+
+                                    // Jika ada error detail, tampilkan secara rapi
+                                    if (data.errors && Array.isArray(data.errors)) {
+                                        const errorTitle = document.createElement('li');
+                                        errorTitle.innerHTML = "<strong>Errors:</strong>";
+                                        statusDetails.appendChild(errorTitle);
+
+                                        data.errors.forEach(error => {
+                                            const li = document.createElement('li');
+                                            li.innerHTML = `<strong>Line ${error.line}</strong>: [${error.error_code}] ${error.message}`;
+                                            statusDetails.appendChild(li);
+                                        });
+                                    }
+
+                                    // Jika ada saran perbaikan, tampilkan secara rapi
+                                    if (data.suggestions && Array.isArray(data.suggestions)) {
+                                        const suggestionTitle = document.createElement('li');
+                                        suggestionTitle.innerHTML = "<strong>Suggestions:</strong>";
+                                        statusDetails.appendChild(suggestionTitle);
+
+                                        data.suggestions.forEach(suggestion => {
+                                            const li = document.createElement('li');
+                                            li.textContent = suggestion;
+                                            statusDetails.appendChild(li);
+                                        });
+                                    }
+                                }
+
+                                // Tampilkan modal status
+                                var modalInstance = new bootstrap.Modal(statusModal);
+                                modalInstance.show();
+                            })
+                            .catch(error => {
+                                hideLoadingOverlay(); // Sembunyikan loading overlay
+                                console.error('Error:', error);
+
+                                // Tampilkan error di modal
+                                const statusModal = document.getElementById('statusModal');
+                                const statusMessage = document.getElementById('statusModalMessage');
+                                const statusDetails = document.getElementById('statusDetailsList');
+
+                                statusModal.querySelector('.modal-content').classList.remove('bg-success');
+                                statusModal.querySelector('.modal-content').classList.add('bg-danger');
+
+                                statusMessage.textContent = 'Terjadi kesalahan saat memproses permintaan.';
+                                statusDetails.innerHTML = "";
+
+                                var modalInstance = new bootstrap.Modal(statusModal);
+                                modalInstance.show();
+                            });
+                    });
+                });
+            });
+
         </script>
+
         {% endblock %}

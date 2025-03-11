@@ -6,7 +6,7 @@
 
 <!-- Filter row for selecting items per page -->
 {% block form_filter_row %}
-<form id="perPageForm" action="{{ url_for('backup.index') }}" method="get">
+<form id="perPageForm" action="{{ url_for('backup_bp.index') }}" method="get">
     <label class="d-flex align-items-center">
         <span>Tampilkan</span>
         <select name="per_page" class="form-select form-select-sm mx-2"
@@ -23,7 +23,7 @@
 
 <!-- Search functionality -->
 {% block form_search %}
-<form id="searchForm" method="get" action="{{ url_for('backup.index') }}" class="form-inline d-flex">
+<form id="searchForm" method="get" action="{{ url_for('backup_bp.index') }}" class="form-inline d-flex">
     <input id="searchInput" type="text" name="search" class="form-control form-control-sm me-2" placeholder="Search..."
         value="{{ search_query }}">
     <button class="btn btn-outline-success btn-sm" type="submit">
@@ -83,7 +83,7 @@
 
                 <!-- Edit Backup -->
                 <li>
-                    <a class="dropdown-item" href="{{ url_for('backup.update_backup', backup_id=backup.id) }}">
+                    <a class="dropdown-item" href="{{ url_for('backup_bp.update_backup', backup_id=backup.id) }}">
                         <i class="fas fa-edit"></i> Edit
                     </a>
                 </li>
@@ -110,12 +110,6 @@
                     </a>
                 </li>
 
-                <!-- Analyze -->
-                <li>
-                    <a class="dropdown-item" href="#" data-backup-id="{{ backup.id }}" onclick="openAnalyzeModal(this)">
-                        <i class="fas fa-share-alt"></i> Analyze
-                    </a>
-                </li>
                 {% endif %}
             </ul>
         </div>
@@ -244,77 +238,5 @@
 
         <!-- JS Scripts for interactivity -->
         {% block script_js %}
-        <!-- Script for handling search input -->
-        <script>
-            document.getElementById("searchInput").addEventListener("input", function () {
-                clearTimeout(this.timeout);
-                this.timeout = setTimeout(function () {
-                    document.getElementById('searchForm').submit();
-                }, 1000);
-            });
-        </script>
-
-        <!-- Script for handling sorting -->
-        <script>
-            function sortTable(n) {
-                const table = document.getElementById("dataTable");
-                if (!table) return;
-                let rows, switching, i, x, y, shouldSwitch, dir, switchCount = 0;
-                const headers = table.getElementsByTagName("TH");
-                switching = true;
-                dir = "asc";
-
-                for (let header of headers) {
-                    let icon = header.querySelector("i");
-                    if (icon) {
-                        icon.classList.remove("fa-sort-up", "fa-sort-down");
-                        icon.classList.add("fa-sort");
-                    }
-                }
-
-                while (switching) {
-                    switching = false;
-                    rows = table.rows;
-
-                    for (i = 1; i < (rows.length - 1); i++) {
-                        shouldSwitch = false;
-                        x = rows[i].getElementsByTagName("TD")[n];
-                        y = rows[i + 1].getElementsByTagName("TD")[n];
-
-                        if (dir === "asc") {
-                            if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-                                shouldSwitch = true;
-                                break;
-                            }
-                        } else if (dir === "desc") {
-                            if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
-                                shouldSwitch = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (shouldSwitch) {
-                        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                        switching = true;
-                        switchCount++;
-                    } else {
-                        if (switchCount === 0 && dir === "asc") {
-                            dir = "desc";
-                            switching = true;
-                        }
-                    }
-                }
-
-                if (dir === "asc") {
-                    headers[n].querySelector("i").classList.remove("fa-sort");
-                    headers[n].querySelector("i").classList.add("fa-sort-up");
-                } else {
-                    headers[n].querySelector("i").classList.remove("fa-sort");
-                    headers[n].querySelector("i").classList.add("fa-sort-down");
-                }
-            }
-        </script>
-
-        <script src="{{ url_for('static', filename='js/backup-controller.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/backup_controller.js') }}"></script>
         {% endblock %}

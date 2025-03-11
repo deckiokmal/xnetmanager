@@ -6,7 +6,7 @@
     <div class="card-header mb-3">
         Update Template
     </div>
-    <form action="{{ url_for('tm.update_template', template_id=template.id) }}" method="post" class="needs-validation"
+    <form action="{{ url_for('template_bp.update_template', template_id=template.id) }}" method="post" class="needs-validation"
         novalidate>
         {{ form.hidden_tag() }}
 
@@ -82,7 +82,7 @@
         <button type="submit" class="btn btn-sm btn-success">
             <i class="fa-solid fa-check"></i> Save Changes
         </button>
-        <a class="btn btn-sm btn-warning" href="{{ url_for('tm.index') }}">
+        <a class="btn btn-sm btn-warning" href="{{ url_for('template_bp.template_index') }}">
             <i class="fa-solid fa-arrow-left"></i> Back
         </a>
     </form>

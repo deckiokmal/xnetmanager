@@ -13,7 +13,7 @@ from src.utils.mask_password_utils import mask_password
 from src.config import DevelopmentConfig, TestingConfig, ProductionConfig, get_uuid_type
 from flask_mail import Mail
 from flask_talisman import Talisman
-import openai
+from openai import OpenAI
 import os
 from flask_marshmallow import Marshmallow
 from flask_jwt_extended import JWTManager
@@ -89,7 +89,7 @@ def create_app():
         raise ValueError("Missing required configuration: TALITA_URL")
 
     # Set API key untuk OpenAI
-    openai.api_key = openai_api_key
+    client_openai = OpenAI(api_key=openai_api_key)
 
     # Simpan TALITA API Key dan URL ke dalam konfigurasi aplikasi
     app.config["TALITA_API_KEY"] = talita_api_key
@@ -128,14 +128,20 @@ def create_app():
     UUID_TYPE = get_uuid_type(app.config["SQLALCHEMY_DATABASE_URI"])
 
     # Konfigurasi logger
-    handler = StreamHandler()
-    handler.setLevel(logging.INFO)
+    # Konfigurasi logger
+    stream_handler = StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    file_handler = logging.FileHandler('app.log')
+    file_handler.setLevel(logging.INFO)
+
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
-    handler.setFormatter(formatter)
+    stream_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
 
-    app.logger.addHandler(handler)
+    app.logger.addHandler(stream_handler)
+    app.logger.addHandler(file_handler)
     app.logger.setLevel(logging.INFO)
 
     # Register context processor
@@ -153,34 +159,26 @@ def create_app():
 
     # Register blueprints
     from .controllers.main_controller import main_bp
+    from .utils.error_helper_utils import error_bp
     from .controllers.users_controller import users_bp
     from .controllers.profile_controller import profile_bp
     from .controllers.roles_controller import roles_bp
     from .controllers.device_manager_controller import dm_bp
-    from .controllers.template_manager_controller import tm_bp
-    from .controllers.config_manager_controller import nm_bp
-    from .utils.error_helper_utils import error_bp
+    from .controllers.template_manager_controller import template_bp
+    from .controllers.network_configurator_controller import network_configurator_bp
     from .controllers.backup_controller import backup_bp
-    from .controllers.ai_chatbot_controller import chatbot_bp
-    from .controllers.config_file_manager_controller import config_file_bp
-    from .controllers.restfull_api_controller import restapi_bp
-    from .controllers.whatsapp_gateway_controller import whatsapp_bp
-    from .controllers.analytic_controller import analytics_bp
+    from .controllers.ai_agent_controller import ai_agent_bp
 
     app.register_blueprint(main_bp)
+    app.register_blueprint(error_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(roles_bp)
     app.register_blueprint(dm_bp)
-    app.register_blueprint(tm_bp)
-    app.register_blueprint(nm_bp)
-    app.register_blueprint(error_bp)
+    app.register_blueprint(template_bp)
+    app.register_blueprint(network_configurator_bp)
     app.register_blueprint(backup_bp)
-    app.register_blueprint(chatbot_bp)
-    app.register_blueprint(config_file_bp)
-    app.register_blueprint(restapi_bp)
-    app.register_blueprint(whatsapp_bp)
-    app.register_blueprint(analytics_bp)
+    app.register_blueprint(ai_agent_bp)
 
     # Set up user loader
     from .models.app_models import User
