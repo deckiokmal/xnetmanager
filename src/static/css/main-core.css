@@ -562,7 +562,7 @@ body {
 
 /* Styling for profile background banner */
 .profile-background {
-    background-image: url('../img/bg.jpg');
+    background: linear-gradient(135deg, hsla(261, 100%, 50%, 1) 0%, hsla(0, 0%, 0%, 1) 100%);
     background-size: cover;
     background-position: center;
     height: 180px;
@@ -736,7 +736,9 @@ body {
 }
 
 .page-banner {
-    background-image: url('../img/banner.jpg');
+    background: hsla(0, 0%, 0%, 1);
+
+    background: linear-gradient(360deg, hsla(0, 0%, 0%, 1) 0%, hsla(261, 100%, 50%, 1) 100%);
     background-size: cover;
     background-position: center;
     width: 100%;
@@ -803,4 +805,10 @@ body {
 
 .step.active {
     display: block;
+}
+
+/* tooltip bootstrap 5.3 */
+.custom-tooltip {
+    --bs-tooltip-bg: var(--bd-violet-bg);
+    --bs-tooltip-color: var(--bs-white);
 }

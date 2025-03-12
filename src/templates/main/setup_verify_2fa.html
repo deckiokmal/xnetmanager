@@ -9,11 +9,11 @@
 <!-- Kolom Kiri (Instruksi & QR Code) -->
 <div class="tfa-instruction">
     <form class="tfa-card" role="form">
-        <h4 class="text-center mt-2">Setup Two-Factor Authentication</h4>
+        <h5 class="text-center mt-2">Setup Two-Factor Authentication</h5>
         <ul>
             <li class="small">
                 Download
-                <a class="small"
+                <a class="medium"
                     href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2"
                     target="_blank">
                     Google Authenticator
@@ -44,7 +44,7 @@
     <form class="tfa-card" method="POST">
         {{ form.csrf_token }}
         {{ form.hidden_tag() }}
-        <h4 class="text-center">Verifikasi 2FA</h4>
+        <h5 class="text-center">Verifikasi 2FA</h5>
 
         <div class="mb-3 mt-2">
             {{ form.otp.label(class="form-control-label mb-2") }}
