@@ -124,7 +124,7 @@ class AgenticNetworkIntent:
         )
         vendor: str = Field(description="Vendor of the network device")
         command: str = Field(
-            description="Generate valid network configurations for the specified vendor and additional verification syntax to display the results of the applied configuration. Make sure 'commands' without additional text formatting, without explanation and without additional escape characters."
+            description="Generate valid network configurations for the specified vendor (e,g.. mikrotik, fortinet, cisco) and additional verification syntax to display the results of the applied configuration. Make sure 'commands' without additional text formatting, without explanation and without additional escape characters."
         )
 
     class MonitoringDetails(BaseModel):
@@ -135,7 +135,7 @@ class AgenticNetworkIntent:
         )
         vendor: str = Field(description="Vendor of the network device")
         command: str = Field(
-            description="Commands to monitor the device. If any commands are indicated to cause continuous output to be executed (e,g.. ping,monitor traffic), they should always be set to an interval once or four count to prevent continuous output, ensuring controlled execution and optimal system performance."
+            description="Commands to monitor the device (e,g.. mikrotik, fortinet, cisco). If any commands are indicated to cause continuous output to be executed (e,g.. ping,monitor traffic), they should always be set to an interval once or four count to prevent continuous output, ensuring controlled execution and optimal system performance."
         )
 
     class NetworkResponse(BaseModel):

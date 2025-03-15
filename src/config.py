@@ -72,14 +72,6 @@ class Config(object):
     LOGGING_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     LOGGING_LOCATION = "app.log"
 
-    # Pengaturan Email
-    MAIL_SERVER = config("MAIL_SERVER", default="smtp.gmail.com")
-    MAIL_USERNAME = config("MAIL_USERNAME")
-    MAIL_PASSWORD = config("MAIL_PASSWORD")
-    MAIL_USE_TLS = config("MAIL_USE_TLS", default=True, cast=bool)
-    MAIL_USE_SSL = config("MAIL_USE_SSL", default=False, cast=bool)
-    MAIL_PORT = 465 if MAIL_USE_SSL else 587
-
     # Flask-Talisman untuk Keamanan
     TALISMAN_FORCE_HTTPS = True
     TALISMAN_STRICT_TRANSPORT_SECURITY = True
