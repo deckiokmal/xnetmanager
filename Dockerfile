@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir -r ${CONTAINER_HOME}/requirements.txt
 RUN chmod +x entrypoint.sh
 
 # Tentukan variabel lingkungan default untuk Flask
-ENV CONFIG_NAME Production
+ENV CONFIG_NAME=Production
 
 EXPOSE 8000
 RUN echo "All xnetmanager build successfully!"
