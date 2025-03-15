@@ -22,10 +22,6 @@ echo "Menjalankan 'flask db migrate' dan 'flask db upgrade'..."
 flask db migrate -m "Initial Migration"
 flask db upgrade
 
-# Jalankan skrip inisialisasi database
-echo "Menjalankan inisialisasi data awal dengan db_init.py..."
-python db_init.py
-
 # Mulai aplikasi menggunakan Gunicorn
 echo "Memulai aplikasi XnetManager dengan Gunicorn..."
 exec gunicorn --bind 0.0.0.0:8000 --workers 4 run:app

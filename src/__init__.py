@@ -114,9 +114,11 @@ def create_app():
         content_security_policy=app.config["TALISMAN_CONTENT_SECURITY_POLICY"],
         force_https=app.config["TALISMAN_FORCE_HTTPS"],
         strict_transport_security=app.config["TALISMAN_STRICT_TRANSPORT_SECURITY"],
-        strict_transport_security_max_age=app.config["TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE"],
+        strict_transport_security_max_age=app.config[
+            "TALISMAN_STRICT_TRANSPORT_SECURITY_MAX_AGE"
+        ],
         strict_transport_security_include_subdomains=app.config.get(
-        "TALISMAN_STRICT_TRANSPORT_SECURITY_INCLUDE_SUBDOMAINS", True
+            "TALISMAN_STRICT_TRANSPORT_SECURITY_INCLUDE_SUBDOMAINS", True
         ),
         strict_transport_security_preload=app.config.get(
             "TALISMAN_STRICT_TRANSPORT_SECURITY_PRELOAD", False
@@ -131,7 +133,7 @@ def create_app():
     # Konfigurasi logger
     stream_handler = StreamHandler()
     stream_handler.setLevel(logging.INFO)
-    file_handler = logging.FileHandler('app.log')
+    file_handler = logging.FileHandler("app.log")
     file_handler.setLevel(logging.INFO)
 
     formatter = logging.Formatter(
@@ -179,6 +181,14 @@ def create_app():
     app.register_blueprint(network_configurator_bp)
     app.register_blueprint(backup_bp)
     app.register_blueprint(ai_agent_bp)
+
+    # Pastikan database terbuat sebelum inisialisasi data
+    with app.app_context():
+        db.create_all()
+
+        # Import dan panggil initialize() di dalam konteks Flask untuk menghindari circular import
+        from src.db_init import initialize
+        initialize()
 
     # Set up user loader
     from .models.app_models import User
