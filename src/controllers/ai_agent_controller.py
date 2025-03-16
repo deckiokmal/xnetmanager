@@ -1,5 +1,5 @@
 import logging
-from werkzeug.exceptions import BadRequest, InternalServerError
+from werkzeug.exceptions import BadRequest
 from flask import (
     Blueprint,
     request,
@@ -96,9 +96,7 @@ def chatbot():
 
         if chat_intent == "other":
             # Ambil ID pengguna saat ini (dari Flask-Login)
-            user_id = (
-                current_user.id if current_user.is_authenticated else "anonymous"
-            )
+            user_id = current_user.id if current_user.is_authenticated else "anonymous"
             response = talita_llm(user_input, user_id)
             return jsonify(response), 200
 
@@ -123,7 +121,6 @@ def chatbot():
 # --------------------------------------------------------------------------------
 @ai_agent_bp.route("/view/analyze/<device_id>", methods=["GET"])
 def analyze_view(device_id):
-
     device = DeviceManager.query.get_or_404(device_id)
     if not device:
         flash("Device tidak ditemukan", "danger")
@@ -133,18 +130,18 @@ def analyze_view(device_id):
     config_data = AIAnalyticsUtils.get_configuration_data(device)
     # current_app.logger.info(f"config_data: {config_data}")
 
-    if config_data["live"] != None:
+    if config_data["live"] is not None:
         show_config_data = config_data["live"]
-    elif config_data["backup"] != None:
+    elif config_data["backup"] is not None:
         show_config_data = config_data["backup"]
     else:
         flash("No available data, check your device connection.", "warning")
         return redirect(url_for("dm.index"))
 
-    #handle jika data live config dan backup tidak ada
+    # handle jika data live config dan backup tidak ada
     if show_config_data == "No data available":
-        current_app.logger.info(f"Live config & Backup data not available - AI Agent.")
-        flash("No data available, please check your device connection.","warning")
+        current_app.logger.info("Live config & Backup data not available - AI Agent.")
+        flash("No data available, please check your device connection.", "warning")
         return redirect(url_for("dm.index"))
 
     # Ambil hasil rekomendasi
@@ -286,7 +283,7 @@ def apply_recommendation():
 
         backup_type = "differential" if backup_exists else "full"
         # Create a new backup for this device using the static method
-        new_backup = BackupData.create_backup(
+        BackupData.create_backup(
             backup_name=f"post-ai-{recommendation.title}",
             description=f"After applying AI recommendation {recommendation.title}",
             user_id=current_user.id,

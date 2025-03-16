@@ -1,7 +1,7 @@
 from decouple import config as decouple_config
 from flask import Flask
-import logging
-from logging import StreamHandler
+from logging.config import dictConfig
+from logging.handlers import RotatingFileHandler
 from flask_wtf.csrf import CSRFProtect
 from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate
@@ -38,7 +38,7 @@ UUID_TYPE = None
 
 def create_app():
     global UUID_TYPE
-
+    configure_logging()
     app = Flask(__name__)
 
     # Membaca konfigurasi dari file .env
@@ -89,7 +89,7 @@ def create_app():
         raise ValueError("Missing required configuration: TALITA_URL")
 
     # Set API key untuk OpenAI
-    client_openai = OpenAI(api_key=openai_api_key)
+    OpenAI(api_key=openai_api_key)
 
     # Simpan TALITA API Key dan URL ke dalam konfigurasi aplikasi
     app.config["TALITA_API_KEY"] = talita_api_key
@@ -109,7 +109,7 @@ def create_app():
     mail.init_app(app)
     ma.init_app(app)
     jwt.init_app(app)
-    talisman = Talisman(
+    Talisman(
         app,
         content_security_policy=app.config["TALISMAN_CONTENT_SECURITY_POLICY"],
         force_https=app.config["TALISMAN_FORCE_HTTPS"],
@@ -128,23 +128,6 @@ def create_app():
 
     # Set UUID type based on database type
     UUID_TYPE = get_uuid_type(app.config["SQLALCHEMY_DATABASE_URI"])
-
-    # Konfigurasi logger
-    # Konfigurasi logger
-    stream_handler = StreamHandler()
-    stream_handler.setLevel(logging.INFO)
-    file_handler = logging.FileHandler("app.log")
-    file_handler.setLevel(logging.INFO)
-
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    stream_handler.setFormatter(formatter)
-    file_handler.setFormatter(formatter)
-
-    app.logger.addHandler(stream_handler)
-    app.logger.addHandler(file_handler)
-    app.logger.setLevel(logging.INFO)
 
     # Register context processor
     app.jinja_env.filters["mask_password"] = mask_password
@@ -188,6 +171,7 @@ def create_app():
 
         # Import dan panggil initialize() di dalam konteks Flask untuk menghindari circular import
         from src.db_init import initialize
+
         initialize()
 
     # Set up user loader
@@ -200,3 +184,51 @@ def create_app():
         return User.query.filter(User.id == user_id).first()
 
     return app
+
+
+def configure_logging():
+    LOG_CONFIG = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "standard": {
+                "format": "%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(lineno)d - %(message)s",
+                "datefmt": "%Y-%m-%d %H:%M:%S",
+            }
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "level": "INFO",
+                "formatter": "standard",
+                "stream": "ext://sys.stdout",
+            },
+            "file": {
+                "()": RotatingFileHandler,
+                "level": "INFO",
+                "formatter": "standard",
+                "filename": "app.log",
+                "maxBytes": 10485760,  # 10MB
+                "backupCount": 5,
+                "encoding": "utf8",
+            },
+            "error_file": {
+                "()": RotatingFileHandler,
+                "level": "WARNING",
+                "formatter": "standard",
+                "filename": "app-error.log",
+                "maxBytes": 10485760,
+                "backupCount": 5,
+                "encoding": "utf8",
+            },
+        },
+        "loggers": {
+            "": {  # Root logger
+                "handlers": ["console", "file", "error_file"],
+                "level": "DEBUG",
+                "propagate": True,
+            }
+        },
+    }
+
+    dictConfig(LOG_CONFIG)

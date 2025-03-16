@@ -12,7 +12,7 @@ from flask_login import login_required, current_user, logout_user
 from flask_paginate import Pagination, get_page_args
 from src import db
 from src.models.app_models import User, Role, Permission, UserRoles
-from .decorators import role_required, login_required, required_2fa
+from .decorators import role_required, login_required, required_2fa  # noqa: F811
 import logging
 from src.utils.forms_utils import (
     RolesForm,

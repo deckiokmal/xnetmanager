@@ -16,7 +16,7 @@ from src.utils.network_configurator_utilities import ConfigurationManagerUtils
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
-from .decorators import login_required, role_required, required_2fa
+from .decorators import login_required, role_required, required_2fa  # noqa: F811
 import random
 import string
 from flask_paginate import Pagination, get_page_args
@@ -122,7 +122,7 @@ def save_uploaded_file(file, upload_folder):
     return filename
 
 
-def read_file(filepath):
+def read_file(filepath):  # noqa: F811
     try:
         with open(filepath, "r", encoding="utf-8") as file:
             return file.read()
@@ -134,7 +134,7 @@ def read_file(filepath):
         return None
 
 
-def generate_random_filename(vendor_name):
+def generate_random_filename(vendor_name):  # noqa: F811
     random_str = "".join(random.choices(string.ascii_letters + string.digits, k=8))
     date_str = datetime.now().strftime("%d_%m_%Y")
     filename = f"{vendor_name}_{random_str}_{date_str}"
@@ -354,7 +354,7 @@ def upload_template():
         template_dir = current_app.config["TEMPLATE_DIR"]
         if j2.filename and allowed_file(j2.filename, TEMPLATE_EXTENSIONS):
             template_name = secure_filename(j2.filename)
-            template_path = save_uploaded_file(j2, template_dir)
+            save_uploaded_file(j2, template_dir)
         else:
             flash("Jenis file template tidak valid. Diizinkan: j2.", "danger")
             current_app.logger.warning(
@@ -365,7 +365,7 @@ def upload_template():
         # Validasi dan simpan file parameter
         if yaml.filename and allowed_file(yaml.filename, PARAMS_EXTENSIONS):
             parameter_name = secure_filename(yaml.filename)
-            parameter_path = save_uploaded_file(yaml, template_dir)
+            save_uploaded_file(yaml, template_dir)
         else:
             flash("Jenis file parameter tidak valid. Diizinkan: yml, yaml.", "danger")
             current_app.logger.warning(
