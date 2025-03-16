@@ -1,7 +1,5 @@
 from decouple import config as decouple_config
 from flask import Flask
-from logging.config import dictConfig
-from logging.handlers import RotatingFileHandler
 from flask_wtf.csrf import CSRFProtect
 from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate
@@ -17,11 +15,12 @@ import os
 from flask_marshmallow import Marshmallow
 from flask_jwt_extended import JWTManager
 from werkzeug.middleware.proxy_fix import ProxyFix
+from src.utils.logging_utils import configure_logging
 
-# Load .env file variable
+# * Load .env file variable
 load_dotenv()
 
-# Initialize extensions
+# * Initialize extensions
 bcrypt = Bcrypt()
 db = SQLAlchemy()
 migrate = Migrate()
@@ -30,19 +29,19 @@ csrf = CSRFProtect()
 ma = Marshmallow()
 jwt = JWTManager()
 
-# Global variable for UUID type
+# * Global variable for UUID type
 UUID_TYPE = None
 
 
 def create_app():
     global UUID_TYPE
-    configure_logging()
+    configure_logging()  # * setup logging
     app = Flask(__name__)
 
-    # Membaca konfigurasi dari file .env
+    # * Membaca konfigurasi dari file .env
     config_name = decouple_config("CONFIG_NAME", default="Production")
 
-    # Memilih konfigurasi berdasarkan nama
+    # * Memilih konfigurasi berdasarkan nama
     if config_name == "Development":
         app.config.from_object(DevelopmentConfig)
     elif config_name == "Testing":
@@ -54,7 +53,7 @@ def create_app():
             "Invalid CONFIG_NAME. Expected 'Development', 'Testing', or 'Production'."
         )
 
-    # Pastikan semua direktori yang dibutuhkan ada
+    #! Pastikan semua direktori yang dibutuhkan ada
     for directory in [
         app.config["BACKUP_DIR"],
         app.config["CONFIG_DIR"],
@@ -70,15 +69,15 @@ def create_app():
             app.logger.error(f"Error creating directory {directory}: {e}")
             raise RuntimeError(f"Failed to create directory: {directory}")
 
-    # Inisiasi pustaka OpenAI dengan API key
+    # * Inisiasi pustaka OpenAI dengan API key
     openai_api_key = decouple_config("OPENAI_API_KEY", default=None)
     talita_api_key = decouple_config("TALITA_API_KEY", default=None)
     talita_url = decouple_config("TALITA_URL", default=None)
 
-    # JWT Secret Key
+    # * JWT Secret Key
     jwt_secret_key = decouple_config("JWT_SECRET_KEY", default=None)
 
-    # Pengecekan apakah variabel konfigurasi penting telah dimuat
+    # * Pengecekan apakah variabel konfigurasi penting telah dimuat
     if not openai_api_key:
         raise ValueError("Missing required configuration: OPENAI_API_KEY")
     if not talita_api_key:
@@ -86,19 +85,19 @@ def create_app():
     if not talita_url:
         raise ValueError("Missing required configuration: TALITA_URL")
 
-    # Set API key untuk OpenAI
+    # * Set API key untuk OpenAI
     OpenAI(api_key=openai_api_key)
 
-    # Simpan TALITA API Key dan URL ke dalam konfigurasi aplikasi
+    # * Simpan TALITA API Key dan URL ke dalam konfigurasi aplikasi
     app.config["TALITA_API_KEY"] = talita_api_key
     app.config["TALITA_URL"] = talita_url
 
-    # set config for JWT Extended Library
+    # * set config for JWT Extended Library
     app.config["JWT_SECRET_KEY"] = jwt_secret_key
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = False
     app.config["JWT_REFRESH_TOKEN_EXPIRES"] = False
 
-    # Initialize extensions
+    # * Initialize extensions
     bcrypt.init_app(app)
     db.init_app(app)
     migrate.init_app(app, db)
@@ -123,13 +122,13 @@ def create_app():
     )
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
-    # Set UUID type based on database type
+    # * Set UUID type based on database type
     UUID_TYPE = get_uuid_type(app.config["SQLALCHEMY_DATABASE_URI"])
 
-    # Register context processor
+    # * Register context processor
     app.jinja_env.filters["mask_password"] = mask_password
 
-    # Middleware to modify the Server header
+    # * Middleware to modify the Server header
     @app.after_request
     def hide_server_header(response):
         response.headers["Server"] = "Hidden Server"
@@ -139,7 +138,7 @@ def create_app():
     def utility_processor():
         return dict(is_active=is_active)
 
-    # Register blueprints
+    # * Register blueprints
     from .controllers.main_controller import main_bp
     from .utils.error_helper_utils import error_bp
     from .controllers.users_controller import users_bp
@@ -162,16 +161,16 @@ def create_app():
     app.register_blueprint(backup_bp)
     app.register_blueprint(ai_agent_bp)
 
-    # Pastikan database terbuat sebelum inisialisasi data
+    #! Pastikan database terbuat sebelum inisialisasi data
     with app.app_context():
         db.create_all()
 
-        # Import dan panggil initialize() di dalam konteks Flask untuk menghindari circular import
+        # * Import dan panggil initialize() di dalam konteks Flask untuk menghindari circular import
         from src.db_init import initialize
 
         initialize()
 
-    # Set up user loader
+    # * Set up user loader
     from .models.app_models import User
 
     login_manager.login_view = "main.login"
@@ -181,51 +180,3 @@ def create_app():
         return User.query.filter(User.id == user_id).first()
 
     return app
-
-
-def configure_logging():
-    LOG_CONFIG = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {
-            "standard": {
-                "format": "%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(lineno)d - %(message)s",
-                "datefmt": "%Y-%m-%d %H:%M:%S",
-            }
-        },
-        "handlers": {
-            "console": {
-                "class": "logging.StreamHandler",
-                "level": "INFO",
-                "formatter": "standard",
-                "stream": "ext://sys.stdout",
-            },
-            "file": {
-                "()": RotatingFileHandler,
-                "level": "INFO",
-                "formatter": "standard",
-                "filename": "app.log",
-                "maxBytes": 10485760,  # 10MB
-                "backupCount": 5,
-                "encoding": "utf8",
-            },
-            "error_file": {
-                "()": RotatingFileHandler,
-                "level": "WARNING",
-                "formatter": "standard",
-                "filename": "app-error.log",
-                "maxBytes": 10485760,
-                "backupCount": 5,
-                "encoding": "utf8",
-            },
-        },
-        "loggers": {
-            "": {  # Root logger
-                "handlers": ["console", "file", "error_file"],
-                "level": "DEBUG",
-                "propagate": True,
-            }
-        },
-    }
-
-    dictConfig(LOG_CONFIG)
