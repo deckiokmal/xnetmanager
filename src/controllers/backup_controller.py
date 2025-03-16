@@ -16,7 +16,7 @@ from flask import (
     flash,
 )
 from flask_paginate import Pagination, get_page_args
-from flask_login import login_required, current_user, logout_user
+from flask_login import login_required, current_user, logout_user  # noqa: F811
 from src import db
 from src.models.app_models import (
     BackupData,

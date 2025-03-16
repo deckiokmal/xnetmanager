@@ -19,7 +19,7 @@ from src.models.app_models import (
     BackupData,
 )
 from src.utils.forms_utils import RegisterForm, UserUpdateForm
-from .decorators import login_required, role_required, required_2fa
+from .decorators import login_required, role_required, required_2fa  # noqa: F811
 from flask_paginate import Pagination, get_page_args
 import logging
 

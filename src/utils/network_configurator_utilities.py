@@ -1,6 +1,4 @@
-import threading
 import paramiko
-import subprocess
 from jinja2 import Template
 import yaml
 import platform
@@ -55,7 +53,7 @@ class ConfigurationManagerUtils:
                     timeout=10,
                 )
                 return ssh_client
-            except (paramiko.SSHException, EOFError) as ssh_err:
+            except (paramiko.SSHException, EOFError):
                 retries += 1
                 logging.error(
                     f"SSH connection failed for {self.ip_address}. Retrying... ({retries}/{self.MAX_RETRIES})"

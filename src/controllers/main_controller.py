@@ -126,7 +126,7 @@ def login():
         try:
             user = User.query.filter_by(email=username).first()
             if not user:
-                flash(f"Invalid username or password", "danger")
+                flash("Invalid username or password", "danger")
                 return redirect(url_for("main.login"))
             elif user and bcrypt.check_password_hash(
                 user.password_hash, form.password.data

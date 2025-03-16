@@ -5,13 +5,12 @@ from flask import (
     redirect,
     url_for,
     flash,
-    jsonify,
     current_app,
 )
 from flask_login import login_required, current_user, logout_user
 from src import db
 from src.models.app_models import DeviceManager
-from .decorators import login_required, role_required, required_2fa
+from .decorators import login_required, role_required, required_2fa  # noqa: F811
 from src.utils.forms_utils import DeviceForm, DeviceUpdateForm
 from flask_paginate import Pagination, get_page_args
 import logging

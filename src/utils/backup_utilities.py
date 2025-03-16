@@ -143,7 +143,7 @@ class BackupUtils:
         except RuntimeError as e:
             current_app.logger.info(f"backup utils runtimeerror: {str(e)}")
             return jsonify({"status": "error", "message": str(e)}), 400
-        except Exception as e:
+        except Exception:
             return (
                 jsonify(
                     {"status": "error", "message": "Terjadi kesalahan pada server"}

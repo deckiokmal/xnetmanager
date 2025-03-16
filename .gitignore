@@ -18,3 +18,5 @@ app.log
 API Docs/
 cookbook/
 .vscode/
+xnetmanager.code-workspace
+app-error.log

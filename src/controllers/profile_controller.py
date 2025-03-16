@@ -9,7 +9,7 @@ from flask import (
 )
 from flask_login import login_required, current_user, logout_user
 from src.models.app_models import User
-from .decorators import login_required, role_required, required_2fa
+from .decorators import login_required, role_required, required_2fa  # noqa: F811
 from src import db, bcrypt
 from src.utils.forms_utils import (
     ProfileUpdateForm,
