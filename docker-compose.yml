@@ -3,6 +3,7 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile
+    image: deckiokmal/xnetmanager:latest
     container_name: xnetmanager_flask
     volumes:
       - xnetmanager_backups:/var/www/data/backups
