@@ -19,9 +19,6 @@ from src.utils.forms_utils import (
 )
 import logging
 import os
-from src.utils.mail_utils import (
-    send_verification_email,
-)
 
 # Membuat blueprint users
 profile_bp = Blueprint("profile", __name__)
@@ -341,37 +338,5 @@ def toggle_2fa():
                 f"Error toggling 2FA for user {current_user.email}: {e}"
             )
             flash("Terjadi kesalahan saat memperbarui pengaturan 2FA.", "danger")
-
-    return redirect(url_for("profile.index"))
-
-
-# Mail aktif/nonaktif
-@profile_bp.route("/mail_enabled", methods=["POST"])
-@login_required
-def mail_enabled():
-    try:
-        email_verification = "email_verification" in request.form
-        user = User.query.get(current_user.id)
-
-        if email_verification and not user.is_verified:
-            send_verification_email(user)
-            flash("A verification email has been sent to your email address.", "info")
-            current_app.logger.info(
-                f"Verification email sent to user {current_user.email}."
-            )
-        else:
-            flash("Your email is already verified.", "warning")
-            current_app.logger.warning(
-                f"User {current_user.email} attempted to verify an already verified email."
-            )
-
-    except Exception as e:
-        current_app.logger.error(
-            f"Error in email verification for user {current_user.email}: {e}"
-        )
-        flash(
-            "An error occurred while sending the verification email. Please try again later.",
-            "danger",
-        )
 
     return redirect(url_for("profile.index"))
