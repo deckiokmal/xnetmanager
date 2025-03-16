@@ -10,6 +10,7 @@ from wtforms import (
     BooleanField,
     IntegerField,
     SelectMultipleField,
+    HiddenField
 )
 from wtforms.validators import (
     DataRequired,
@@ -20,6 +21,7 @@ from wtforms.validators import (
     Optional,
     IPAddress,
     Regexp,
+    NumberRange
 )
 from wtforms_sqlalchemy.fields import QuerySelectMultipleField
 from src.models.app_models import User, Permission
@@ -291,9 +293,14 @@ class DeviceForm(FlaskForm):
             Length(min=1, max=50),
         ],
     )
-    vendor = StringField(
-        "Vendor",
-        validators=[DataRequired(message="Please enter the vendor name.")],
+    vendor = SelectField(
+        "Select Device Vendor",
+        choices=[
+            ("mikrotik", "Mikrotik"),
+            ("cisco", "Cisco"),
+            ("fortinet", "Fortinet"),
+        ],
+        validators=[DataRequired()],
     )
     ip_address = StringField(
         "IP Address",
@@ -333,9 +340,14 @@ class DeviceUpdateForm(FlaskForm):
             Length(min=1, max=50),
         ],
     )
-    vendor = StringField(
-        "Vendor",
-        validators=[DataRequired(message="Please enter the vendor name.")],
+    vendor = SelectField(
+        "Select Device Vendor",
+        choices=[
+            ("mikrotik", "Mikrotik"),
+            ("cisco", "Cisco"),
+            ("fortinet", "Fortinet"),
+        ],
+        validators=[DataRequired()],
     )
     ip_address = StringField(
         "IP Address",
@@ -366,12 +378,14 @@ class DeviceUpdateForm(FlaskForm):
 
 
 class TemplateForm(FlaskForm):
-    vendor = StringField(
-        "Vendor",
-        validators=[
-            DataRequired(message="Vendor is required."),
-            Length(max=100, message="Vendor must be less than 100 characters."),
+    vendor = SelectField(
+        "Select Device Vendor",
+        choices=[
+            ("mikrotik", "Mikrotik"),
+            ("cisco", "Cisco"),
+            ("fortinet", "Fortinet"),
         ],
+        validators=[DataRequired()],
     )
     version = StringField(
         "Version",
@@ -407,12 +421,14 @@ class TemplateUpdateForm(FlaskForm):
             ),
         ],
     )
-    vendor = StringField(
-        "Vendor",
-        validators=[
-            DataRequired(message="Vendor harus dipilih."),
-            Length(max=50, message="Nama vendor tidak boleh lebih dari 50 karakter."),
+    vendor = SelectField(
+        "Select Device Vendor",
+        choices=[
+            ("mikrotik", "Mikrotik"),
+            ("cisco", "Cisco"),
+            ("fortinet", "Fortinet"),
         ],
+        validators=[DataRequired()],
     )
     version = StringField(
         "Versi",
@@ -438,12 +454,14 @@ class TemplateUpdateForm(FlaskForm):
 
 
 class ManualTemplateForm(FlaskForm):
-    vendor = StringField(
-        "Vendor",
-        validators=[
-            DataRequired(message="Vendor tidak boleh kosong."),
-            Length(max=100),
+    vendor = SelectField(
+        "Select Device Vendor",
+        choices=[
+            ("mikrotik", "Mikrotik"),
+            ("cisco", "Cisco"),
+            ("fortinet", "Fortinet"),
         ],
+        validators=[DataRequired()],
     )
     version = StringField(
         "Version",
@@ -474,16 +492,14 @@ class ManualConfigurationForm(FlaskForm):
             ),
         ],
     )
-    vendor = StringField(
-        "Vendor",
-        validators=[
-            DataRequired(message="Vendor name is required."),
-            Length(
-                min=1,
-                max=20,
-                message="Vendor name must be between 1 and 20 characters.",
-            ),
+    vendor = SelectField(
+        "Select Device Vendor",
+        choices=[
+            ("mikrotik", "Mikrotik"),
+            ("cisco", "Cisco"),
+            ("fortinet", "Fortinet"),
         ],
+        validators=[DataRequired()],
     )
     configuration_description = TextAreaField(
         "Configuration Description",
@@ -515,16 +531,14 @@ class AIConfigurationForm(FlaskForm):
             ),
         ],
     )
-    vendor = StringField(
-        "Vendor",
-        validators=[
-            DataRequired(message="Vendor name is required."),
-            Length(
-                min=1,
-                max=20,
-                message="Vendor name must be between 1 and 20 characters.",
-            ),
+    vendor = SelectField(
+        "Select Device Vendor",
+        choices=[
+            ("mikrotik", "Mikrotik"),
+            ("cisco", "Cisco"),
+            ("fortinet", "Fortinet"),
         ],
+        validators=[DataRequired()],
     )
     description = TextAreaField(
         "Description",
@@ -558,14 +572,14 @@ class UpdateConfigurationForm(FlaskForm):
             ),
         ],
     )
-    vendor = StringField(
-        "Vendor",
-        validators=[
-            DataRequired(message="Vendor is required."),
-            Length(
-                min=1, max=50, message="Vendor must be between 1 and 50 characters."
-            ),
+    vendor = SelectField(
+        "Select Device Vendor",
+        choices=[
+            ("mikrotik", "Mikrotik"),
+            ("cisco", "Cisco"),
+            ("fortinet", "Fortinet"),
         ],
+        validators=[DataRequired()],
     )
     description = TextAreaField(
         "Description",
@@ -591,12 +605,14 @@ class TalitaQuestionForm(FlaskForm):
             Length(max=100, message="Configuration name cannot exceed 100 characters."),
         ],
     )
-    vendor = StringField(
-        "Vendor",
-        validators=[
-            DataRequired(message="Vendor is required."),
-            Length(max=100, message="Vendor name cannot exceed 100 characters."),
+    vendor = SelectField(
+        "Select Device Vendor",
+        choices=[
+            ("mikrotik", "Mikrotik"),
+            ("cisco", "Cisco"),
+            ("fortinet", "Fortinet"),
         ],
+        validators=[DataRequired()],
     )
     description = TextAreaField(
         "Description",
@@ -612,6 +628,25 @@ class TalitaQuestionForm(FlaskForm):
         ],
     )
     submit = SubmitField("Submit")
+
+
+class BackupForm(FlaskForm):
+    backup_name = StringField("Backup Name", validators=[DataRequired()])
+    description = TextAreaField("Description", validators=[Optional()])
+    backup_type = SelectField(
+        "Backup Type",
+        choices=[
+            ("full", "Full Backup"),
+            ("incremental", "Incremental Backup"),
+            ("differential", "Differential Backup"),
+        ],
+        validators=[DataRequired()],
+    )
+    retention_days = IntegerField(
+        "Retention Days", validators=[Optional(), NumberRange(min=1)]
+    )
+    devices = HiddenField("Devices")
+    submit = SubmitField("Create Backup")
 
 
 class UpdateBackupForm(FlaskForm):
