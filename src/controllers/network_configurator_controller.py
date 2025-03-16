@@ -262,7 +262,7 @@ def push_configs():
         )
 
     # Cek konsistensi vendor
-    unique_vendors = {device.vendor for device in devices.lower()}
+    unique_vendors = {device.vendor for device in devices}
     if len(unique_vendors) > 1:
         return (
             jsonify(
@@ -447,7 +447,7 @@ def push_config_single_device(device_id):
                     "device_name": device.device_name,
                     "ip": device.ip_address,
                     "status": "error",
-                    "message": error_summary.get("message", "Unknown error occurred."),
+                    "message": error_summary,
                 }
             else:
                 return {
