@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 from src.utils.is_active_utils import is_active
 from src.utils.mask_password_utils import mask_password
 from src.config import DevelopmentConfig, TestingConfig, ProductionConfig, get_uuid_type
-from flask_mail import Mail
 from flask_talisman import Talisman
 from openai import OpenAI
 import os
@@ -28,7 +27,6 @@ db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 csrf = CSRFProtect()
-mail = Mail()
 ma = Marshmallow()
 jwt = JWTManager()
 
@@ -106,7 +104,6 @@ def create_app():
     migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
-    mail.init_app(app)
     ma.init_app(app)
     jwt.init_app(app)
     Talisman(
