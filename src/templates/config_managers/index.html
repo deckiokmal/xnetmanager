@@ -225,15 +225,6 @@
                                 <label for="retentionDays" class="form-label">Retention Days</label>
                                 <input type="number" class="form-control" id="retentionDays" name="retention_days">
                             </div>
-                            <!-- Backup Command -->
-                            <div class="mb-3">
-                                <label for="command" class="form-label">Backup Command</label>
-                                <select class="form-select" id="command" name="command" required>
-                                    <option value="show running-config">Cisco</option>
-                                    <option value="export compact terse">MikroTik</option>
-                                    <option value="show full-configuration">Fortinet</option>
-                                </select>
-                            </div>
                             <!-- Hidden field to store selected devices -->
                             <input type="hidden" id="selectedBackupDevices" name="devices">
                             <button type="submit" class="btn btn-primary">Create Backup</button>
@@ -293,15 +284,6 @@
                                     <option value="full">Full Backup</option>
                                     <option value="incremental">Incremental Backup</option>
                                     <option value="differential">Differential Backup</option>
-                                </select>
-                            </div>
-                            <!-- Backup Command -->
-                            <div class="mb-3">
-                                <label for="command{{ device.id }}" class="form-label">Backup Command</label>
-                                <select class="form-select" id="command{{ device.id }}" name="command" required>
-                                    <option value="show running-config">Cisco</option>
-                                    <option value="export compact terse">MikroTik</option>
-                                    <option value="show full-configuration">Fortinet</option>
                                 </select>
                             </div>
                             <button type="submit" class="btn btn-primary">Create Backup</button>

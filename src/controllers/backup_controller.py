@@ -203,7 +203,6 @@ def create_backup_multiple():
         description = data.get("description", "")
         backup_type = data.get("backup_type", "full")
         retention_days = data.get("retention_days", None)
-        command = data.get("command")
         user_id = current_user.id
 
         if not device_ips:
@@ -216,11 +215,24 @@ def create_backup_multiple():
         if not devices:
             return jsonify({"message": "No devices found."}), 404
 
+        # Check device vendor dari device yang di pilih oleh user
+        command_map = {
+            "mikrotik": "export compact terse",
+            "cisco": "show running-configuration",
+            "fortinet": "show full-configuration",
+        }
+        command = ""
+
         # Pastikan semua perangkat memiliki vendor yang sama
         vendors = {device.vendor for device in devices}
         if len(vendors) > 1:
             return jsonify({"message": "Devices must have the same vendor."}), 400
 
+        # Mengambil data vendor dan mengubah set menjadi str menggunakan pop()
+        if vendors:
+            vendor_str = vendors.pop()
+            command = command_map[vendor_str]
+        
         results = []
         success = True
 
@@ -347,7 +359,6 @@ def create_backup_single(device_id):
         description = data.get("description", "")
         backup_type = data.get("backup_type", "full")
         retention_days = data.get("retention_days", None)
-        command = data.get("command")  # Ensure command is retrieved correctly
         user_id = current_user.id
 
         # Validate that a backup name is provided
@@ -359,6 +370,16 @@ def create_backup_single(device_id):
 
         if not device:
             return jsonify({"message": f"Device with ID {device_id} not found."}), 404
+
+        # Check device vendor dari device yang di pilih oleh user
+        command_map = {
+            "mikrotik": "export compact terse",
+            "cisco": "show running-configuration",
+            "fortinet": "show full-configuration",
+        }
+        if device:
+            vendor = device.vendor
+            command = command_map[vendor]
 
         # Ensure the current user is the owner of the device or is an Admin
         if current_user.has_role("Admin") or device.owner_id == user_id:
@@ -530,7 +551,9 @@ def update_backup(backup_id):
             return redirect(url_for("backup_bp.index", backup_id=backup.id))
 
         # Render the update template
-        return render_template("backup_managers/update_backup.html", form=form, backup=backup)
+        return render_template(
+            "backup_managers/update_backup.html", form=form, backup=backup
+        )
 
     except Exception as e:
         current_app.logger.error(f"Error updating backup: {e}")
