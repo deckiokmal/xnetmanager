@@ -118,7 +118,7 @@ body {
 
 /* Logo */
 .logo img {
-    width: 80px;
+    width: 70%;
 
 }
 
@@ -307,7 +307,7 @@ button:hover {
     /* Warna lebih gelap saat hover */
 }
 
-.tfa-card a{
+.tfa-card a {
     color: #5900FF;
 }
 

@@ -13,7 +13,7 @@
 <!-- Kolom Form Login -->
 <div class="login-form">
     <div class="logo">
-        <img src="{{ url_for('static', filename='favicon.ico') }}" alt="XNET Logo">
+        <img src="{{ url_for('static', filename='img/logo-login.png') }}" alt="XNET Logo">
         <div class="flash_message">
             {% with errors = get_flashed_messages(category_filter=["error"]) %}
             {% if errors %}
