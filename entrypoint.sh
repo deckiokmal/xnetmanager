@@ -17,7 +17,10 @@ else
     echo "Direktori migrations ditemukan. Melewati 'flask db init'."
 fi
 
-# Lanjutkan dengan migrasi dan upgrade
+#! Inisialisasi Database
+echo "DB Initialization..."
+flask db init
+#! Lanjutkan dengan migrasi dan upgrade
 echo "Menjalankan 'flask db migrate' dan 'flask db upgrade'..."
 flask db migrate -m "Initial Migration"
 flask db upgrade

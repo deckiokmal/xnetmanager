@@ -61,7 +61,7 @@ services:
 
   certbot:
     image: certbot/certbot
-    container_name: certbot
+    container_name: xnetmanager_certbot
     volumes:
       - ./certbot/www:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
