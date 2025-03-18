@@ -9,14 +9,6 @@ done
 
 echo "Memulai proses inisialisasi dan aplikasi XnetManager..."
 
-# Jalankan migrasi database
-if [ ! -d "/var/www/migrations" ]; then
-    echo "Direktori migrations tidak ditemukan. Menjalankan 'flask db init'..."
-    flask db init
-else
-    echo "Direktori migrations ditemukan. Melewati 'flask db init'."
-fi
-
 #! Inisialisasi Database
 echo "DB Initialization..."
 flask db init
