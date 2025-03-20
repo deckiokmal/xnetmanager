@@ -20,3 +20,4 @@ cookbook/
 .vscode/
 xnetmanager.code-workspace
 app-error.log
+migrations/

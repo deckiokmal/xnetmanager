@@ -23,7 +23,9 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     phone_number = db.Column(db.String(20), nullable=True)
-    profile_picture = db.Column(db.String(255), nullable=True)
+    profile_picture = db.Column(
+        db.String(255), nullable=False, default="img/undraw_profile.svg"
+    )
     company = db.Column(db.String(255), nullable=True)
     title = db.Column(db.String(255), nullable=True)
     city = db.Column(db.String(255), nullable=True)

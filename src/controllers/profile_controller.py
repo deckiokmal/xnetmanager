@@ -268,7 +268,8 @@ def upload_profile_picture():
                     1
                 ]  # Mengambil ekstensi file
                 # Format nama file
-                filename = f"{current_user.first_name} {current_user.last_name}{file_extension}"
+                file_ = f"{current_user.first_name}_{current_user.last_name}{file_extension}"
+                filename = file_.lower()
                 # Path lengkap untuk menyimpan file
                 file_path = os.path.join(
                     current_app.static_folder, PROFILE_PICTURE_DIRECTORY, filename

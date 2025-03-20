@@ -1,221 +1,240 @@
 <!-- save token jwt ke cookies -->
 <script>
-    // Simpan token JWT ke dalam cookie setelah pengguna berhasil login
-    function saveTokenToCookie(token) {
-        document.cookie = `access_token_cookie=${token}; path=/;`;
-    }
+  // Simpan token JWT ke dalam cookie setelah pengguna berhasil login
+  function saveTokenToCookie(token) {
+    document.cookie = `access_token_cookie=${token}; path=/;`;
+  }
 </script>
 
 <!-- JavaScript handle darkmode dan lightmode -->
 <script>
-    function DarkTheme() {
-        var element = document.body;
-        element.dataset.bsTheme =
-            element.dataset.bsTheme == "light" ? "dark" : "light";
-    }
+  function DarkTheme() {
+    var element = document.body;
+    element.dataset.bsTheme =
+      element.dataset.bsTheme == "light" ? "dark" : "light";
+  }
 </script>
 
 <!-- JavaScript handle alert delay closing -->
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Waktu delay untuk menghilangkan alert (dalam milidetik)
-        var delay = 5000;
+  document.addEventListener("DOMContentLoaded", function () {
+    // Waktu delay untuk menghilangkan alert (dalam milidetik)
+    var delay = 5000;
 
-        var alerts = document.querySelectorAll('.alert');
-        alerts.forEach(function (alert) {
-            setTimeout(function () {
-                alert.classList.remove('show');
-                alert.classList.add('fade');
-            }, delay);
-        });
+    var alerts = document.querySelectorAll(".alert");
+    alerts.forEach(function (alert) {
+      setTimeout(function () {
+        alert.classList.remove("show");
+        alert.classList.add("fade");
+      }, delay);
     });
+  });
 </script>
 
 <!-- Talita chatbot JS -->
 <script>
-    const chatbotButton = document.getElementById('chatbot-button');
-    const chatbotContainer = document.getElementById('chatbot-container');
-    const chatBody = document.getElementById('chat-body');
-    const userInput = document.getElementById('user-input');
-    const sendBtn = document.getElementById('send-btn');
-    const typingIndicator = document.getElementById('typing-indicator');
+  const chatbotButton = document.getElementById("chatbot-button");
+  const chatbotContainer = document.getElementById("chatbot-container");
+  const chatBody = document.getElementById("chat-body");
+  const userInput = document.getElementById("user-input");
+  const sendBtn = document.getElementById("send-btn");
+  const typingIndicator = document.getElementById("typing-indicator");
 
-    // Set initial state: Chatbot closed by default
-    chatbotContainer.style.display = 'none';
-    chatbotButton.style.backgroundImage = 'url("https://iili.io/JpjR5tp.png")';
+  // Set initial state: Chatbot closed by default
+  chatbotContainer.style.display = "none";
+  chatbotButton.style.backgroundImage = 'url("https://iili.io/JpjR5tp.png")';
 
-    // Event listener for opening and closing the chatbot
-    chatbotButton.addEventListener('click', (e) => {
-        e.stopPropagation(); // Mencegah event bubbling
+  // Event listener for opening and closing the chatbot
+  chatbotButton.addEventListener("click", (e) => {
+    e.stopPropagation(); // Mencegah event bubbling
 
-        if (chatbotContainer.style.display === 'none' || chatbotContainer.style.display === '') {
-            chatbotContainer.style.display = 'block';
-            chatbotButton.classList.add('clicked');
-            chatbotButton.innerHTML = `
+    if (
+      chatbotContainer.style.display === "none" ||
+      chatbotContainer.style.display === ""
+    ) {
+      chatbotContainer.style.display = "block";
+      chatbotButton.classList.add("clicked");
+      chatbotButton.innerHTML = `
             <svg viewBox="0 0 24 24" fill="currentColor">
                 <path
                     d="M18.601 8.39897C18.269 8.06702 17.7309 8.06702 17.3989 8.39897L12 13.7979L6.60099 8.39897C6.26904 8.06702 5.73086 8.06702 5.39891 8.39897C5.06696 8.73091 5.06696 9.2691 5.39891 9.60105L11.3989 15.601C11.7309 15.933 12.269 15.933 12.601 15.601L18.601 9.60105C18.9329 9.2691 18.9329 8.73091 18.601 8.39897Z">
                 </path>
             </svg>`;
-            localStorage.setItem('chatbotOpen', 'true');
-        } else {
-            closeChatbot();
-        }
-    });
+      localStorage.setItem("chatbotOpen", "true");
+    } else {
+      closeChatbot();
+    }
+  });
 
-    // Fungsi untuk menutup chatbot
-    function closeChatbot() {
-        chatbotContainer.style.display = 'none';
-        chatbotButton.classList.remove('clicked');
-        chatbotButton.innerHTML = '';
-        chatbotButton.style.backgroundImage = 'url("https://iili.io/JpjR5tp.png")';
-        localStorage.setItem('chatbotOpen', 'false');
+  // Fungsi untuk menutup chatbot
+  function closeChatbot() {
+    chatbotContainer.style.display = "none";
+    chatbotButton.classList.remove("clicked");
+    chatbotButton.innerHTML = "";
+    chatbotButton.style.backgroundImage = 'url("https://iili.io/JpjR5tp.png")';
+    localStorage.setItem("chatbotOpen", "false");
+  }
+
+  // Handle klik di luar container
+  document.addEventListener("click", (e) => {
+    const isChatbotVisible = chatbotContainer.style.display === "block";
+    const clickedInsideChatbot = chatbotContainer.contains(e.target);
+    const clickedOnButton = e.target === chatbotButton;
+
+    if (isChatbotVisible && !clickedInsideChatbot && !clickedOnButton) {
+      closeChatbot();
+    }
+  });
+
+  userInput.addEventListener("input", () => {
+    userInput.style.height = "auto"; // Reset height
+    userInput.style.height = userInput.scrollHeight + "px"; // Resize based on content
+  });
+
+  function addMessage(message, className) {
+    if (!message) message = "[Error: Empty response]";
+    const messageDiv = document.createElement("div");
+    messageDiv.className = `message ${className}`;
+
+    let imgSrc =
+      className === "user-message"
+        ? '{{ url_for("static", filename=current_user.profile_picture) if current_user.profile_picture else url_for("static", filename="img/undraw_profile.svg") }}'
+        : "https://iili.io/JpjR5tp.png";
+
+    // If the message has no newlines, just render as is; else use Marked.js for markdown formatting
+    const formattedMessage = message.includes("\n")
+      ? marked.parse(message)
+      : message.replace(/\n/g, "");
+
+    // Create the message element
+    messageDiv.innerHTML = `<img src="${imgSrc}" alt="Avatar"> <div class="message-text">${formattedMessage}</div>`;
+    chatBody.appendChild(messageDiv);
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
+
+  async function sendMessage() {
+    const message = userInput.value.trim();
+    if (!message) return;
+
+    addMessage(message, "user-message");
+    userInput.value = "";
+    userInput.style.height = "40px"; // Reset height to default
+
+    typingIndicator.style.display = "inline"; // Show typing indicator
+
+    try {
+      const response = await fetch("/ai/chatbot", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message }),
+      });
+      const data = await response.json();
+
+      typingIndicator.style.display = "none"; // Hide typing indicator after response
+
+      if (data.success) {
+        addMessage(data.message, "bot-message"); // Access the 'response' property
+      } else {
+        addMessage(
+          "An unexpected error occurred. Please try again later.",
+          "bot-message"
+        );
+      }
+    } catch (error) {
+      typingIndicator.style.display = "none"; // Hide typing indicator in case of error
+      addMessage(
+        "An unexpected error occurred. Please try again later.",
+        "bot-message"
+      );
+    }
+  }
+
+  sendBtn.addEventListener("click", sendMessage);
+
+  // Handle keyboard input
+  userInput.addEventListener("keydown", (e) => {
+    // Shift + Enter = New line
+    if (e.key === "Enter" && e.shiftKey) {
+      // Biarkan default behavior (new line)
+      return;
     }
 
-    // Handle klik di luar container
-    document.addEventListener('click', (e) => {
-        const isChatbotVisible = chatbotContainer.style.display === 'block';
-        const clickedInsideChatbot = chatbotContainer.contains(e.target);
-        const clickedOnButton = e.target === chatbotButton;
-
-        if (isChatbotVisible && !clickedInsideChatbot && !clickedOnButton) {
-            closeChatbot();
-        }
-    });
-
-    userInput.addEventListener('input', () => {
-        userInput.style.height = 'auto'; // Reset height
-        userInput.style.height = userInput.scrollHeight + 'px'; // Resize based on content
-    });
-
-    function addMessage(message, className) {
-        if (!message) message = "[Error: Empty response]";
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${className}`;
-
-        let imgSrc = className === 'user-message' ?
-            '{{ url_for("static", filename=current_user.profile_picture) if current_user.profile_picture else url_for("static", filename="profile_pictures/default.jpg") }}' :
-            'https://iili.io/JpjR5tp.png';
-
-        // If the message has no newlines, just render as is; else use Marked.js for markdown formatting
-        const formattedMessage = message.includes('\n') ? marked.parse(message) : message.replace(/\n/g, '');
-
-        // Create the message element
-        messageDiv.innerHTML = `<img src="${imgSrc}" alt="Avatar"> <div class="message-text">${formattedMessage}</div>`;
-        chatBody.appendChild(messageDiv);
-        chatBody.scrollTop = chatBody.scrollHeight;
+    // Enter saja = Kirim pesan
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault(); // Mencegah new line
+      sendMessage();
     }
-
-    async function sendMessage() {
-        const message = userInput.value.trim();
-        if (!message) return;
-
-        addMessage(message, 'user-message');
-        userInput.value = '';
-        userInput.style.height = '40px'; // Reset height to default
-
-        typingIndicator.style.display = 'inline'; // Show typing indicator
-
-        try {
-            const response = await fetch('/ai/chatbot', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ message })
-            });
-            const data = await response.json();
-
-            typingIndicator.style.display = 'none'; // Hide typing indicator after response
-
-            if (data.success) {
-                addMessage(data.message, 'bot-message'); // Access the 'response' property
-            } else {
-                addMessage('An unexpected error occurred. Please try again later.', 'bot-message');
-            }
-        } catch (error) {
-            typingIndicator.style.display = 'none'; // Hide typing indicator in case of error
-            addMessage('An unexpected error occurred. Please try again later.', 'bot-message');
-        }
-    }
-
-    sendBtn.addEventListener('click', sendMessage);
-
-    // Handle keyboard input
-    userInput.addEventListener('keydown', (e) => {
-        // Shift + Enter = New line
-        if (e.key === 'Enter' && e.shiftKey) {
-            // Biarkan default behavior (new line)
-            return;
-        }
-
-        // Enter saja = Kirim pesan
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault(); // Mencegah new line
-            sendMessage();
-        }
-    });
+  });
 </script>
 
 <!-- JavaScript handle sort table -->
 <script>
-    function sortTable(n) {
-        const table = document.getElementById("dataTable");
-        let rows, switching, i, x, y, shouldSwitch, dir, switchCount = 0;
-        const headers = table.getElementsByTagName("TH");
-        switching = true;
-        dir = "asc"; // Set default sort direction to ascending
+  function sortTable(n) {
+    const table = document.getElementById("dataTable");
+    let rows,
+      switching,
+      i,
+      x,
+      y,
+      shouldSwitch,
+      dir,
+      switchCount = 0;
+    const headers = table.getElementsByTagName("TH");
+    switching = true;
+    dir = "asc"; // Set default sort direction to ascending
 
-        // Reset all header icons
-        for (let header of headers) {
-            let icon = header.querySelector("i");
-            if (icon) {
-                icon.classList.remove("fa-sort-up", "fa-sort-down");
-                icon.classList.add("fa-sort");
-            }
-        }
-
-        // Start sorting process
-        while (switching) {
-            switching = false;
-            rows = table.rows;
-
-            for (i = 1; i < (rows.length - 1); i++) {
-                shouldSwitch = false;
-                x = rows[i].getElementsByTagName("TD")[n];
-                y = rows[i + 1].getElementsByTagName("TD")[n];
-
-                if (dir === "asc") {
-                    if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-                        shouldSwitch = true;
-                        break;
-                    }
-                } else if (dir === "desc") {
-                    if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
-                        shouldSwitch = true;
-                        break;
-                    }
-                }
-            }
-            if (shouldSwitch) {
-                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                switching = true;
-                switchCount++;
-            } else {
-                if (switchCount === 0 && dir === "asc") {
-                    dir = "desc";
-                    switching = true;
-                }
-            }
-        }
-
-        // Update the clicked column header icon to show sort direction
-        if (dir === "asc") {
-            headers[n].querySelector("i").classList.remove("fa-sort");
-            headers[n].querySelector("i").classList.add("fa-sort-up");
-        } else {
-            headers[n].querySelector("i").classList.remove("fa-sort");
-            headers[n].querySelector("i").classList.add("fa-sort-down");
-        }
+    // Reset all header icons
+    for (let header of headers) {
+      let icon = header.querySelector("i");
+      if (icon) {
+        icon.classList.remove("fa-sort-up", "fa-sort-down");
+        icon.classList.add("fa-sort");
+      }
     }
+
+    // Start sorting process
+    while (switching) {
+      switching = false;
+      rows = table.rows;
+
+      for (i = 1; i < rows.length - 1; i++) {
+        shouldSwitch = false;
+        x = rows[i].getElementsByTagName("TD")[n];
+        y = rows[i + 1].getElementsByTagName("TD")[n];
+
+        if (dir === "asc") {
+          if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+            shouldSwitch = true;
+            break;
+          }
+        } else if (dir === "desc") {
+          if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+            shouldSwitch = true;
+            break;
+          }
+        }
+      }
+      if (shouldSwitch) {
+        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+        switching = true;
+        switchCount++;
+      } else {
+        if (switchCount === 0 && dir === "asc") {
+          dir = "desc";
+          switching = true;
+        }
+      }
+    }
+
+    // Update the clicked column header icon to show sort direction
+    if (dir === "asc") {
+      headers[n].querySelector("i").classList.remove("fa-sort");
+      headers[n].querySelector("i").classList.add("fa-sort-up");
+    } else {
+      headers[n].querySelector("i").classList.remove("fa-sort");
+      headers[n].querySelector("i").classList.add("fa-sort-down");
+    }
+  }
 </script>
