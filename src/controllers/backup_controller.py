@@ -29,6 +29,7 @@ from src.models.app_models import (
 from src.utils.backup_utilities import BackupUtils
 from src.utils.forms_utils import UpdateBackupForm
 from src.utils.network_configurator_utilities import ConfigurationManagerUtils
+from src.utils.activity_feed_utils import log_activity
 
 
 # ----------------------------------------------------------------------------------------
@@ -232,7 +233,7 @@ def create_backup_multiple():
         if vendors:
             vendor_str = vendors.pop()
             command = command_map[vendor_str]
-        
+
         results = []
         success = True
 
@@ -329,6 +330,11 @@ def create_backup_multiple():
                     current_app.logger.error(f"Error in backup thread: {e}")
                     success = False
 
+        log_activity(
+            current_user.id,
+            "User backup multiple devices successfully.",
+            details=f"User {current_user.email} successfully backup multiple devices",
+        )
         return jsonify({"success": success, "results": results}), (
             200 if success else 500
         )
@@ -393,6 +399,12 @@ def create_backup_single(device_id):
                     backup_type=backup_type,
                     retention_days=retention_days,
                     command=command,
+                )
+
+                log_activity(
+                    current_user.id,
+                    "User backup single devices successfully.",
+                    details=f"User {current_user.email} successfully backup device {device.device_name}",
                 )
 
                 return (
@@ -548,6 +560,11 @@ def update_backup(backup_id):
             db.session.commit()
 
             flash("Backup updated successfully!", "success")
+            log_activity(
+                current_user.id,
+                "User updated backup data successfully.",
+                details=f"User {current_user.email} successfully updated backup data for backup {backup.backup_name}",
+            )
             return redirect(url_for("backup_bp.index", backup_id=backup.id))
 
         # Render the update template
@@ -595,6 +612,11 @@ def delete_backup(backup_id):
             current_app.logger.error(f"Error deleting backup file: {e}")
             # We don't rollback the DB transaction if the file deletion fails, just log the error
 
+        log_activity(
+            current_user.id,
+            "User deleted backup file successfully.",
+            details=f"User {current_user.email} successfully delete backup file {backup.backup_name}",
+        )
         # Return success response
         return jsonify({"message": "Backup successfully deleted."}), 200
 
@@ -705,6 +727,11 @@ def share_backup():
 
     db.session.commit()
 
+    log_activity(
+        current_user.id,
+        "User deleted successfully.",
+        details=f"User {current_user.email} successfully Backup shared with user {user_to_share.email} with {permission_level} access",
+    )
     return (
         jsonify(
             {
@@ -751,6 +778,11 @@ def rollback_backup(backup_id):
         )
         result = config_utils.configure_device(command)
 
+        log_activity(
+            current_user.id,
+            "User rollback configuration successfully.",
+            details=f"User {current_user.email} successfully rollback configuration for device {device.device_name} ",
+        )
         return jsonify({"message": "Rollback berhasil", "result": result}), 200
     except Exception as e:
         return jsonify({"message": f"Error during rollback: {e}"}), 500

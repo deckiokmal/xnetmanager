@@ -123,6 +123,7 @@
     <div class="card smooth-shadow-sm">
       <div class="card-body">
         <h4 class="card-title">Activity Feed</h4>
+        {% for activity in activities %}
         <div class="d-flex">
           <div>
             {% if current_user.profile_picture %}
@@ -143,12 +144,13 @@
             <h5 class="fs-10 mb-1">
               {{ user.first_name }} {{ user.last_name }}
             </h5>
-            <p class="fs-15 mb-2 text-muted">
-              Just create a new Project in Dashui...
+            <p class="fs-15 mb-0 text-muted">{{ activity.action }}</p>
+            <p class="fs-20 mb-0 text-muted">
+              {{ activity.timestamp.strftime('%d-%m-%Y %H:%M') }}
             </p>
-            <p class="fs-20 mb-0 text-muted">2m ago</p>
           </div>
         </div>
+        {% endfor %}
       </div>
     </div>
   </div>

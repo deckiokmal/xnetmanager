@@ -24,6 +24,7 @@ from src.utils.ai_agent_utilities import (
 from src.utils.backup_utilities import BackupUtils
 from src.utils.network_configurator_utilities import ConfigurationManagerUtils
 from src import db
+from src.utils.activity_feed_utils import log_activity
 
 
 # ----------------------------------------------------------------------------------------
@@ -206,6 +207,11 @@ def analyze_device(device_id):
         session.commit()
 
         flash(f"Berhasil memproses {len(valid_recommendations)} rekomendasi", "success")
+        log_activity(
+            current_user.id,
+            "User analyze device current configuration with AI successfully.",
+            details=f"User {current_user.email} successfully analyze device current configuration with AI for device {device.device_name}",
+        )
         if duplicate_count > 0:
             flash(f"Ditemukan {duplicate_count} duplikat", "info")
 
@@ -293,6 +299,11 @@ def apply_recommendation():
             command=command,
         )
 
+        log_activity(
+            current_user.id,
+            "User apply AI recommendation successfully.",
+            details=f"User {current_user.email} successfully apply AI recommendation {recommendation.title}",
+        )
         return (
             jsonify(
                 {

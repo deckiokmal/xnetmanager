@@ -19,6 +19,8 @@ from src.utils.forms_utils import (
 )
 import logging
 import os
+from src.utils.activity_feed_utils import log_activity
+from src.models.app_models import Activity
 
 # Membuat blueprint users
 profile_bp = Blueprint("profile", __name__)
@@ -131,12 +133,19 @@ def index():
         )
         return redirect(url_for("main.dashboard"))  # Redirect to a safe page
 
+    activities = (
+        Activity.query.filter_by(user_id=current_user.id)
+        .order_by(Activity.timestamp.desc())
+        .limit(10)
+        .all()
+    )
     return render_template(
         "/users_management/index_profile.html",
         user=user,
         form=form,
         form_picture=form_picture,
         towfactorform=towfactorform,
+        activities=activities,
     )
 
 
@@ -168,6 +177,11 @@ def update_profile():
             # Logging sukses
             current_app.logger.info(f"User {current_user.email} updated their profile.")
             flash("Profile updated successfully.", "success")
+            log_activity(
+                current_user.id,
+                "User profile update successfully.",
+                details=f"User {current_user.email} successfully updated profile",
+            )
             return redirect(url_for("profile.index"))
 
         except Exception as e:
@@ -227,6 +241,11 @@ def change_password():
             current_app.logger.info(
                 f"User {current_user.email} changed their password."
             )
+            log_activity(
+                current_user.id,
+                "User change password successfully.",
+                details=f"User {current_user.email} successfully change password",
+            )
             return redirect(url_for("profile.index"))
 
         except Exception as e:
@@ -285,6 +304,11 @@ def upload_profile_picture():
                 flash("Profile picture updated successfully.", "success")
                 current_app.logger.info(
                     f"User {current_user.email} updated their profile picture."
+                )
+                log_activity(
+                    current_user.id,
+                    "User update profile picture successfully.",
+                    details=f"User {current_user.email} successfully update profile picture",
                 )
             else:
                 flash("No file selected.", "error")

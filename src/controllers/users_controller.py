@@ -22,6 +22,7 @@ from src.utils.forms_utils import RegisterForm, UserUpdateForm
 from .decorators import login_required, role_required, required_2fa  # noqa: F811
 from flask_paginate import Pagination, get_page_args
 import logging
+from src.utils.activity_feed_utils import log_activity
 
 # Membuat blueprint users dan error
 users_bp = Blueprint("users", __name__)
@@ -271,6 +272,12 @@ def create_user():
             db.session.add(new_user)
             db.session.commit()
 
+            log_activity(
+                current_user.id,
+                "Menambah user baru",
+                details=f"User: {new_user.email} dengan role: {new_user.roles}",
+            )
+
             flash("User berhasil ditambahkan.", "success")
             return redirect(url_for("users.index"))
         else:
@@ -403,12 +410,23 @@ def update_user(user_id):
                 f"User {current_user.email} successfully updated user with ID: {user_id}"
             )
 
+            log_activity(
+                current_user.id,
+                "User updated successfully.",
+                details=f"User {current_user.email} successfully updated user {user.email}",
+            )
+
             # If password was changed, force the user to log out by setting `force_logout`
             if password_changed:
                 user.force_logout = True  # Force logout the user on next request
                 db.session.commit()
                 current_app.logger.info(
                     f"User {user.email} will be forced to log out on next request."
+                )
+                log_activity(
+                    current_user.id,
+                    "Password change successfully.",
+                    details=f"User {current_user.email} successfully change password.",
                 )
 
             return redirect(url_for("users.index"))
@@ -473,6 +491,11 @@ def delete_user(user_id):
         flash("User telah dihapus.", "success")
         current_app.logger.info(
             f"User {current_user.email} successfully deleted user with ID: {user_id}"
+        )
+        log_activity(
+            current_user.id,
+            "User deleted successfully.",
+            details=f"User {current_user.email} successfully delete user {user.email}",
         )
     except Exception as e:
         current_app.logger.error(

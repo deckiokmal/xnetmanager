@@ -23,6 +23,7 @@ from src.utils.forms_utils import (
     PermissionUpdateForm,
     PermissionDeleteForm,
 )
+from src.utils.activity_feed_utils import log_activity
 
 # Membuat blueprint roles_bp dan error_bp
 roles_bp = Blueprint("roles", __name__)
@@ -202,6 +203,11 @@ def create_role():
                 f"User {current_user.email} berhasil membuat role baru: {role_name}."
             )
             flash("Role berhasil ditambah!", "success")
+            log_activity(
+                current_user.id,
+                "User role created successfully.",
+                details=f"User {current_user.email} successfully create user role {role_name}",
+            )
             return redirect(url_for("roles.index"))
 
         except Exception as e:
@@ -272,6 +278,11 @@ def update_role(role_id):
                 f"User {current_user.email} berhasil memperbarui role {role.name}."
             )
             flash("Role berhasil diubah.", "success")
+            log_activity(
+                current_user.id,
+                "User role updated successfully.",
+                details=f"User {current_user.email} successfully delete user {role.name}",
+            )
             return redirect(url_for("roles.index"))
 
         except Exception as e:
@@ -348,6 +359,11 @@ def delete_role(role_id):
                 f"User {current_user.email} berhasil menghapus role {role.name}."
             )
             flash("Role berhasil dihapus.", "success")
+            log_activity(
+                current_user.id,
+                "User role deleted successfully.",
+                details=f"User {current_user.email} successfully delete role user {role.name}",
+            )
             return redirect(url_for("roles.index"))
 
         except Exception as e:
@@ -405,6 +421,11 @@ def add_user_to_role():
                     f"User {current_user.email} berhasil menambahkan role {role_name} ke pengguna {user.email}."
                 )
                 flash("Pengguna berhasil ditambahkan ke role.", "success")
+                log_activity(
+                    current_user.id,
+                    "User add to role successfully.",
+                    details=f"User {current_user.email} successfully add role user {role_name} to {user.email}",
+                )
             else:
                 current_app.logger.warning(
                     f"User {current_user.email} gagal menambahkan role {role_name} ke pengguna {user.email} karena role ini sudah ada."
@@ -465,6 +486,11 @@ def remove_user_from_role():
                 f"User {current_user.email} berhasil menghapus role {role_name} dari pengguna {user.email}."
             )
             flash("Pengguna berhasil dihapus dari role.", "success")
+            log_activity(
+                current_user.id,
+                "User remove role successfully.",
+                details=f"User {current_user.email} successfully remove role user {role_name} from user {user.email}",
+            )
         else:
             current_app.logger.warning(
                 f"User {current_user.email} gagal menghapus role {role_name} dari pengguna {user.email} karena role ini tidak ada."
@@ -511,6 +537,11 @@ def add_permission_to_role():
                 f"User {current_user.email} berhasil menambahkan permission {permission.name} ke role {role.name}"
             )
             flash("Permission berhasil ditambahkan ke role.", "success")
+            log_activity(
+                current_user.id,
+                "User add permission to role successfully.",
+                details=f"User {current_user.email} successfully add permission {permission.name} to role {role.name}",
+            )
         else:
             current_app.logger.warning(
                 f"User {current_user.email} mencoba menambahkan permission {permission.name} ke role {role.name}, tetapi permission sudah ada."
@@ -563,7 +594,7 @@ def index_permissions():
         permissions = []  # Set permissions to an empty list in case of error
 
     return render_template(
-        "role_management/index_permissions.html", 
+        "role_management/index_permissions.html",
         permissions=permissions,
         create_form=create_form,
         update_form=update_form,
@@ -606,6 +637,11 @@ def create_permission():
                 f"User {current_user.email} berhasil menambahkan permission '{name}'."
             )
             flash(f"Permission '{name}' berhasil ditambahkan.", "success")
+            log_activity(
+                current_user.id,
+                "User created permission successfully.",
+                details=f"User {current_user.email} successfully create permission {name}",
+            )
             return redirect(url_for("roles.index_permissions"))
 
         except Exception as e:
@@ -662,6 +698,11 @@ def update_permission(permission_id):
                     f"User {current_user.email} berhasil memperbarui permission '{name}'"
                 )
                 flash("Permission berhasil diperbarui.", "success")
+                log_activity(
+                    current_user.id,
+                    "User updated permission successfully.",
+                    details=f"User {current_user.email} successfully update permission {name}",
+                )
                 return redirect(url_for("roles.index_permissions"))
 
             except Exception as e:
@@ -720,6 +761,11 @@ def delete_permission(permission_id):
                 f"User {current_user.email} berhasil menghapus permission: {permission.name}"
             )
             flash("Permission berhasil dihapus!", "success")
+            log_activity(
+                current_user.id,
+                "Permission deleted successfully.",
+                details=f"User {current_user.email} successfully delete permission {permission.name}",
+            )
         except Exception as e:
             # Log error jika terjadi masalah selama penghapusan
             current_app.logger.error(

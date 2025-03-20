@@ -14,6 +14,7 @@ from .decorators import login_required, role_required, required_2fa  # noqa: F81
 from src.utils.forms_utils import DeviceForm, DeviceUpdateForm
 from flask_paginate import Pagination, get_page_args
 import logging
+from src.utils.activity_feed_utils import log_activity
 
 # Create blueprints for the device manager (dm_bp) and error handling (error_bp)
 dm_bp = Blueprint("dm", __name__)
@@ -223,6 +224,11 @@ def create_device():
                     current_app.logger.info(
                         f"Device created: {form.device_name.data.strip()} with IP {form.ip_address.data.strip()} by {current_user.email}"
                     )
+                    log_activity(
+                        current_user.id,
+                        "Add new device successfully.",
+                        details=f"User {current_user.email} successfully add new device {form.device_name.data.strip()}",
+                    )
                     return redirect(
                         url_for("dm.index")
                     )  # Redirect to the device management page
@@ -322,6 +328,11 @@ def update_device(device_id):
                 current_app.logger.info(
                     f"Device ID {device_id} updated successfully by {current_user.email}"
                 )
+                log_activity(
+                    current_user.id,
+                    "Device updated successfully.",
+                    details=f"User {current_user.email} successfully updated device {form.device_name.data.strip()}",
+                )
                 return redirect(
                     url_for("dm.index")
                 )  # Redirect to the device management page
@@ -388,6 +399,11 @@ def delete_device(device_id):
         )  # Inform the user of successful deletion
         current_app.logger.info(
             f"Device ID {device_id} deleted by {current_user.email}"  # Log the successful deletion
+        )
+        log_activity(
+            current_user.id,
+            "User deleted device successfully.",
+            details=f"User {current_user.email} successfully delete device {device.device_name}",
         )
     except Exception as e:
         # Handle any exceptions that occur during deletion

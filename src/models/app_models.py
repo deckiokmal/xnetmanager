@@ -76,6 +76,11 @@ class User(UserMixin, db.Model):
         foreign_keys="AIRecommendations.applied_by",
     )
 
+    # Menghapus User Activity di level ORM jika user di delete
+    activities = db.relationship(
+        "Activity", backref="user", cascade="all, delete-orphan", lazy=True
+    )
+
     def __init__(self, first_name, last_name, email, password_hash):
         self.first_name = first_name
         self.last_name = last_name
@@ -177,6 +182,19 @@ class RolePermissions(db.Model):
     permission_id = db.Column(
         UUID_TYPE, db.ForeignKey("permissions.id", ondelete="CASCADE"), index=True
     )
+
+
+class Activity(db.Model):
+    id = db.Column(UUID_TYPE, primary_key=True, default=lambda: uuid.uuid4())
+    user_id = db.Column(
+        UUID_TYPE, db.ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    action = db.Column(db.String(255), nullable=False)  # Deskripsi aktivitas
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)  # Waktu aktivitas
+    details = db.Column(db.Text, nullable=True)  # Info tambahan (opsional)
+
+    def __repr__(self):
+        return f"<Activity {self.user_id} - {self.action} - {self.timestamp}>"
 
 
 # ------------------------------------------------------------------------
