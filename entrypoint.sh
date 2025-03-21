@@ -20,7 +20,7 @@ flask db upgrade
 
 #! Menjalankan inisialisasi database tambahan dari db_init.py
 echo "Menjalankan inisialisasi database dengan db_init.py..."
-python src/db_init.py
+python db_init.py
 
 # Mulai aplikasi menggunakan Gunicorn
 echo "Memulai aplikasi XnetManager dengan Gunicorn..."
