@@ -136,7 +136,7 @@ def index():
     activities = (
         Activity.query.filter_by(user_id=current_user.id)
         .order_by(Activity.timestamp.desc())
-        .limit(10)
+        .limit(6)
         .all()
     )
     return render_template(
@@ -170,6 +170,7 @@ def update_profile():
             user.city = form.city.data.strip()
             user.division = form.division.data.strip()
             user.time_zone = form.time_zone.data.strip()
+            user.biodata = form.biodata.data.strip()
 
             # Commit perubahan ke database
             db.session.commit()
