@@ -178,9 +178,12 @@ def update_profile():
             # Logging sukses
             current_app.logger.info(f"User {current_user.email} updated their profile.")
             flash("Profile updated successfully.", "success")
+            
+            timezone = current_user.time_zone
             log_activity(
                 current_user.id,
                 "User profile update successfully.",
+                timezone,
                 details=f"User {current_user.email} successfully updated profile",
             )
             return redirect(url_for("profile.index"))
@@ -242,9 +245,12 @@ def change_password():
             current_app.logger.info(
                 f"User {current_user.email} changed their password."
             )
+            
+            timezone = current_user.time_zone
             log_activity(
                 current_user.id,
                 "User change password successfully.",
+                timezone,
                 details=f"User {current_user.email} successfully change password",
             )
             return redirect(url_for("profile.index"))
@@ -306,9 +312,13 @@ def upload_profile_picture():
                 current_app.logger.info(
                     f"User {current_user.email} updated their profile picture."
                 )
+                
+                timezone = current_user.time_zone
+                current_app.logger.info(f"timezone: {timezone}")
                 log_activity(
                     current_user.id,
                     "User update profile picture successfully.",
+                    timezone=timezone,
                     details=f"User {current_user.email} successfully update profile picture",
                 )
             else:

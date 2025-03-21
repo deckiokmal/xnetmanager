@@ -411,9 +411,12 @@ def upload_template():
             f"User {current_user.email} successfully uploaded new template: {template_name}."
         )
         flash("File berhasil diunggah.", "success")
+        
+        timezone = current_user.time_zone
         log_activity(
             current_user.id,
             "Upload new template successfully.",
+            timezone,
             details=f"User {current_user.email} successfully upload new template",
         )
 
@@ -513,9 +516,12 @@ def create_template_manual():
             f"Successfully added new template to database: {template_filename}"
         )
         flash("Template berhasil dibuat.", "success")
+        
+        timezone = current_user.time_zone
         log_activity(
             current_user.id,
             "User create new template successfully.",
+            timezone,
             details=f"User {current_user.email} successfully create new template manually",
         )
 
@@ -650,9 +656,12 @@ def update_template(template_id):
             db.session.commit()
             current_app.logger.info(f"Template updated successfully: {template_id}")
             flash("Pembaruan template berhasil.", "success")
+            
+            timezone = current_user.time_zone
             log_activity(
                 current_user.id,
                 "User udpate template successfully.",
+                timezone,
                 details=f"User {current_user.email} successfully updated template {template.template_name}",
             )
             return redirect(url_for("template_bp.template_index"))
@@ -723,9 +732,12 @@ def delete_template(template_id):
                 f"Template with ID {template_id} successfully deleted by {current_user.email}"
             )
             flash("Template berhasil dihapus.", "success")
+            
+            timezone = current_user.time_zone
             log_activity(
                 current_user.id,
                 "User deleted template successfully.",
+                timezone,
                 details=f"User {current_user.email} successfully delete template {template.template_name}",
             )
 
@@ -822,9 +834,11 @@ def template_generator(template_id):
                 200,
             )
 
+        timezone = current_user.time_zone
         log_activity(
             current_user.id,
             "User generated valid configuration successfully.",
+            timezone,
             details=f"User {current_user.email} successfully generated valid configuration",
         )
 
@@ -1116,9 +1130,12 @@ def update_configuration(config_id):
             )
 
             flash("Update file konfigurasi berhasil!", "success")
+            
+            timezone = current_user.time_zone
             log_activity(
                 current_user.id,
                 "User update configuration file successfully.",
+                timezone,
                 details=f"User {current_user.email} successfully updated configuration file {config.config_name}",
             )
             return jsonify(
@@ -1190,9 +1207,12 @@ def delete_configuration(config_id):
                 "redirect_url": url_for("template_bp.configuration_file_index"),
             }
         )
+        
+        timezone = current_user.time_zone
         log_activity(
             current_user.id,
             "User deleted configuration file successfully.",
+            timezone,
             details=f"User {current_user.email} successfully delete configuration file {config.config_name}",
         )
         return redirect(url_for("template_bp.configuration_file_index"))

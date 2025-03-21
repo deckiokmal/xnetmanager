@@ -12,7 +12,9 @@ from src.utils.backup_utilities import BackupUtils
 
 
 # Set timezone Asia/Jakarta
-jakarta_tz = pytz.timezone("Asia/Jakarta")
+DEFAULT_TZ = pytz.timezone("UTC")
+
+
 # ------------------------------------------------------------------------
 # User and Roles Management Section
 # ------------------------------------------------------------------------
@@ -37,11 +39,11 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
     date_joined = db.Column(
-        db.DateTime, nullable=False, default=datetime.now(jakarta_tz)
+        db.DateTime, nullable=False, default=datetime.now(DEFAULT_TZ)
     )
     last_login = db.Column(db.DateTime, nullable=True)
     time_zone = db.Column(
-        db.String(50), nullable=True, default=datetime.now(jakarta_tz)
+        db.String(50), nullable=True, default=datetime.now(DEFAULT_TZ)
     )
     is_2fa_enabled = db.Column(db.Boolean, nullable=False, default=False)
     secret_token = db.Column(db.String, unique=True, nullable=True)
@@ -96,7 +98,7 @@ class User(UserMixin, db.Model):
         self.password_hash = bcrypt.generate_password_hash(password_hash).decode(
             "utf-8"
         )
-        self.date_joined = datetime.now(jakarta_tz)
+        self.date_joined = datetime.now(DEFAULT_TZ)
         self.secret_token = pyotp.random_base32()
 
     def get_authentication_setup_uri(self):
@@ -198,13 +200,8 @@ class Activity(db.Model):
         UUID_TYPE, db.ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     action = db.Column(db.String(255), nullable=False)  # Deskripsi aktivitas
-    timestamp = db.Column(
-        db.DateTime, default=datetime.now(jakarta_tz)
-    )  # Waktu aktivitas
+    timestamp = db.Column(db.String(255), nullable=False)  # Waktu aktivitas
     details = db.Column(db.Text, nullable=True)  # Info tambahan (opsional)
-
-    def __repr__(self):
-        return f"<Activity {self.user_id} - {self.action} - {self.timestamp}>"
 
 
 # ------------------------------------------------------------------------
@@ -316,7 +313,7 @@ class BackupData(db.Model):
     description = db.Column(db.String(255), nullable=True)
     version = db.Column(db.Integer, nullable=False, default=1)
     created_at = db.Column(
-        db.DateTime, nullable=False, default=datetime.now(jakarta_tz)
+        db.DateTime, nullable=False, default=datetime.now(DEFAULT_TZ)
     )
     backup_path = db.Column(db.String(255), nullable=False)  # Valid path required
     is_encrypted = db.Column(db.Boolean, default=False)
@@ -488,7 +485,7 @@ class AuditLog(db.Model):
     )
     action = db.Column(db.String(50), nullable=False, default="created", index=True)
     performed_by = db.Column(UUID_TYPE, db.ForeignKey("users.id"), nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.now(jakarta_tz))
+    timestamp = db.Column(db.DateTime, default=datetime.now(DEFAULT_TZ))
     description = db.Column(db.String(1000), nullable=True)
 
     # Relationship to the backup this log belongs to

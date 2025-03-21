@@ -224,9 +224,12 @@ def create_device():
                     current_app.logger.info(
                         f"Device created: {form.device_name.data.strip()} with IP {form.ip_address.data.strip()} by {current_user.email}"
                     )
+                    
+                    timezone = current_user.time_zone
                     log_activity(
                         current_user.id,
                         "Add new device successfully.",
+                        timezone,
                         details=f"User {current_user.email} successfully add new device {form.device_name.data.strip()}",
                     )
                     return redirect(
@@ -328,9 +331,12 @@ def update_device(device_id):
                 current_app.logger.info(
                     f"Device ID {device_id} updated successfully by {current_user.email}"
                 )
+                
+                timezone = current_user.time_zone
                 log_activity(
                     current_user.id,
                     "Device updated successfully.",
+                    timezone,
                     details=f"User {current_user.email} successfully updated device {form.device_name.data.strip()}",
                 )
                 return redirect(
@@ -400,9 +406,12 @@ def delete_device(device_id):
         current_app.logger.info(
             f"Device ID {device_id} deleted by {current_user.email}"  # Log the successful deletion
         )
+        
+        timezone = current_user.time_zone
         log_activity(
             current_user.id,
             "User deleted device successfully.",
+            timezone,
             details=f"User {current_user.email} successfully delete device {device.device_name}",
         )
     except Exception as e:

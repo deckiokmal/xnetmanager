@@ -203,9 +203,12 @@ def create_role():
                 f"User {current_user.email} berhasil membuat role baru: {role_name}."
             )
             flash("Role berhasil ditambah!", "success")
+            
+            timezone = current_user.time_zone
             log_activity(
                 current_user.id,
                 "User role created successfully.",
+                timezone,
                 details=f"User {current_user.email} successfully create user role {role_name}",
             )
             return redirect(url_for("roles.index"))
@@ -278,9 +281,12 @@ def update_role(role_id):
                 f"User {current_user.email} berhasil memperbarui role {role.name}."
             )
             flash("Role berhasil diubah.", "success")
+            
+            timezone = current_user.time_zone
             log_activity(
                 current_user.id,
                 "User role updated successfully.",
+                timezone,
                 details=f"User {current_user.email} successfully delete user {role.name}",
             )
             return redirect(url_for("roles.index"))
@@ -359,9 +365,12 @@ def delete_role(role_id):
                 f"User {current_user.email} berhasil menghapus role {role.name}."
             )
             flash("Role berhasil dihapus.", "success")
+            
+            timezone = current_user.time_zone
             log_activity(
                 current_user.id,
                 "User role deleted successfully.",
+                timezone,
                 details=f"User {current_user.email} successfully delete role user {role.name}",
             )
             return redirect(url_for("roles.index"))
@@ -421,9 +430,12 @@ def add_user_to_role():
                     f"User {current_user.email} berhasil menambahkan role {role_name} ke pengguna {user.email}."
                 )
                 flash("Pengguna berhasil ditambahkan ke role.", "success")
+                
+                timezone = current_user.time_zone
                 log_activity(
                     current_user.id,
                     "User add to role successfully.",
+                    timezone,
                     details=f"User {current_user.email} successfully add role user {role_name} to {user.email}",
                 )
             else:
@@ -486,9 +498,12 @@ def remove_user_from_role():
                 f"User {current_user.email} berhasil menghapus role {role_name} dari pengguna {user.email}."
             )
             flash("Pengguna berhasil dihapus dari role.", "success")
+            
+            timezone = current_user.time_zone
             log_activity(
                 current_user.id,
                 "User remove role successfully.",
+                timezone,
                 details=f"User {current_user.email} successfully remove role user {role_name} from user {user.email}",
             )
         else:
@@ -537,9 +552,12 @@ def add_permission_to_role():
                 f"User {current_user.email} berhasil menambahkan permission {permission.name} ke role {role.name}"
             )
             flash("Permission berhasil ditambahkan ke role.", "success")
+            
+            timezone = current_user.time_zone
             log_activity(
                 current_user.id,
                 "User add permission to role successfully.",
+                timezone,
                 details=f"User {current_user.email} successfully add permission {permission.name} to role {role.name}",
             )
         else:
@@ -637,9 +655,12 @@ def create_permission():
                 f"User {current_user.email} berhasil menambahkan permission '{name}'."
             )
             flash(f"Permission '{name}' berhasil ditambahkan.", "success")
+            
+            timezone = current_user.time_zone
             log_activity(
                 current_user.id,
                 "User created permission successfully.",
+                timezone,
                 details=f"User {current_user.email} successfully create permission {name}",
             )
             return redirect(url_for("roles.index_permissions"))
@@ -698,9 +719,12 @@ def update_permission(permission_id):
                     f"User {current_user.email} berhasil memperbarui permission '{name}'"
                 )
                 flash("Permission berhasil diperbarui.", "success")
+                
+                timezone = current_user.time_zone
                 log_activity(
                     current_user.id,
                     "User updated permission successfully.",
+                    timezone,
                     details=f"User {current_user.email} successfully update permission {name}",
                 )
                 return redirect(url_for("roles.index_permissions"))
@@ -761,9 +785,12 @@ def delete_permission(permission_id):
                 f"User {current_user.email} berhasil menghapus permission: {permission.name}"
             )
             flash("Permission berhasil dihapus!", "success")
+            
+            timezone = current_user.time_zone
             log_activity(
                 current_user.id,
                 "Permission deleted successfully.",
+                timezone,
                 details=f"User {current_user.email} successfully delete permission {permission.name}",
             )
         except Exception as e:

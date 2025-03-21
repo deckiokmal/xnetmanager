@@ -161,15 +161,6 @@ def create_app():
     app.register_blueprint(backup_bp)
     app.register_blueprint(ai_agent_bp)
 
-    #! Pastikan database terbuat sebelum inisialisasi data
-    with app.app_context():
-        db.create_all()
-
-        # * Import dan panggil initialize() di dalam konteks Flask untuk menghindari circular import
-        from src.db_init import initialize
-
-        initialize()
-
     # * Set up user loader
     from .models.app_models import User
 

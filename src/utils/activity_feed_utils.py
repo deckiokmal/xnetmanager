@@ -1,34 +1,36 @@
-from datetime import datetime, timezone
+from datetime import datetime
 import pytz
-from src.models.app_models import Activity, User
+from src.models.app_models import Activity
 from src import db
 
 
-def log_activity(user_id, action, details=None):
-    # Ambil user dari database
-    user = User.query.get(user_id)
+def log_activity(user_id, action, timezone="Asia/Jakarta", details=None):
+    """
+    Mencatat aktivitas pengguna ke database dengan timestamp dalam format string.
 
-    # Jika user tidak ditemukan, gunakan default time_zone Asia/Jakarta
-    user_timezone = user.time_zone if user and user.time_zone else "Asia/Jakarta"
+    Args:
+        user_id (int): ID pengguna yang melakukan aktivitas.
+        action (str): Jenis aksi yang dilakukan pengguna.
+        timezone (str): Zona waktu yang diinginkan (default: Asia/Jakarta).
+        details (str, optional): Detail tambahan tentang aktivitas. Defaults to None.
+    """
 
-    # Konversi waktu ke zona waktu user
-    local_time = get_local_time(user_timezone)
-
-    # Simpan ke database
-    new_activity = Activity(
-        user_id=user_id, action=action, timestamp=local_time, details=details
-    )
-    db.session.add(new_activity)
-    db.session.commit()
-
-
-def get_local_time(user_timezone):
-    """Mengonversi UTC ke zona waktu lokal pengguna"""
     try:
-        tz = pytz.timezone(user_timezone)  # Coba set timezone
-    except pytz.UnknownTimeZoneError:
-        tz = pytz.timezone("Asia/Jakarta")  # Jika tidak valid, default ke Asia/Jakarta
+        # Ambil zona waktu lokal
+        local_tz = pytz.timezone(timezone)
+        # Waktu sekarang dalam zona waktu lokal
+        local_time = datetime.now(local_tz)
+        # Format waktu sebagai string
+        formatted_time = local_time.strftime("%d-%m-%Y %H:%M")  # Contoh: "20-03-2025 22:00"
 
-    utc_now = datetime.now(timezone.utc)  # Ambil waktu sekarang dalam UTC
-    local_time = utc_now.astimezone(tz)  # Konversi ke waktu lokal
-    return local_time
+        # Simpan waktu dalam bentuk string ke database
+        new_activity = Activity(
+            user_id=user_id, action=action, timestamp=formatted_time, details=details
+        )
+
+        db.session.add(new_activity)
+        db.session.commit()
+
+    except Exception as e:
+        print(f"Error logging activity: {e}")
+        db.session.rollback()

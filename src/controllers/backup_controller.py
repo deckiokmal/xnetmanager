@@ -330,9 +330,11 @@ def create_backup_multiple():
                     current_app.logger.error(f"Error in backup thread: {e}")
                     success = False
 
+        timezone = current_user.time_zone
         log_activity(
             current_user.id,
             "User backup multiple devices successfully.",
+            timezone,
             details=f"User {current_user.email} successfully backup multiple devices",
         )
         return jsonify({"success": success, "results": results}), (
@@ -401,9 +403,11 @@ def create_backup_single(device_id):
                     command=command,
                 )
 
+                timezone = current_user.time_zone
                 log_activity(
                     current_user.id,
                     "User backup single devices successfully.",
+                    timezone,
                     details=f"User {current_user.email} successfully backup device {device.device_name}",
                 )
 
@@ -560,9 +564,12 @@ def update_backup(backup_id):
             db.session.commit()
 
             flash("Backup updated successfully!", "success")
+            
+            timezone = current_user.time_zone
             log_activity(
                 current_user.id,
                 "User updated backup data successfully.",
+                timezone,
                 details=f"User {current_user.email} successfully updated backup data for backup {backup.backup_name}",
             )
             return redirect(url_for("backup_bp.index", backup_id=backup.id))
@@ -612,9 +619,11 @@ def delete_backup(backup_id):
             current_app.logger.error(f"Error deleting backup file: {e}")
             # We don't rollback the DB transaction if the file deletion fails, just log the error
 
+        timezone = current_user.time_zone
         log_activity(
             current_user.id,
             "User deleted backup file successfully.",
+            timezone,
             details=f"User {current_user.email} successfully delete backup file {backup.backup_name}",
         )
         # Return success response
@@ -727,9 +736,11 @@ def share_backup():
 
     db.session.commit()
 
+    timezone = current_user.time_zone
     log_activity(
         current_user.id,
         "User deleted successfully.",
+        timezone,
         details=f"User {current_user.email} successfully Backup shared with user {user_to_share.email} with {permission_level} access",
     )
     return (
@@ -778,9 +789,11 @@ def rollback_backup(backup_id):
         )
         result = config_utils.configure_device(command)
 
+        timezone = current_user.time_zone
         log_activity(
             current_user.id,
             "User rollback configuration successfully.",
+            timezone,
             details=f"User {current_user.email} successfully rollback configuration for device {device.device_name} ",
         )
         return jsonify({"message": "Rollback berhasil", "result": result}), 200
