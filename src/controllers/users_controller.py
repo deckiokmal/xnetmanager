@@ -272,11 +272,9 @@ def create_user():
             db.session.add(new_user)
             db.session.commit()
 
-            timezone = current_user.time_zone
             log_activity(
                 current_user.id,
                 "Menambah user baru",
-                timezone,
                 details=f"User: {new_user.email} dengan role: {new_user.roles}",
             )
 
@@ -412,11 +410,9 @@ def update_user(user_id):
                 f"User {current_user.email} successfully updated user with ID: {user_id}"
             )
 
-            timezone = current_user.time_zone
             log_activity(
                 current_user.id,
                 "User updated successfully.",
-                timezone,
                 details=f"User {current_user.email} successfully updated user {user.email}",
             )
 
@@ -427,12 +423,10 @@ def update_user(user_id):
                 current_app.logger.info(
                     f"User {user.email} will be forced to log out on next request."
                 )
-                
-                timezone = current_user.time_zone
+
                 log_activity(
                     current_user.id,
                     "Password change successfully.",
-                    timezone,
                     details=f"User {current_user.email} successfully change password.",
                 )
 
@@ -499,12 +493,10 @@ def delete_user(user_id):
         current_app.logger.info(
             f"User {current_user.email} successfully deleted user with ID: {user_id}"
         )
-        
-        timezone = current_user.time_zone
+
         log_activity(
             current_user.id,
             "User deleted successfully.",
-            timezone,
             details=f"User {current_user.email} successfully delete user {user.email}",
         )
     except Exception as e:

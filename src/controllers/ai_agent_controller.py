@@ -207,11 +207,10 @@ def analyze_device(device_id):
         session.commit()
 
         flash(f"Berhasil memproses {len(valid_recommendations)} rekomendasi", "success")
-        timezone = current_user.time_zone
+
         log_activity(
             current_user.id,
             "User analyze device current configuration with AI successfully.",
-            timezone,
             details=f"User {current_user.email} successfully analyze device current configuration with AI for device {device.device_name}",
         )
         if duplicate_count > 0:
@@ -301,11 +300,9 @@ def apply_recommendation():
             command=command,
         )
 
-        timezone = current_user.time_zone
         log_activity(
             current_user.id,
             "User apply AI recommendation successfully.",
-            timezone,
             details=f"User {current_user.email} successfully apply AI recommendation {recommendation.title}",
         )
         return (

@@ -2,9 +2,10 @@ from datetime import datetime
 import pytz
 from src.models.app_models import Activity
 from src import db
+from flask_login import current_user
 
 
-def log_activity(user_id, action, timezone="Asia/Jakarta", details=None):
+def log_activity(user_id, action, details=None):
     """
     Mencatat aktivitas pengguna ke database dengan timestamp dalam format string.
 
@@ -15,13 +16,17 @@ def log_activity(user_id, action, timezone="Asia/Jakarta", details=None):
         details (str, optional): Detail tambahan tentang aktivitas. Defaults to None.
     """
 
+    user_tz = current_user.time_zone if current_user.time_zone else "Asia/Jakarta"
+
     try:
         # Ambil zona waktu lokal
-        local_tz = pytz.timezone(timezone)
+        local_tz = pytz.timezone(user_tz)
         # Waktu sekarang dalam zona waktu lokal
         local_time = datetime.now(local_tz)
         # Format waktu sebagai string
-        formatted_time = local_time.strftime("%d-%m-%Y %H:%M")  # Contoh: "20-03-2025 22:00"
+        formatted_time = local_time.strftime(
+            "%d-%m-%Y %H:%M"
+        )  # Contoh: "20-03-2025 22:00"
 
         # Simpan waktu dalam bentuk string ke database
         new_activity = Activity(

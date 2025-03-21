@@ -364,12 +364,10 @@ def push_configs():
         if success
         else "Some configurations failed. Check individual device messages."
     )
-    
-    timezone = current_user.time_zone
+
     log_activity(
         current_user.id,
         "User Push multiple devices successfully.",
-        timezone,
         details=f"User {current_user.email} successfully push configuration for multiple devices",
     )
     return jsonify({"success": success, "message": summary_message, "results": results})
@@ -483,12 +481,10 @@ def push_config_single_device(device_id):
 
     result = configure_device(device)
     success = result["status"] == "success"
-    
-    timezone = current_user.time_zone
+
     log_activity(
         current_user.id,
         "User push config single device successfully.",
-        timezone,
         details=f"User {current_user.email} successfully push config for device {device.device_name}",
     )
     return jsonify({"success": success, "result": result}), 200 if success else 500

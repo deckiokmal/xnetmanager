@@ -21,3 +21,4 @@ cookbook/
 xnetmanager.code-workspace
 app-error.log
 migrations/
+TODO.py
