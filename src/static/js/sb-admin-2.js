@@ -10,30 +10,6 @@
   //   };
   // });
 
-  document.addEventListener("DOMContentLoaded", function() {
-    // Ambil elemen tombol toggle
-    var sidebarToggles = document.querySelectorAll("#sidebarToggle, #sidebarToggleTop");
-  
-    sidebarToggles.forEach(function(toggle) {
-      toggle.addEventListener("click", function() {
-        // Toggle class pada body dan sidebar
-        document.body.classList.toggle("sidebar-toggled");
-        var sidebar = document.querySelector(".sidebar");
-        if (sidebar) {
-          sidebar.classList.toggle("toggled");
-        }
-  
-        // Tutup semua elemen dengan class 'collapse' jika sidebar dalam keadaan 'toggled'
-        if (sidebar && sidebar.classList.contains("toggled")) {
-          document.querySelectorAll(".sidebar .collapse").forEach(function(el) {
-            el.classList.remove("show"); // Menghilangkan class 'show' untuk Bootstrap collapse
-          });
-        }
-      });
-    });
-  });  
-  
-
   // Close any open menu accordions when window is resized below 768px
   $(window).resize(function() {
     if ($(window).width() < 768) {
