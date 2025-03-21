@@ -9,21 +9,17 @@ done
 
 echo "Memulai proses inisialisasi dan aplikasi XnetManager..."
 
-# Jalankan migrasi database
-if [ ! -d "/var/www/migrations" ]; then
-    echo "Direktori migrations tidak ditemukan. Menjalankan 'flask db init'..."
-    flask db init
-else
-    echo "Direktori migrations ditemukan. Melewati 'flask db init'."
-fi
+#! Inisialisasi Database
+echo "DB Initialization..."
+flask db init
 
-# Lanjutkan dengan migrasi dan upgrade
+#! Lanjutkan dengan migrasi dan upgrade
 echo "Menjalankan 'flask db migrate' dan 'flask db upgrade'..."
 flask db migrate -m "Initial Migration"
 flask db upgrade
 
-# Jalankan skrip inisialisasi database
-echo "Menjalankan inisialisasi data awal dengan db_init.py..."
+#! Menjalankan inisialisasi database tambahan dari db_init.py
+echo "Menjalankan inisialisasi database dengan db_init.py..."
 python db_init.py
 
 # Mulai aplikasi menggunakan Gunicorn

@@ -1,24 +1,25 @@
-FROM python:3.9-slim
+FROM python:3.12
 
+# Set environment variable
 ENV CONTAINER_HOME=/var/www
 
-RUN echo "Copy all data to /var/www"
+# Copy aplikasi ke dalam container
 COPY . ${CONTAINER_HOME}
 WORKDIR ${CONTAINER_HOME}
 
-RUN echo "System update & Dependency"
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends iputils-ping postgresql-client && \
+# Install dependencies yang diperlukan
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    iputils-ping postgresql-client libpq-dev build-essential && \
     rm -rf /var/lib/apt/lists/*
 
-RUN echo "Install all Python library"
+# Install library Python
 RUN pip install --no-cache-dir -r ${CONTAINER_HOME}/requirements.txt
 
-# Pastikan file entrypoint memiliki izin eksekusi
+# Pastikan entrypoint bisa dieksekusi
 RUN chmod +x entrypoint.sh
 
 # Tentukan variabel lingkungan default untuk Flask
-ENV CONFIG_NAME Production
+ENV CONFIG_NAME=Production
 
 EXPOSE 8000
-RUN echo "All xnetmanager build  successfully!"
+RUN echo "All xnetmanager build successfully!"

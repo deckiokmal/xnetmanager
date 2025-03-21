@@ -30,7 +30,7 @@ from .decorators import (
 from src import db
 from src.models.app_models import DeviceManager, ConfigurationManager
 from src.utils.network_configurator_utilities import ConfigurationManagerUtils
-from src.utils.ai_agent_utilities import ConfigurationFileManagement
+from src.utils.activity_feed_utils import log_activity
 
 
 # ----------------------------------------------------------------------------------------
@@ -262,7 +262,7 @@ def push_configs():
         )
 
     # Cek konsistensi vendor
-    unique_vendors = {device.vendor for device in devices.lower()}
+    unique_vendors = {device.vendor for device in devices}
     if len(unique_vendors) > 1:
         return (
             jsonify(
@@ -364,6 +364,12 @@ def push_configs():
         if success
         else "Some configurations failed. Check individual device messages."
     )
+
+    log_activity(
+        current_user.id,
+        "User Push multiple devices successfully.",
+        details=f"User {current_user.email} successfully push configuration for multiple devices",
+    )
     return jsonify({"success": success, "message": summary_message, "results": results})
 
 
@@ -447,7 +453,7 @@ def push_config_single_device(device_id):
                     "device_name": device.device_name,
                     "ip": device.ip_address,
                     "status": "error",
-                    "message": error_summary.get("message", "Unknown error occurred."),
+                    "message": error_summary,
                 }
             else:
                 return {
@@ -476,6 +482,11 @@ def push_config_single_device(device_id):
     result = configure_device(device)
     success = result["status"] == "success"
 
+    log_activity(
+        current_user.id,
+        "User push config single device successfully.",
+        details=f"User {current_user.email} successfully push config for device {device.device_name}",
+    )
     return jsonify({"success": success, "result": result}), 200 if success else 500
 
 

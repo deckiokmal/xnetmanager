@@ -17,7 +17,7 @@ class LoginUtils:
         login_attempts_key = f"{username}_login_attempts"
         block_until_key = f"{username}_block_until"
 
-        login_attempts = session.get(login_attempts_key, 0)
+        session.get(login_attempts_key, 0)
         block_until = session.get(block_until_key, 0)
 
         if block_until > time():

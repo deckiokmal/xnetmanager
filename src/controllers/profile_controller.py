@@ -9,7 +9,7 @@ from flask import (
 )
 from flask_login import login_required, current_user, logout_user
 from src.models.app_models import User
-from .decorators import login_required, role_required, required_2fa
+from .decorators import login_required, role_required, required_2fa  # noqa: F811
 from src import db, bcrypt
 from src.utils.forms_utils import (
     ProfileUpdateForm,
@@ -19,9 +19,8 @@ from src.utils.forms_utils import (
 )
 import logging
 import os
-from src.utils.mail_utils import (
-    send_verification_email,
-)
+from src.utils.activity_feed_utils import log_activity
+from src.models.app_models import Activity
 
 # Membuat blueprint users
 profile_bp = Blueprint("profile", __name__)
@@ -134,12 +133,19 @@ def index():
         )
         return redirect(url_for("main.dashboard"))  # Redirect to a safe page
 
+    activities = (
+        Activity.query.filter_by(user_id=current_user.id)
+        .order_by(Activity.timestamp.desc())
+        .limit(6)
+        .all()
+    )
     return render_template(
         "/users_management/index_profile.html",
         user=user,
         form=form,
         form_picture=form_picture,
         towfactorform=towfactorform,
+        activities=activities,
     )
 
 
@@ -164,6 +170,7 @@ def update_profile():
             user.city = form.city.data.strip()
             user.division = form.division.data.strip()
             user.time_zone = form.time_zone.data.strip()
+            user.biodata = form.biodata.data.strip()
 
             # Commit perubahan ke database
             db.session.commit()
@@ -171,6 +178,12 @@ def update_profile():
             # Logging sukses
             current_app.logger.info(f"User {current_user.email} updated their profile.")
             flash("Profile updated successfully.", "success")
+
+            log_activity(
+                current_user.id,
+                "User profile update successfully.",
+                details=f"User {current_user.email} successfully updated profile",
+            )
             return redirect(url_for("profile.index"))
 
         except Exception as e:
@@ -230,6 +243,12 @@ def change_password():
             current_app.logger.info(
                 f"User {current_user.email} changed their password."
             )
+
+            log_activity(
+                current_user.id,
+                "User change password successfully.",
+                details=f"User {current_user.email} successfully change password",
+            )
             return redirect(url_for("profile.index"))
 
         except Exception as e:
@@ -271,7 +290,8 @@ def upload_profile_picture():
                     1
                 ]  # Mengambil ekstensi file
                 # Format nama file
-                filename = f"{current_user.first_name} {current_user.last_name}{file_extension}"
+                file_ = f"{current_user.first_name}_{current_user.last_name}{file_extension}"
+                filename = file_.lower()
                 # Path lengkap untuk menyimpan file
                 file_path = os.path.join(
                     current_app.static_folder, PROFILE_PICTURE_DIRECTORY, filename
@@ -287,6 +307,12 @@ def upload_profile_picture():
                 flash("Profile picture updated successfully.", "success")
                 current_app.logger.info(
                     f"User {current_user.email} updated their profile picture."
+                )
+
+                log_activity(
+                    current_user.id,
+                    "User update profile picture successfully.",
+                    details=f"User {current_user.email} successfully update profile picture",
                 )
             else:
                 flash("No file selected.", "error")
@@ -341,37 +367,5 @@ def toggle_2fa():
                 f"Error toggling 2FA for user {current_user.email}: {e}"
             )
             flash("Terjadi kesalahan saat memperbarui pengaturan 2FA.", "danger")
-
-    return redirect(url_for("profile.index"))
-
-
-# Mail aktif/nonaktif
-@profile_bp.route("/mail_enabled", methods=["POST"])
-@login_required
-def mail_enabled():
-    try:
-        email_verification = "email_verification" in request.form
-        user = User.query.get(current_user.id)
-
-        if email_verification and not user.is_verified:
-            send_verification_email(user)
-            flash("A verification email has been sent to your email address.", "info")
-            current_app.logger.info(
-                f"Verification email sent to user {current_user.email}."
-            )
-        else:
-            flash("Your email is already verified.", "warning")
-            current_app.logger.warning(
-                f"User {current_user.email} attempted to verify an already verified email."
-            )
-
-    except Exception as e:
-        current_app.logger.error(
-            f"Error in email verification for user {current_user.email}: {e}"
-        )
-        flash(
-            "An error occurred while sending the verification email. Please try again later.",
-            "danger",
-        )
 
     return redirect(url_for("profile.index"))

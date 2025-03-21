@@ -1,6 +1,7 @@
 from datetime import datetime
 from flask_login import UserMixin
 import pyotp
+import pytz
 from src import bcrypt, db
 from src.config import Config
 from itsdangerous import URLSafeTimedSerializer as Serializer, SignatureExpired
@@ -8,6 +9,10 @@ from flask import current_app
 import uuid
 from src import UUID_TYPE
 from src.utils.backup_utilities import BackupUtils
+
+
+# Set timezone Asia/Jakarta
+DEFAULT_TZ = pytz.timezone("UTC")
 
 
 # ------------------------------------------------------------------------
@@ -23,16 +28,23 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     phone_number = db.Column(db.String(20), nullable=True)
-    profile_picture = db.Column(db.String(255), nullable=True)
+    profile_picture = db.Column(
+        db.String(255), nullable=True, default="img/undraw_profile.svg"
+    )
     company = db.Column(db.String(255), nullable=True)
     title = db.Column(db.String(255), nullable=True)
     city = db.Column(db.String(255), nullable=True)
+    biodata = db.Column(db.String(255), nullable=True)
     division = db.Column(db.String(255), nullable=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
-    date_joined = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    date_joined = db.Column(
+        db.DateTime, nullable=False, default=datetime.now(DEFAULT_TZ)
+    )
     last_login = db.Column(db.DateTime, nullable=True)
-    time_zone = db.Column(db.String(50), nullable=True)
+    time_zone = db.Column(
+        db.String(50), nullable=True, default=datetime.now(DEFAULT_TZ)
+    )
     is_2fa_enabled = db.Column(db.Boolean, nullable=False, default=False)
     secret_token = db.Column(db.String, unique=True, nullable=True)
     email_verification_token = db.Column(db.String, nullable=True)
@@ -74,6 +86,11 @@ class User(UserMixin, db.Model):
         foreign_keys="AIRecommendations.applied_by",
     )
 
+    # Menghapus User Activity di level ORM jika user di delete
+    activities = db.relationship(
+        "Activity", backref="user", cascade="all, delete-orphan", lazy=True
+    )
+
     def __init__(self, first_name, last_name, email, password_hash):
         self.first_name = first_name
         self.last_name = last_name
@@ -81,7 +98,7 @@ class User(UserMixin, db.Model):
         self.password_hash = bcrypt.generate_password_hash(password_hash).decode(
             "utf-8"
         )
-        self.date_joined = datetime.utcnow()
+        self.date_joined = datetime.now(DEFAULT_TZ)
         self.secret_token = pyotp.random_base32()
 
     def get_authentication_setup_uri(self):
@@ -175,6 +192,16 @@ class RolePermissions(db.Model):
     permission_id = db.Column(
         UUID_TYPE, db.ForeignKey("permissions.id", ondelete="CASCADE"), index=True
     )
+
+
+class Activity(db.Model):
+    id = db.Column(UUID_TYPE, primary_key=True, default=lambda: uuid.uuid4())
+    user_id = db.Column(
+        UUID_TYPE, db.ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    action = db.Column(db.String(255), nullable=False)  # Deskripsi aktivitas
+    timestamp = db.Column(db.String(255), nullable=False)  # Waktu aktivitas
+    details = db.Column(db.Text, nullable=True)  # Info tambahan (opsional)
 
 
 # ------------------------------------------------------------------------
@@ -285,7 +312,9 @@ class BackupData(db.Model):
     backup_name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.String(255), nullable=True)
     version = db.Column(db.Integer, nullable=False, default=1)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(
+        db.DateTime, nullable=False, default=datetime.now(DEFAULT_TZ)
+    )
     backup_path = db.Column(db.String(255), nullable=False)  # Valid path required
     is_encrypted = db.Column(db.Boolean, default=False)
     is_compressed = db.Column(db.Boolean, default=False)
@@ -456,7 +485,7 @@ class AuditLog(db.Model):
     )
     action = db.Column(db.String(50), nullable=False, default="created", index=True)
     performed_by = db.Column(UUID_TYPE, db.ForeignKey("users.id"), nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.now(DEFAULT_TZ))
     description = db.Column(db.String(1000), nullable=True)
 
     # Relationship to the backup this log belongs to

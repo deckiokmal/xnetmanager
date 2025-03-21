@@ -16,7 +16,7 @@ from src.utils.network_configurator_utilities import ConfigurationManagerUtils
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
-from .decorators import login_required, role_required, required_2fa
+from .decorators import login_required, role_required, required_2fa  # noqa: F811
 import random
 import string
 from flask_paginate import Pagination, get_page_args
@@ -41,6 +41,7 @@ from src.utils.configuration_file_utilities import (
     is_safe_path,
     delete_file_safely,
 )
+from src.utils.activity_feed_utils import log_activity
 
 # ----------------------------------------------------------------------------------------
 # Buat Blueprint untuk endpoint templating management as template_bp
@@ -122,7 +123,7 @@ def save_uploaded_file(file, upload_folder):
     return filename
 
 
-def read_file(filepath):
+def read_file(filepath):  # noqa: F811
     try:
         with open(filepath, "r", encoding="utf-8") as file:
             return file.read()
@@ -134,7 +135,7 @@ def read_file(filepath):
         return None
 
 
-def generate_random_filename(vendor_name):
+def generate_random_filename(vendor_name):  # noqa: F811
     random_str = "".join(random.choices(string.ascii_letters + string.digits, k=8))
     date_str = datetime.now().strftime("%d_%m_%Y")
     filename = f"{vendor_name}_{random_str}_{date_str}"
@@ -354,7 +355,7 @@ def upload_template():
         template_dir = current_app.config["TEMPLATE_DIR"]
         if j2.filename and allowed_file(j2.filename, TEMPLATE_EXTENSIONS):
             template_name = secure_filename(j2.filename)
-            template_path = save_uploaded_file(j2, template_dir)
+            save_uploaded_file(j2, template_dir)
         else:
             flash("Jenis file template tidak valid. Diizinkan: j2.", "danger")
             current_app.logger.warning(
@@ -365,7 +366,7 @@ def upload_template():
         # Validasi dan simpan file parameter
         if yaml.filename and allowed_file(yaml.filename, PARAMS_EXTENSIONS):
             parameter_name = secure_filename(yaml.filename)
-            parameter_path = save_uploaded_file(yaml, template_dir)
+            save_uploaded_file(yaml, template_dir)
         else:
             flash("Jenis file parameter tidak valid. Diizinkan: yml, yaml.", "danger")
             current_app.logger.warning(
@@ -410,6 +411,12 @@ def upload_template():
             f"User {current_user.email} successfully uploaded new template: {template_name}."
         )
         flash("File berhasil diunggah.", "success")
+
+        log_activity(
+            current_user.id,
+            "Upload new template successfully.",
+            details=f"User {current_user.email} successfully upload new template",
+        )
 
     except Exception as e:
         # Rollback jika terjadi error dan berikan feedback ke pengguna
@@ -508,6 +515,12 @@ def create_template_manual():
         )
         flash("Template berhasil dibuat.", "success")
 
+        log_activity(
+            current_user.id,
+            "User create new template successfully.",
+            details=f"User {current_user.email} successfully create new template manually",
+        )
+
     except Exception as e:
         current_app.logger.error(
             f"Error creating template for user {current_user.email}: {e}"
@@ -569,14 +582,18 @@ def update_template(template_id):
                 TemplateManager.id != template.id,
             ).first():
                 flash(f"Nama template '{new_template_name}' sudah ada.", "danger")
-                return redirect(url_for("template_bp.update_template", template_id=template_id))
+                return redirect(
+                    url_for("template_bp.update_template", template_id=template_id)
+                )
 
             if TemplateManager.query.filter(
                 TemplateManager.parameter_name == new_parameter_name,
                 TemplateManager.id != template.id,
             ).first():
                 flash(f"Nama parameter '{new_parameter_name}' sudah ada.", "danger")
-                return redirect(url_for("template_bp.update_template", template_id=template_id))
+                return redirect(
+                    url_for("template_bp.update_template", template_id=template_id)
+                )
 
             # Handle file content changes
             template_dir = current_app.config["TEMPLATE_DIR"]
@@ -635,13 +652,21 @@ def update_template(template_id):
             db.session.commit()
             current_app.logger.info(f"Template updated successfully: {template_id}")
             flash("Pembaruan template berhasil.", "success")
+
+            log_activity(
+                current_user.id,
+                "User udpate template successfully.",
+                details=f"User {current_user.email} successfully updated template {template.template_name}",
+            )
             return redirect(url_for("template_bp.template_index"))
 
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Error updating template: {e}")
             flash("Gagal memperbarui template.", "error")
-            return redirect(url_for("template_bp.update_template", template_id=template_id))
+            return redirect(
+                url_for("template_bp.update_template", template_id=template_id)
+            )
 
     return render_template(
         "/template_managers/update_template.html",
@@ -701,6 +726,12 @@ def delete_template(template_id):
                 f"Template with ID {template_id} successfully deleted by {current_user.email}"
             )
             flash("Template berhasil dihapus.", "success")
+
+            log_activity(
+                current_user.id,
+                "User deleted template successfully.",
+                details=f"User {current_user.email} successfully delete template {template.template_name}",
+            )
 
         except OSError as os_error:
             current_app.logger.error(
@@ -794,6 +825,12 @@ def template_generator(template_id):
                 ),
                 200,
             )
+
+        log_activity(
+            current_user.id,
+            "User generated valid configuration successfully.",
+            details=f"User {current_user.email} successfully generated valid configuration",
+        )
 
     except Exception as e:
         current_app.logger.error(
@@ -1026,7 +1063,10 @@ def update_configuration(config_id):
                 f"No changes detected for configuration ID {config_id}"
             )
             return jsonify(
-                {"is_valid": True, "redirect_url": url_for("template_bp.configuration_file_index")}
+                {
+                    "is_valid": True,
+                    "redirect_url": url_for("template_bp.configuration_file_index"),
+                }
             )
 
         # Check if the new config name already exists
@@ -1080,8 +1120,17 @@ def update_configuration(config_id):
             )
 
             flash("Update file konfigurasi berhasil!", "success")
+
+            log_activity(
+                current_user.id,
+                "User update configuration file successfully.",
+                details=f"User {current_user.email} successfully updated configuration file {config.config_name}",
+            )
             return jsonify(
-                {"is_valid": True, "redirect_url": url_for("template_bp.configuration_file_index")}
+                {
+                    "is_valid": True,
+                    "redirect_url": url_for("template_bp.configuration_file_index"),
+                }
             )
 
         except Exception as e:
@@ -1140,7 +1189,18 @@ def delete_configuration(config_id):
         db.session.commit()
 
         flash("Delete file konfigurasi berhasil!", "success")
-        jsonify({"success": True, "redirect_url": url_for("template_bp.configuration_file_index")})
+        jsonify(
+            {
+                "success": True,
+                "redirect_url": url_for("template_bp.configuration_file_index"),
+            }
+        )
+
+        log_activity(
+            current_user.id,
+            "User deleted configuration file successfully.",
+            details=f"User {current_user.email} successfully delete configuration file {config.config_name}",
+        )
         return redirect(url_for("template_bp.configuration_file_index"))
 
     except Exception as e:

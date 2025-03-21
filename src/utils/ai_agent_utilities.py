@@ -4,7 +4,7 @@ import logging
 import requests
 import numpy as np
 from openai import OpenAI
-from flask import current_app, jsonify
+from flask import current_app
 from typing import Optional, Literal
 from pydantic import BaseModel, Field
 from sklearn.metrics.pairwise import cosine_similarity
@@ -124,7 +124,7 @@ class AgenticNetworkIntent:
         )
         vendor: str = Field(description="Vendor of the network device")
         command: str = Field(
-            description="Generate valid network configurations for the specified vendor and additional verification syntax to display the results of the applied configuration. Make sure 'commands' without additional text formatting, without explanation and without additional escape characters."
+            description="Generate valid network configurations for the specified vendor (e,g.. mikrotik, fortinet, cisco) and additional verification syntax to display the results of the applied configuration. Make sure 'commands' without additional text formatting, without explanation and without additional escape characters."
         )
 
     class MonitoringDetails(BaseModel):
@@ -135,7 +135,7 @@ class AgenticNetworkIntent:
         )
         vendor: str = Field(description="Vendor of the network device")
         command: str = Field(
-            description="Commands to monitor the device. If any commands are indicated to cause continuous output to be executed (e,g.. ping,monitor traffic), they should always be set to an interval once or four count to prevent continuous output, ensuring controlled execution and optimal system performance."
+            description="Commands to monitor the device (e,g.. mikrotik, fortinet, cisco). If any commands are indicated to cause continuous output to be executed (e,g.. ping,monitor traffic), they should always be set to an interval once or four count to prevent continuous output, ensuring controlled execution and optimal system performance."
         )
 
     class NetworkResponse(BaseModel):
@@ -257,12 +257,12 @@ class AgenticNetworkIntent:
         # Check confidence threshold
         if route_result.confidence_score < 0.7:
             # logger.warning(f"Low confidence score: {route_result.confidence_score}")
-            return f"Please provide clear input."
+            return "Please provide clear input."
 
         # Route to appropriate handler
         if route_result.intent == "other":
             # current_app.logger.info(f"other talita di trigger")
-            return f"other"
+            return "other"
 
         # Periksa IP Address ke database sebelum LLM Call
         pattern = r"target\s+ip\s+(\d+\.\d+\.\d+\.\d+)"
@@ -290,11 +290,11 @@ class AgenticNetworkIntent:
                     return result.response
                 else:
                     logger.warning("Request type not supported")
-                    return f"request gagal"
+                    return "request gagal"
             else:
-                return f"The target IP address is not found in the Device Management system"
+                return "The target IP address is not found in the Device Management system"
         else:
-            return f"No information available for the target IP <ip_address>. Please verify the IP address and try again"
+            return "No information available for the target IP <ip_address>. Please verify the IP address and try again"
 
     # --------------------------------------------------------------
     # Step 4: Define Function Calling OpenAI
@@ -361,7 +361,7 @@ class AgenticNetworkIntent:
 
         if not tool_calls:  # <-- Tambahkan ini
             # logger.error("No tool calls found in OpenAI response")
-            return f"There is an issue with the system at the moment. Please try again later."
+            return "There is an issue with the system at the moment. Please try again later."
 
         # Step 3: Execute the corresponding function
         def call_function(name, args):
@@ -399,7 +399,7 @@ class AgenticNetworkIntent:
 
         if completion_2 is None or not completion_2.choices:
             # logger.error("OpenAI API response is None or empty")
-            return f"There is an issue with the system at the moment. Please try again later."
+            return "There is an issue with the system at the moment. Please try again later."
 
         return completion_2.choices[0].message.parsed
 
@@ -573,7 +573,7 @@ class RecommendationDeduplicator:
         """Retrieve existing embeddings dengan ID"""
         stmt = select(AIRecommendations.id, AIRecommendations.embedding).where(
             AIRecommendations.device_id == device_id,
-            AIRecommendations.is_duplicate == False,
+            AIRecommendations.is_duplicate is False,
         )
         return session.execute(stmt).fetchall()
 

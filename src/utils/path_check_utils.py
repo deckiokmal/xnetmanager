@@ -19,7 +19,7 @@ def check_path_compatibility(base_path):
         with open(test_file_path, "w") as f:
             f.write("Test content")
         with open(test_file_path, "r") as f:
-            content = f.read()
+            f.read()
         os.remove(test_file_path)
 
         logging.info("Path compatibility check passed.")

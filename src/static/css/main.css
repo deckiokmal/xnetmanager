@@ -5,8 +5,11 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
-    background: linear-gradient(to right, #4a90e2, #50bfa0);
+    background: hsla(261, 100%, 50%, 1);
+    background: linear-gradient(135deg, hsla(261, 100%, 50%, 1) 0%, hsla(0, 0%, 0%, 1) 100%);
     margin: 0;
+    background-size: cover;
+    background-repeat: repeat-y;
 }
 
 /* Container Login */
@@ -83,7 +86,7 @@ body {
     text-align: center;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    /* justify-content: space-between; */
 }
 
 .login-form input {
@@ -101,7 +104,7 @@ body {
     font-weight: bold;
     border: none;
     border-radius: 5px;
-    background: #007bff;
+    background: #5900FF;
     /* Warna biru modern */
     color: white;
     cursor: pointer;
@@ -115,13 +118,19 @@ body {
 
 /* Logo */
 .logo img {
-    width: 80px;
+    width: 70%;
+
 }
 
 .logo h1 {
     font-size: 24px;
     font-weight: 600;
     margin-top: 10px;
+}
+
+.login-box {
+    margin-top: 15%;
+    padding: 10px;
 }
 
 /* Input & Tombol */
@@ -147,7 +156,7 @@ body {
 button {
     width: 100%;
     padding: 10px;
-    background: #4a90e2;
+    background: #5900FF;
     border: none;
     color: white;
     font-size: 16px;
@@ -176,7 +185,7 @@ button:hover {
 @media (max-width: 768px) {
     .base-container {
         flex-direction: column;
-        width: 90%;
+        width: 80%;
     }
 
     .login-image {
@@ -187,6 +196,11 @@ button:hover {
     .flash_message {
         max-width: 100%;
         padding: 0 5px;
+    }
+
+    .login-form {
+        max-width: 100%;
+        max-height: 40%;
     }
 }
 
@@ -230,12 +244,13 @@ button:hover {
     justify-content: center;
     overflow: hidden;
     background: #f4f4f4;
+    padding: 25px;
 }
 
 /* Kolom Kanan: Form Login */
 .tfa-form {
     flex: 1;
-    padding: 2rem;
+    padding: 35px;
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -257,7 +272,7 @@ button:hover {
     font-weight: bold;
     border: none;
     border-radius: 5px;
-    background: #007bff;
+    background: #2e0085;
     /* Warna biru modern */
     color: white;
     cursor: pointer;
@@ -265,8 +280,35 @@ button:hover {
 }
 
 .tfa-form button:hover {
-    background: #0056b3;
+    background: #5900FF;
     /* Warna lebih gelap saat hover */
+}
+
+/* Styling untuk tombol login agar tetap di tengah */
+.tfa-card button {
+    width: 100%;
+    /* Pastikan tombol melebar sesuai form */
+    margin-top: 1rem;
+    /* Jarak dari input */
+    padding: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    background: #2e0085;
+    /* Warna biru modern */
+    color: white;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.tfa-card button:hover {
+    background: #5900FF;
+    /* Warna lebih gelap saat hover */
+}
+
+.tfa-card a {
+    color: #5900FF;
 }
 
 /* Instruksi untuk Mobile */

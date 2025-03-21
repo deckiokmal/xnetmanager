@@ -296,7 +296,6 @@ document.querySelectorAll('form[id^="backupForm"]').forEach(form => {
             backup_name: document.getElementById(`backupName${deviceId}`).value,
             description: document.getElementById(`description${deviceId}`).value,
             backup_type: document.getElementById(`backupType${deviceId}`).value,
-            command: document.getElementById(`command${deviceId}`).value
         };
         const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 
@@ -339,8 +338,7 @@ document.getElementById('createBackupForm')?.addEventListener('submit', function
         backup_name: document.getElementById('backupName').value,
         description: document.getElementById('description').value,
         backup_type: document.getElementById('backupType').value,
-        retention_days: document.getElementById('retentionDays').value,
-        command: document.getElementById('command').value,
+        retention_days: document.getElementById('retentionDays').value ? parseInt(document.getElementById('retentionDays').value, 7) : null,
         devices: JSON.parse(document.getElementById('selectedBackupDevices').value) // Ambil daftar perangkat yang dipilih
     };
     const csrfToken = document.querySelector('input[name="csrf_token"]').value;
