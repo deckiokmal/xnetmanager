@@ -1,20 +1,20 @@
+from src import db, create_app
+from src.models.app_models import (
+    User,
+    Role,
+    Permission,
+)
 import logging
-from flask import current_app
-from src.models.app_models import User, Role, Permission
-from src import db
 
 
 def initialize():
-    """
-    Inisialisasi database, membuat tabel jika belum ada,
-    serta menambahkan peran, izin, dan pengguna default.
-    """
-    with current_app.app_context():
+    app = create_app()
+    with app.app_context():
         try:
-            # Buat tabel jika belum ada
+            # Buat database dan tabel-tabelnya jika belum ada
             db.create_all()
 
-            # Definisi peran dan izin
+            # Buat peran dan izin default
             roles_permissions = {
                 "Admin": [
                     "Manage Roles",
@@ -41,7 +41,7 @@ def initialize():
                 "View": ["View Devices", "View Templates", "Manage Profile"],
             }
 
-            # Tambahkan peran dan izin ke database jika belum ada
+            # Tambahkan role dan permission ke dalam database
             for role_name, permissions in roles_permissions.items():
                 role = Role.query.filter_by(name=role_name).first()
                 if not role:
@@ -63,10 +63,10 @@ def initialize():
 
             db.session.commit()
 
-            # Buat pengguna default jika belum ada
+            # Buat pengguna default dengan peran Admin
             default_email = "xnetmanager@example.com"
             default_password = (
-                "xnetmanager"  # Jangan gunakan password default ini di produksi
+                "xnetmanager"  # Jangan gunakan password default seperti ini di produksi
             )
 
             if not User.query.filter_by(email=default_email).first():
@@ -75,17 +75,25 @@ def initialize():
                     first_name="Xnet",
                     last_name="Manager",
                     email=default_email,
-                    password_hash=default_password,  # Harus dienkripsi di sistem produksi
+                    password_hash=default_password,
                 )
                 admin_user.roles.append(admin_role)
                 db.session.add(admin_user)
                 db.session.commit()
 
             logging.info(
-                "Inisialisasi database selesai dengan peran, izin, dan pengguna default."
+                "Inisialisasi database selesai dengan peran dan izin default serta pengguna admin."
             )
 
         except Exception as e:
             db.session.rollback()
-            logging.error(f"Error during database initialization: {e}")
+            logging.error(f"Error during initialization: {e}")
             raise
+
+
+if __name__ == "__main__":
+    try:
+        initialize()
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error during initialization: {e}")

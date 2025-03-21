@@ -20,10 +20,7 @@ flask db upgrade
 
 #! Menjalankan inisialisasi database tambahan dari db_init.py
 echo "Menjalankan inisialisasi database dengan db_init.py..."
-flask shell <<EOF
-from src.db_init import initialize
-initialize()
-EOF
+python src/db_init.py
 
 # Mulai aplikasi menggunakan Gunicorn
 echo "Memulai aplikasi XnetManager dengan Gunicorn..."
