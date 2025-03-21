@@ -12,10 +12,18 @@ echo "Memulai proses inisialisasi dan aplikasi XnetManager..."
 #! Inisialisasi Database
 echo "DB Initialization..."
 flask db init
+
 #! Lanjutkan dengan migrasi dan upgrade
 echo "Menjalankan 'flask db migrate' dan 'flask db upgrade'..."
 flask db migrate -m "Initial Migration"
 flask db upgrade
+
+#! Menjalankan inisialisasi database tambahan dari db_init.py
+echo "Menjalankan inisialisasi database dengan db_init.py..."
+flask shell <<EOF
+from src.db_init import initialize
+initialize()
+EOF
 
 # Mulai aplikasi menggunakan Gunicorn
 echo "Memulai aplikasi XnetManager dengan Gunicorn..."
