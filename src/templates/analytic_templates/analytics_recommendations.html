@@ -1,197 +1,243 @@
-{% extends "layouts/layout.html" %}
-{% block page_heading %}Analyze Configuration{% endblock %}
-{% block title %}Analyze Configuration{% endblock %}
-
+{% extends "layouts/layout.html" %} {% block page_heading %}Analyze
+Configuration{% endblock %} {% block title %}Analyze Configuration{% endblock %}
 {% block content %}
 <div class="container-fluid">
-
-    <div class="row">
-        <!-- Live Config Panel -->
-        <div class="col-lg-6">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <!-- Header -->
-                    <h1 class="h3 mb-4 text-gray-800">
-                        AI Analytics - {{ device.name }}
-                        <small class="text-muted">({{ device.ip_address }})</small>
-                    </h1>
-                    <!-- Tombol untuk membuka modal pembuatan perangkat baru -->
-                    <a href="{{ url_for('ai_agent_bp.analyze_device', device_id=device.id) }}"
-                        class="btn btn-sm btn-success btn-sm mb-3">
-                        <i class="fas fa-rocket"></i> Re-analyze Configuration
-                    </a>
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        Current Configuration
-                        <button class="btn btn-sm btn-secondary float-right" data-toggle="collapse"
-                            data-target="#configPanel">
-                            Toggle View
-                        </button>
-                    </h6>
-                </div>
-                <div class="card-body collapse show" id="configPanel">
-                    <pre class="config-pre">{{ live_config }}</pre>
-                </div>
-            </div>
+  <div class="row">
+    <!-- Live Config Panel -->
+    <div class="col-lg-6">
+      <div class="card shadow mb-4">
+        <div class="card-header py-3">
+          <!-- Header -->
+          <h1 class="h3 mb-4 text-gray-800">
+            AI Analytics - {{ device.name }}
+            <small class="text-muted">({{ device.ip_address }})</small>
+          </h1>
+          <!-- Tombol untuk membuka modal pembuatan perangkat baru -->
+          <a
+            href="{{ url_for('ai_agent_bp.analyze_device', device_id=device.id) }}"
+            class="btn btn-sm btn-success btn-sm mb-3"
+          >
+            <i class="fas fa-rocket"></i> Re-analyze Configuration
+          </a>
+          <h6 class="m-0 font-weight-bold text-primary">
+            Current Configuration
+            <button
+              class="btn btn-sm btn-secondary float-right"
+              data-toggle="collapse"
+              data-target="#configPanel"
+            >
+              Toggle View
+            </button>
+          </h6>
         </div>
-
-        <!-- AI Recommendations Chat -->
-        <div class="col-lg-6">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3 d-flex justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        AI Recommendations
-                    </h6>
-                    <div class="badge badge-pill badge-info">
-                        {{ recommendations|length }} Suggestions
-                    </div>
-                </div>
-                <div class="card-body ai-chat-container">
-                    {% for rec in recommendations %}
-                    <div class="ai-message card mb-3" id="rec-{{ rec.id }}">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between">
-                                <h5 class="card-title">{{ rec.title }}</h5>
-                                <span class="badge badge-{{ 'success' if rec.risk_level == 'low' else 'warning' }}">
-                                    {{ rec.risk_level|upper }}
-                                </span>
-                            </div>
-                            <p class="card-text">{{ rec.description }}</p>
-                            <div class="row">
-                                <div class="col">
-                                    <small class="text-muted">
-                                        Impact Area: <span class="badge text-bg-primary">{{
-                                            rec.impact_area|default('security', true) }}</span>
-                                    </small>
-                                    <small class="text-muted">
-                                        | Status: <span class="badge text-bg-primary" id="status-{{ rec.id }}">{{
-                                            rec.status|default('generated',
-                                            true) }}</span>
-                                    </small>
-                                </div>
-                                <div class="col text-right">
-                                    <button class="btn btn-sm btn-secondary mb-1" onclick="viewCommand('{{ rec.id }}')">
-                                        <i class="fas fa-eye"></i> View
-                                    </button>
-                                    <button class="btn btn-sm btn-primary mb-1"
-                                        onclick="applyRecommendation('{{ rec.id }}')">
-                                        <i class="fas fa-rocket"></i> Apply
-                                    </button>
-                                    <div class="spinner-border spinner-border-sm text-primary d-none" role="status"
-                                        id="spinner-{{ rec.id }}">
-                                        <span class="sr-only">Loading...</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="command-section d-none mt-3" id="command-{{ rec.id }}">
-                                <textarea class="form-control command-text p-2 bg-light border"
-                                    id="command-text-{{ rec.id }}">{{ rec.command }}</textarea>
-                                <button class="btn btn-sm btn-success mt-2"
-                                    onclick="saveRecommendation('{{ rec.id }}')">
-                                    <i class="fas fa-save"></i> Save
-                                </button>
-                                <div class="spinner-border spinner-border-sm text-primary d-none" role="status"
-                                    id="spinner-{{ rec.id }}">
-                                    <span class="sr-only">Saving...</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
+        <div class="card-body collapse show" id="configPanel">
+          <pre class="config-pre">{{ live_config }}</pre>
         </div>
+      </div>
     </div>
+
+    <!-- AI Recommendations Chat -->
+    <div class="col-lg-6">
+      <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between">
+          <h6 class="m-0 font-weight-bold text-primary">AI Recommendations</h6>
+          <div class="badge badge-pill badge-info">
+            {{ recommendations|length }} Suggestions
+          </div>
+        </div>
+        <div class="card-body ai-chat-container">
+          {% for rec in recommendations %}
+          <div class="ai-message card mb-3" id="rec-{{ rec.id }}">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <h5 class="card-title">{{ rec.title }}</h5>
+                <span
+                  class="badge badge-{{ 'success' if rec.risk_level == 'low' else 'warning' }}"
+                >
+                  {{ rec.risk_level|upper }}
+                </span>
+              </div>
+              <p class="card-text">{{ rec.description }}</p>
+              <div class="row">
+                <div class="col">
+                  <small class="text-muted">
+                    Impact Area:
+                    <span class="badge text-bg-primary"
+                      >{{ rec.impact_area|default('security', true) }}</span
+                    >
+                  </small>
+                  <small class="text-muted">
+                    | Status:
+                    <span class="badge text-bg-primary" id="status-{{ rec.id }}"
+                      >{{ rec.status|default('generated', true) }}</span
+                    >
+                  </small>
+                </div>
+                <div class="col text-right">
+                  <button
+                    class="btn btn-sm btn-secondary mb-1"
+                    onclick="viewCommand('{{ rec.id }}')"
+                  >
+                    <i class="fas fa-eye"></i> View
+                  </button>
+                  <button
+                    class="btn btn-sm btn-primary mb-1"
+                    onclick="applyRecommendation('{{ rec.id }}')"
+                  >
+                    <i class="fas fa-rocket"></i> Apply
+                  </button>
+                  <div
+                    class="spinner-border spinner-border-sm text-primary d-none"
+                    role="status"
+                    id="spinner-{{ rec.id }}"
+                  >
+                    <span class="sr-only">Loading...</span>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="command-section d-none mt-3"
+                id="command-{{ rec.id }}"
+              >
+                <textarea
+                  class="form-control command-text p-2 bg-light border"
+                  id="command-text-{{ rec.id }}"
+                >
+{{ rec.command }}</textarea
+                >
+                <button
+                  class="btn btn-sm btn-success mt-2"
+                  onclick="saveRecommendation('{{ rec.id }}')"
+                >
+                  <i class="fas fa-save"></i> Save
+                </button>
+                <div
+                  class="spinner-border spinner-border-sm text-primary d-none"
+                  role="status"
+                  id="spinner-{{ rec.id }}"
+                >
+                  <span class="sr-only">Saving...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-    function viewCommand(recId) {
-        var commandSection = document.getElementById('command-' + recId);
-        if (commandSection.classList.contains('d-none')) {
-            commandSection.classList.remove('d-none');
-        } else {
-            commandSection.classList.add('d-none');
-        }
+  function viewCommand(recId) {
+    var commandSection = document.getElementById("command-" + recId);
+    if (commandSection.classList.contains("d-none")) {
+      commandSection.classList.remove("d-none");
+    } else {
+      commandSection.classList.add("d-none");
+    }
+  }
+
+  function saveRecommendation(recId) {
+    const commandInput = document.getElementById(`command-text-${recId}`);
+    const newCommand = commandInput.value.trim();
+
+    if (!newCommand) {
+      alert("Command cannot be empty!");
+      return;
     }
 
-    function saveRecommendation(recId) {
-        const commandInput = document.getElementById(`command-text-${recId}`);
-        const newCommand = commandInput.value.trim();
+    if (confirm("Save this updated configuration?")) {
+      const spinner = document.getElementById(`spinner-${recId}`);
+      spinner.classList.remove("d-none");
 
-        if (!newCommand) {
-            alert('Command cannot be empty!');
+      // Ambil token CSRF dari meta tag
+      const csrfToken = document
+        .querySelector('meta[name="csrf-token"]')
+        .getAttribute("content");
+
+      fetch(`/ai/edit_recommendations/${recId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken,
+        },
+        body: JSON.stringify({ command: newCommand }),
+      })
+        .then((response) => {
+          if (!response.ok)
+            return response.json().then((err) => {
+              throw err;
+            });
+          return response.json();
+        })
+        .then((data) => {
+          spinner.classList.add("d-none");
+          showToast("Recommendation updated successfully!", "success");
+        })
+        .catch((error) => {
+          spinner.classList.add("d-none");
+          showToast(`Error: ${error.error || "Unknown error"}`, "danger");
+        });
+    }
+  }
+
+  function applyRecommendation(recId) {
+    if (confirm("Apply this configuration?")) {
+      const spinner = document.getElementById(`spinner-${recId}`);
+      spinner.classList.remove("d-none");
+
+      // Ambil token CSRF dari meta tag
+      const csrfToken = document
+        .querySelector('meta[name="csrf-token"]')
+        .getAttribute("content");
+
+      fetch("/ai/apply", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken,
+        },
+        body: JSON.stringify({ rec_id: recId }),
+      })
+        .then((response) => response.json()) // Parsing JSON response
+        .then((data) => {
+          spinner.classList.add("d-none");
+
+          if (data.success) {
+            showToast(
+              data.message || "Configuration applied successfully!",
+              "success"
+            );
+
+            // Ubah teks status menggunakan data dari server
+            const statusElement = document.getElementById(`status-${recId}`);
+            if (statusElement && data.status) {
+              statusElement.textContent = data.status;
+            }
+          } else {
+            showToast("Unknown error", "danger");
             return;
-        }
-
-        if (confirm('Save this updated configuration?')) {
-            const spinner = document.getElementById(`spinner-${recId}`);
-            spinner.classList.remove('d-none');
-
-            fetch(`/ai/edit_recommendations/${recId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ command: newCommand })
-            })
-                .then(response => {
-                    if (!response.ok) return response.json().then(err => { throw err; });
-                    return response.json();
-                })
-                .then(data => {
-                    spinner.classList.add('d-none');
-                    showToast('Recommendation updated successfully!', 'success');
-                })
-                .catch(error => {
-                    spinner.classList.add('d-none');
-                    showToast(`Error: ${error.error || 'Unknown error'}`, 'danger');
-                });
-        }
+          }
+        })
+        .catch((error) => {
+          spinner.classList.add("d-none");
+          showToast(
+            "Unexpected error occurred. Please try again later",
+            "danger"
+          );
+        });
     }
+  }
 
-    function applyRecommendation(recId) {
-        if (confirm('Apply this configuration?')) {
-            const spinner = document.getElementById(`spinner-${recId}`);
-            spinner.classList.remove('d-none');
-
-            fetch('/ai/apply', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ rec_id: recId })
-            })
-                .then(response => response.json())  // Parsing JSON response
-                .then(data => {
-                    spinner.classList.add('d-none');
-
-                    if (data.success) {
-                        showToast(data.message || 'Configuration applied successfully!', 'success');
-
-                        // Ubah teks status menggunakan data dari server
-                        const statusElement = document.getElementById(`status-${recId}`);
-                        if (statusElement && data.status) {
-                            statusElement.textContent = data.status;
-                        }
-                    } else {
-                        showToast('Unknown error', 'danger');
-                        return;
-                    }
-                })
-                .catch(error => {
-                    spinner.classList.add('d-none');
-                    showToast('Unexpected error occurred. Please try again later', 'danger');
-                });
-        }
-    }
-
-    function showToast(message, type = 'info') {
-        const toastContainer = document.getElementById('toast-container');
-        const toast = document.createElement('div');
-        toast.className = `toast align-items-center text-bg-${type} border-0`;
-        toast.role = 'alert';
-        toast.ariaLive = 'assertive';
-        toast.ariaAtomic = 'true';
-        toast.innerHTML = `
+  function showToast(message, type = "info") {
+    const toastContainer = document.getElementById("toast-container");
+    const toast = document.createElement("div");
+    toast.className = `toast align-items-center text-bg-${type} border-0`;
+    toast.role = "alert";
+    toast.ariaLive = "assertive";
+    toast.ariaAtomic = "true";
+    toast.innerHTML = `
         <div class="d-flex">
             <div class="toast-body">
                 ${message}
@@ -199,17 +245,18 @@
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     `;
-        toastContainer.appendChild(toast);
-        const bsToast = new bootstrap.Toast(toast);
-        bsToast.show();
-    }
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+  }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const toastContainer = document.createElement('div');
-        toastContainer.id = 'toast-container';
-        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-        document.body.appendChild(toastContainer);
-    });
+  document.addEventListener("DOMContentLoaded", () => {
+    const toastContainer = document.createElement("div");
+    toastContainer.id = "toast-container";
+    toastContainer.className =
+      "toast-container position-fixed bottom-0 end-0 p-3";
+    document.body.appendChild(toastContainer);
+  });
 </script>
 
 {% endblock %}

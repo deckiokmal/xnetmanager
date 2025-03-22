@@ -1,3 +1,4 @@
+from datetime import datetime
 from flask import (
     Blueprint,
     render_template,
@@ -69,19 +70,18 @@ def before_request_func():
         return redirect(url_for("main.login"))
 
 
+# Context processor untuk menambahkan first_name, last_name serta tahun saat ini ke dalam konteks di semua halaman.
 @dm_bp.context_processor
 def inject_user():
-    """
-    Provide the authenticated user's first name and last name to the template context.
-    This allows templates to access user information for personalized greetings or other user-specific content.
-    """
+    """Menyediakan first_name, last_name pengguna yang terotentikasi ke dalam template serta tahun saat ini."""
     if current_user.is_authenticated:
+        current_year = datetime.now().year
         return dict(
-            first_name=current_user.first_name, last_name=current_user.last_name
+            first_name=current_user.first_name,
+            last_name=current_user.last_name,
+            year=current_year,
         )
-    return dict(
-        first_name="", last_name=""
-    )  # Return empty strings if the user is not authenticated
+    return dict(first_name="", last_name="")
 
 
 # -----------------------------------------------------------

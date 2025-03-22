@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from werkzeug.exceptions import BadRequest
 from flask import (
     Blueprint,
@@ -10,9 +11,11 @@ from flask import (
     redirect,
     url_for,
 )
-from flask_login import login_required, current_user, logout_user
+from flask_login import current_user, logout_user
 from .decorators import (
     required_2fa,
+    login_required,
+    role_required,
 )
 from src.models.app_models import DeviceManager, AIRecommendations, BackupData
 from src.utils.ai_agent_utilities import (
@@ -78,12 +81,31 @@ def before_request_func():
         return redirect(url_for("main.login"))
 
 
+# Context processor untuk menambahkan first_name, last_name serta tahun saat ini ke dalam konteks di semua halaman.
+@ai_agent_bp.context_processor
+def inject_user():
+    """Menyediakan first_name, last_name pengguna yang terotentikasi ke dalam template serta tahun saat ini."""
+    if current_user.is_authenticated:
+        current_year = datetime.now().year
+        return dict(
+            first_name=current_user.first_name,
+            last_name=current_user.last_name,
+            year=current_year,
+        )
+    return dict(first_name="", last_name="")
+
+
 # --------------------------------------------------------------------------------
 # Agentic AI Section
 # --------------------------------------------------------------------------------
 @ai_agent_bp.route("/chatbot", methods=["POST"])
 @login_required
 @required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["AI Agent"],
+    page="Chatbot",
+)
 def chatbot():
     # Ambil pesan dari body permintaan
     data = request.get_json()
@@ -121,6 +143,13 @@ def chatbot():
 # AI Device Configuration Recommendation Section
 # --------------------------------------------------------------------------------
 @ai_agent_bp.route("/view/analyze/<device_id>", methods=["GET"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["AI Agent"],
+    page="Analyze Device Page",
+)
 def analyze_view(device_id):
     device = DeviceManager.query.get_or_404(device_id)
     if not device:
@@ -162,6 +191,13 @@ def analyze_view(device_id):
 
 
 @ai_agent_bp.route("/analyze/<device_id>")
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["AI Agent"],
+    page="Analyze Device",
+)
 def analyze_device(device_id):
     deduplicator = RecommendationDeduplicator()
     session = db.session
@@ -226,6 +262,13 @@ def analyze_device(device_id):
 
 
 @ai_agent_bp.route("/edit_recommendations/<rec_id>", methods=["PUT"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["AI Agent"],
+    page="Edit AI Recommendations",
+)
 def edit_recommendation(rec_id):
     data = request.get_json()
     new_command = data.get("command")
@@ -250,6 +293,13 @@ def edit_recommendation(rec_id):
 
 
 @ai_agent_bp.route("/apply", methods=["POST"])
+@login_required
+@required_2fa
+@role_required(
+    roles=["Admin", "User"],
+    permissions=["AI Agent"],
+    page="AI Apply Recommendation",
+)
 def apply_recommendation():
     data = request.get_json()
     try:

@@ -406,7 +406,7 @@ body {
 }
 
 .message-text {
-    font-size: 0.8em;
+    font-size: 1em;
     /* Ukuran lebih kecil untuk konsistensi */
     max-width: auto;
     /* Maksimal lebar adalah 90% dari kontainer */

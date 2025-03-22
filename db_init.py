@@ -26,6 +26,7 @@ def initialize():
                     "View Templates",
                     "Manage Profile",
                     "Manage Backups",
+                    "AI Agent",
                 ],
                 "User": [
                     "Manage Devices",
@@ -36,6 +37,7 @@ def initialize():
                     "View Templates",
                     "Manage Profile",
                     "Manage Backups",
+                    "AI Agent",
                 ],
                 "View": ["View Devices", "View Templates", "Manage Profile"],
             }
