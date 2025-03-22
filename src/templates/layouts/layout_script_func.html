@@ -123,10 +123,16 @@
     typingIndicator.style.display = "inline"; // Show typing indicator
 
     try {
+      // Ambil token CSRF dari meta tag
+      const csrfToken = document
+        .querySelector('meta[name="csrf-token"]')
+        .getAttribute("content");
+
       const response = await fetch("/ai/chatbot", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken,
         },
         body: JSON.stringify({ message }),
       });

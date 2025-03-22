@@ -1,3 +1,4 @@
+from datetime import datetime
 from flask import (
     Blueprint,
     render_template,
@@ -74,15 +75,16 @@ def before_request_func():
         flash("Your password has been updated. Please log in again.", "info")
         return redirect(url_for("main.login"))
 
-
+# Context processor untuk menambahkan first_name, last_name serta tahun saat ini ke dalam konteks di semua halaman.
 @roles_bp.context_processor
 def inject_user():
-    """
-    Menyediakan first_name dan last_name pengguna yang terotentikasi ke dalam template.
-    """
+    """Menyediakan first_name, last_name pengguna yang terotentikasi ke dalam template serta tahun saat ini."""
     if current_user.is_authenticated:
+        current_year = datetime.now().year
         return dict(
-            first_name=current_user.first_name, last_name=current_user.last_name
+            first_name=current_user.first_name,
+            last_name=current_user.last_name,
+            year=current_year,
         )
     return dict(first_name="", last_name="")
 
