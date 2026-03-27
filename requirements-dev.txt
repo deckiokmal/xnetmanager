@@ -1,0 +1,43 @@
+# --- Core Web Framework ---
+Flask
+Gunicorn
+python-dotenv
+python-decouple
+
+# --- Database & Migrations ---
+psycopg[binary]
+Flask-SQLAlchemy
+Flask-Migrate
+marshmallow-sqlalchemy
+
+# --- Security & Auth ---
+Flask-JWT-Extended
+Flask-Login
+Flask-Bcrypt
+Flask-Limiter
+Flask-Talisman
+Flask-WTF
+Flask-Marshmallow
+pyotp
+qrcode
+
+# --- AI & LLM ---
+langchain
+langchain-openai
+openai
+scikit-learn
+
+# --- Infrastructure & Automation ---
+RouterOS-api
+paramiko
+psutil
+
+# --- Task & Utilities ---
+httpx
+Flask-Mail
+Flask-Babel
+wtforms-sqlalchemy
+flask-paginate
+numpy
+matplotlib
+email_validator
