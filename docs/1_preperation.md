@@ -4,7 +4,13 @@ Langkah:
     ```bash
     uv init
     uv venv
+    source .venv/bin/activate
     uv pip install -r requirements-dev.txt
+    ```
+
+    Menghentikan Python virtual environment:
+    ```bash
+    deactivate
     ```
 
 2. Setup Database PostgreSQL 'Docker Container'
